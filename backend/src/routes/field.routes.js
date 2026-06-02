@@ -1,0 +1,43 @@
+const { Router } = require('express');
+const controller = require('../controllers/field.controller');
+const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
+const validate = require('../middleware/validate');
+const { uploadMultiple } = require('../middleware/upload');
+const { uploadLimiter } = require('../middleware/rateLimiter');
+const Role = require('../constants/roles');
+const {
+  createFieldSchema, updateFieldSchema,
+  createSubFieldSchema, updateSubFieldSchema, availabilityQuerySchema,
+} = require('../validations/field.validation');
+
+const router = Router();
+
+// ── Public ────────────────────────────────────────────────────────────────────
+router.get('/',                  controller.getFields);
+router.get('/owner/my-fields',   authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN), controller.getMyFields);
+router.get('/:id',               controller.getFieldById);
+router.get('/:id/availability',  validate(availabilityQuerySchema, 'query'), controller.checkAvailability);
+
+// ── Field owner ───────────────────────────────────────────────────────────────
+router.post('/',
+  authenticate, authorize(Role.FIELD_OWNER),
+  uploadLimiter, uploadMultiple('images', 8), validate(createFieldSchema),
+  controller.createField
+);
+router.patch('/:id',
+  authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN),
+  uploadLimiter, uploadMultiple('images', 8), validate(updateFieldSchema),
+  controller.updateField
+);
+router.delete('/:id', authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN), controller.deleteField);
+
+// ── Sub-fields ────────────────────────────────────────────────────────────────
+router.post('/:id/sub-fields',              authenticate, authorize(Role.FIELD_OWNER), validate(createSubFieldSchema), controller.addSubField);
+router.patch('/:id/sub-fields/:subFieldId', authenticate, authorize(Role.FIELD_OWNER), validate(updateSubFieldSchema), controller.updateSubField);
+router.delete('/:id/sub-fields/:subFieldId', authenticate, authorize(Role.FIELD_OWNER), controller.deleteSubField);
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+router.patch('/:id/verify', authenticate, authorize(Role.ADMIN), controller.verifyField);
+
+module.exports = router;

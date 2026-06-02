@@ -1,0 +1,24 @@
+const { Router } = require('express');
+const controller = require('../controllers/booking.controller');
+const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
+const validate = require('../middleware/validate');
+const Role = require('../constants/roles');
+const { createBookingSchema, cancelBookingSchema } = require('../validations/booking.validation');
+
+const router = Router();
+router.use(authenticate);
+
+// ── User ──────────────────────────────────────────────────────────────────────
+router.post('/',             validate(createBookingSchema), controller.createBooking);
+router.get('/my-bookings',   controller.getMyBookings);
+router.get('/:id',           controller.getBookingById);
+router.patch('/:id/cancel',  validate(cancelBookingSchema), controller.cancelBooking);
+
+// ── Field owner / Admin ───────────────────────────────────────────────────────
+router.get('/field/:fieldId', authorize(Role.FIELD_OWNER, Role.ADMIN), controller.getFieldBookings);
+router.patch('/:id/confirm',  authorize(Role.FIELD_OWNER, Role.ADMIN), controller.confirmBooking);
+router.patch('/:id/complete', authorize(Role.FIELD_OWNER, Role.ADMIN), controller.completeBooking);
+router.patch('/:id/no-show',  authorize(Role.FIELD_OWNER, Role.ADMIN), controller.markNoShow);
+
+module.exports = router;
