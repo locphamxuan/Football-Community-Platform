@@ -40,12 +40,6 @@ const SKILL_LEVELS = [
   { value: 'advanced', label: 'Khá / Giỏi' },
   { value: 'professional', label: 'Bán chuyên' },
 ];
-const FEET = [
-  { value: 'right', label: 'Chân phải' },
-  { value: 'left', label: 'Chân trái' },
-  { value: 'both', label: 'Hai chân' },
-];
-const FIELD_SIZES = ['5v5', '7v7', '11v11'];
 const GENDERS = [
   { value: 'male', label: 'Nam' },
   { value: 'female', label: 'Nữ' },
@@ -65,8 +59,6 @@ const profileSchema = z.object({
   district: z.string().max(100).optional(),
   positions: z.array(z.string()).max(4),
   skillLevel: z.string(),
-  preferredFoot: z.string(),
-  preferredFieldSize: z.array(z.string()),
   bio: z.string().max(500, 'Tối đa 500 ký tự').optional(),
 });
 
@@ -203,8 +195,6 @@ function ProfileInfoForm({ user, onSaved }: { user: User; onSaved: () => void })
       district: user.location?.district ?? '',
       positions: user.playerProfile?.positions ?? [],
       skillLevel: user.playerProfile?.skillLevel ?? 'beginner',
-      preferredFoot: user.playerProfile?.preferredFoot ?? 'right',
-      preferredFieldSize: user.playerProfile?.preferredFieldSize ?? [],
       bio: user.playerProfile?.bio ?? '',
     },
   });
@@ -219,8 +209,6 @@ function ProfileInfoForm({ user, onSaved }: { user: User; onSaved: () => void })
         playerProfile: {
           positions: form.positions,
           skillLevel: form.skillLevel,
-          preferredFoot: form.preferredFoot,
-          preferredFieldSize: form.preferredFieldSize,
           bio: form.bio,
         },
       }),
@@ -234,7 +222,6 @@ function ProfileInfoForm({ user, onSaved }: { user: User; onSaved: () => void })
   });
 
   const positions = watch('positions');
-  const fieldSizes = watch('preferredFieldSize');
   const toggleIn = (list: string[], v: string) =>
     list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
@@ -303,31 +290,6 @@ function ProfileInfoForm({ user, onSaved }: { user: User; onSaved: () => void })
                   {SKILL_LEVELS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Chân thuận</Label>
-              <Select value={watch('preferredFoot')} onValueChange={(v) => v && setValue('preferredFoot', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FEET.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label>Loại sân ưa thích</Label>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {FIELD_SIZES.map((s) => (
-                <Badge
-                  key={s}
-                  variant={fieldSizes.includes(s) ? 'default' : 'outline'}
-                  className="cursor-pointer select-none px-3 py-1"
-                  onClick={() => setValue('preferredFieldSize', toggleIn(fieldSizes, s))}
-                >
-                  {s}
-                </Badge>
-              ))}
             </div>
           </div>
 

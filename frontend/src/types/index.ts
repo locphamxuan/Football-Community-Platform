@@ -33,8 +33,6 @@ export interface User {
   playerProfile: {
     positions: string[];
     skillLevel: string;
-    preferredFoot: string;
-    preferredFieldSize: string[];
     bio: string;
     stats: {
       matchesPlayed: number;
@@ -48,6 +46,15 @@ export interface User {
 }
 
 // ── Field ────────────────────────────────────────────────────────────────────
+export interface SubFieldAvailability {
+  subFieldId: string;
+  name: string;
+  fieldType: '5v5' | '7v7' | '11v11';
+  surface: 'natural_grass' | 'artificial_grass' | 'concrete';
+  isAvailable: boolean;
+  bookedSlots: { startTime: string; endTime: string }[];
+}
+
 export interface SubField {
   _id: string;
   name: string;

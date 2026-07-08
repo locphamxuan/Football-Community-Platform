@@ -9,8 +9,6 @@ export interface UpdateProfilePayload {
   playerProfile?: {
     positions?: string[];
     skillLevel?: string;
-    preferredFoot?: string;
-    preferredFieldSize?: string[];
     bio?: string;
   };
 }

@@ -175,6 +175,15 @@ const markNoShow = async (bookingId, ownerId) => {
   const field = await Field.findById(booking.field);
   if (!field || field.owner.toString() !== ownerId) throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
+  // Chỉ đánh no-show cho booking đã xác nhận và đã qua giờ bắt đầu
+  if (booking.status !== 'confirmed') {
+    throw new AppError('Only confirmed bookings can be marked as no-show', HttpStatus.BAD_REQUEST, ErrorCode.BOOKING_NOT_CANCELLABLE);
+  }
+  const startAt = new Date(`${booking.date.toISOString().slice(0, 10)}T${booking.startTime}:00`);
+  if (startAt > new Date()) {
+    throw new AppError('Cannot mark no-show before the booking start time', HttpStatus.BAD_REQUEST, ErrorCode.BOOKING_NOT_CANCELLABLE);
+  }
+
   return Booking.findByIdAndUpdate(bookingId, { status: 'no_show' }, { new: true });
 };
 
