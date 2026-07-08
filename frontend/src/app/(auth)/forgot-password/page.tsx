@@ -25,33 +25,24 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-6 flex flex-col items-center gap-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
-            <h2 className="text-xl font-semibold">Email đã được gửi</h2>
-            <p className="text-muted-foreground text-sm">
-              Vui lòng kiểm tra hộp thư và nhấn vào link để đặt lại mật khẩu.
-              Link có hiệu lực trong <strong>1 giờ</strong>.
-            </p>
-            <Link href="/login">
-              <Button variant="outline">Quay lại đăng nhập</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="text-center">
+        <CardContent className="pt-8 pb-6 flex flex-col items-center gap-4">
+          <CheckCircle className="h-16 w-16 text-primary" />
+          <h2 className="text-xl font-semibold">Email đã được gửi</h2>
+          <p className="text-muted-foreground text-sm">
+            Vui lòng kiểm tra hộp thư và nhấn vào link để đặt lại mật khẩu.
+            Link có hiệu lực trong <strong>1 giờ</strong>.
+          </p>
+          <Link href="/login">
+            <Button variant="outline">Quay lại đăng nhập</Button>
+          </Link>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <span className="text-4xl">⚽</span>
-          <h1 className="mt-2 text-2xl font-bold text-green-700">Football Platform</h1>
-        </div>
-
-        <Card>
+    <Card>
           <CardHeader>
             <CardTitle>Quên mật khẩu</CardTitle>
             <CardDescription>Nhập email để nhận link đặt lại mật khẩu</CardDescription>
@@ -67,16 +58,14 @@ export default function ForgotPasswordPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={forgotPassword.isPending}>
+              <Button type="submit" className="w-full" disabled={forgotPassword.isPending}>
                 {forgotPassword.isPending ? 'Đang gửi...' : 'Gửi link đặt lại mật khẩu'}
               </Button>
-              <Link href="/login" className="text-sm text-green-600 hover:underline">
+              <Link href="/login" className="text-sm text-primary hover:underline">
                 Quay lại đăng nhập
               </Link>
             </CardFooter>
           </form>
-        </Card>
-      </div>
-    </div>
+    </Card>
   );
 }

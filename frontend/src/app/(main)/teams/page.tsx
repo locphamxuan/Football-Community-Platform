@@ -40,7 +40,7 @@ export default function TeamsPage() {
         </div>
         {isAuthenticated && (
           <Link href="/teams/create">
-            <Button className="bg-green-600 hover:bg-green-700">
+            <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />Tạo đội
             </Button>
           </Link>
@@ -60,7 +60,7 @@ export default function TeamsPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
-          <Button onClick={handleSearch} className="bg-green-600 hover:bg-green-700">Tìm</Button>
+          <Button onClick={handleSearch} className="bg-primary hover:bg-primary/90">Tìm</Button>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -136,9 +136,9 @@ function TeamCard({ team }: { team: Team }) {
       <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
         <CardContent className="p-5">
           <div className="flex items-center gap-3 mb-4">
-            <Avatar className="h-14 w-14 border-2 border-green-100">
+            <Avatar className="h-14 w-14 border-2 border-primary/20">
               <AvatarImage src={team.logo} alt={team.name} />
-              <AvatarFallback className="bg-green-100 text-green-700 font-bold text-lg">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                 {team.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -171,7 +171,7 @@ function TeamCard({ team }: { team: Team }) {
               <p className="text-xs text-muted-foreground">Trận</p>
             </div>
             <div>
-              <div className="font-bold text-sm text-green-600">{winRate}%</div>
+              <div className="font-bold text-sm text-primary">{winRate}%</div>
               <p className="text-xs text-muted-foreground">Tỷ thắng</p>
             </div>
           </div>

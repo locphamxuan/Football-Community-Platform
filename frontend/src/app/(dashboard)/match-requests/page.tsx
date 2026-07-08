@@ -14,7 +14,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import matchRequestService from '@/services/matchRequest.service';
 import { MATCH_REQUEST_STATUS_LABELS, MATCH_REQUEST_STATUS_COLORS } from '@/lib/constants';
 import type { MatchRequest } from '@/types';
@@ -123,7 +122,7 @@ export default function MatchRequestsPage() {
                   <div className="flex flex-wrap gap-2">
                     {req.status === 'pending' && (
                       <>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => respondMutation.mutate({ id: req._id, accept: true })}>
+                        <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => respondMutation.mutate({ id: req._id, accept: true })}>
                           <CheckCircle className="h-3 w-3 mr-1" />Chấp nhận
                         </Button>
                         <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => respondMutation.mutate({ id: req._id, accept: false })}>
@@ -141,7 +140,7 @@ export default function MatchRequestsPage() {
                 </div>
 
                 {req.message && (
-                  <p className="mt-3 text-sm text-muted-foreground border-t pt-2">"{req.message}"</p>
+                  <p className="mt-3 text-sm text-muted-foreground border-t pt-2">&ldquo;{req.message}&rdquo;</p>
                 )}
               </CardContent>
             </Card>
@@ -182,7 +181,7 @@ export default function MatchRequestsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setResultDialog({ open: false, request: null })}>Hủy</Button>
             <Button
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={resultMutation.isPending}
               onClick={() => resultDialog.request && resultMutation.mutate({ id: resultDialog.request._id, data: scores })}
             >
@@ -200,7 +199,7 @@ function TeamAvatar({ team }: { team: MatchRequest['requesterTeam'] }) {
     <div className="flex flex-col items-center gap-1 w-24">
       <Avatar className="h-12 w-12">
         <AvatarImage src={team.logo} alt={team.name} />
-        <AvatarFallback className="bg-green-100 text-green-700 font-bold">{team.name.charAt(0)}</AvatarFallback>
+        <AvatarFallback className="bg-primary/10 text-primary font-bold">{team.name.charAt(0)}</AvatarFallback>
       </Avatar>
       <p className="text-xs font-medium text-center line-clamp-2">{team.name}</p>
       <span className="text-xs text-amber-600 font-bold">{team.stats.eloRating} ELO</span>

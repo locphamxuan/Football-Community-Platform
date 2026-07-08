@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Field } from '@/types';
-import { Star, MapPin, Clock } from 'lucide-react';
+import { Star, MapPin, Clock, Volleyball } from 'lucide-react';
 
 interface Props {
   field: Field;
@@ -32,8 +32,8 @@ export default function FieldCard({ field }: Props) {
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <span className="text-4xl">⚽</span>
+            <div className="flex items-center justify-center h-full bg-primary/5">
+              <Volleyball className="size-10 text-primary/40" aria-hidden />
             </div>
           )}
 
@@ -42,7 +42,7 @@ export default function FieldCard({ field }: Props) {
             {field.subFields
               .filter((sf, i, arr) => arr.findIndex((x) => x.fieldType === sf.fieldType) === i)
               .map((sf) => (
-                <Badge key={sf.fieldType} className="bg-green-600 text-white text-xs">
+                <Badge key={sf.fieldType} className="bg-primary text-white text-xs">
                   {sf.fieldType}
                 </Badge>
               ))}
@@ -58,7 +58,7 @@ export default function FieldCard({ field }: Props) {
 
         <CardContent className="p-4 space-y-2">
           {/* Name */}
-          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-green-600 transition-colors">
+          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-primary transition-colors">
             {field.name}
           </h3>
 
@@ -83,7 +83,7 @@ export default function FieldCard({ field }: Props) {
             </div>
             <div className="text-right">
               <span className="text-xs text-muted-foreground">từ </span>
-              <span className="text-sm font-semibold text-green-600">{formatPrice(minPrice)}/h</span>
+              <span className="text-sm font-semibold text-primary">{formatPrice(minPrice)}/h</span>
             </div>
           </div>
         </CardContent>

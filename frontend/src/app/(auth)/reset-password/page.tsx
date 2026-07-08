@@ -57,7 +57,7 @@ function ResetPasswordForm() {
         </CardContent>
 
         <CardFooter>
-          <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={resetPassword.isPending}>
+          <Button type="submit" className="w-full" disabled={resetPassword.isPending}>
             {resetPassword.isPending ? 'Đang cập nhật...' : 'Đặt lại mật khẩu'}
           </Button>
         </CardFooter>
@@ -68,17 +68,8 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <span className="text-4xl">⚽</span>
-          <h1 className="mt-2 text-2xl font-bold text-green-700">Football Platform</h1>
-        </div>
-
-        <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
-          <ResetPasswordForm />
-        </Suspense>
-      </div>
-    </div>
+    <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

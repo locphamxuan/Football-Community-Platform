@@ -109,7 +109,7 @@ export default function MyBookingsPage() {
 
                   {/* Right: price + action */}
                   <div className="flex flex-col items-end gap-2">
-                    <span className="font-bold text-green-600 text-lg">{formatPrice(booking.totalPrice)}</span>
+                    <span className="font-bold text-primary text-lg">{formatPrice(booking.totalPrice)}</span>
                     {['pending', 'confirmed'].includes(booking.status) && (
                       <Button
                         variant="outline"

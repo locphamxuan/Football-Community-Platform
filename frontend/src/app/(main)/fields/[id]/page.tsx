@@ -16,7 +16,7 @@ import reviewService from '@/services/review.service';
 import useAuthStore from '@/stores/authStore';
 import type { Review } from '@/types';
 import { toast } from 'sonner';
-import { Star, MapPin, Clock, Phone, CheckCircle, Car, Droplets, Utensils, Wifi, ThumbsUp, MessageSquare } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, CheckCircle, Car, Droplets, Utensils, Wifi, ThumbsUp, MessageSquare, Volleyball } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -48,7 +48,7 @@ const SURFACE_LABELS: Record<string, string> = {
 
 export default function FieldDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const qc = useQueryClient();
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -124,8 +124,8 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         ))}
         {field.images.length === 0 && (
-          <div className="col-span-4 row-span-2 flex items-center justify-center bg-gray-100">
-            <span className="text-6xl">⚽</span>
+          <div className="col-span-4 row-span-2 flex items-center justify-center bg-primary/5">
+            <Volleyball className="size-16 text-primary/40" aria-hidden />
           </div>
         )}
       </div>
@@ -161,7 +161,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Operating hours */}
           <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-green-600" />
+            <Clock className="h-4 w-4 text-primary" />
             <span>Giờ hoạt động: <strong>{field.operatingHours.open} – {field.operatingHours.close}</strong></span>
           </div>
 
@@ -172,12 +172,12 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
               {field.subFields.map((sf) => (
                 <div
                   key={sf._id}
-                  className={`border rounded-lg p-3 ${sf.status === 'available' ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}
+                  className={`border rounded-lg p-3 ${sf.status === 'available' ? 'border-primary/30 bg-primary/5' : 'border-gray-200 bg-gray-50'}`}
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{sf.name}</span>
                     <Badge variant={sf.status === 'available' ? 'default' : 'secondary'}
-                      className={sf.status === 'available' ? 'bg-green-600' : ''}>
+                      className={sf.status === 'available' ? 'bg-primary' : ''}>
                       {sf.status === 'available' ? 'Sẵn sàng' : sf.status === 'maintenance' ? 'Bảo trì' : 'Đóng cửa'}
                     </Badge>
                   </div>
@@ -219,7 +219,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
               <ul className="space-y-1">
                 {field.rules.map((r, i) => (
                   <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                    <span className="text-green-600">•</span> {r}
+                    <span className="text-primary">•</span> {r}
                   </li>
                 ))}
               </ul>
@@ -253,7 +253,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                   />
                   <Button
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-primary hover:bg-primary/90"
                     disabled={createReviewMutation.isPending}
                     onClick={() => createReviewMutation.mutate()}
                   >
@@ -278,7 +278,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm">{review.user.fullName}</span>
-                          {review.isVerified && <Badge className="text-xs bg-green-50 text-green-700 border-green-200">Đã đặt sân</Badge>}
+                          {review.isVerified && <Badge className="text-xs bg-primary/10 text-primary border-primary/20">Đã đặt sân</Badge>}
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(review.createdAt), 'dd/MM/yyyy', { locale: vi })}
                           </span>
@@ -292,7 +292,7 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="flex items-center gap-2 mt-2">
                           <button
                             type="button"
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-600"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                             onClick={() => isAuthenticated && likeMutation.mutate(review._id)}
                           >
                             <ThumbsUp className="h-3 w-3" />
@@ -300,8 +300,8 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                           </button>
                         </div>
                         {review.ownerReply?.comment && (
-                          <div className="mt-2 ml-4 p-2 rounded bg-green-50 border-l-2 border-green-400">
-                            <p className="text-xs font-medium text-green-700">Phản hồi của chủ sân:</p>
+                          <div className="mt-2 ml-4 p-2 rounded bg-primary/5 border-l-2 border-primary/60">
+                            <p className="text-xs font-medium text-primary">Phản hồi của chủ sân:</p>
                             <p className="text-xs text-gray-700 mt-0.5">{review.ownerReply.comment}</p>
                           </div>
                         )}
@@ -328,15 +328,15 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Buổi sáng (6h–12h)</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekday.morning)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekday.morning)}/h</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Buổi chiều (12h–18h)</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekday.afternoon)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekday.afternoon)}/h</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Buổi tối (18h–23h)</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekday.evening)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekday.evening)}/h</span>
                   </div>
                 </div>
               </div>
@@ -347,20 +347,20 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Buổi sáng</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekend.morning)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekend.morning)}/h</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Buổi chiều</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekend.afternoon)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekend.afternoon)}/h</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Buổi tối</span>
-                    <span className="font-medium text-green-600">{formatPrice(field.pricing.weekend.evening)}/h</span>
+                    <span className="font-medium text-primary">{formatPrice(field.pricing.weekend.evening)}/h</span>
                   </div>
                 </div>
               </div>
               <Link href={`/bookings/create?fieldId=${field._id}`}>
-                <Button className="w-full bg-green-600 hover:bg-green-700 mt-2">
+                <Button className="w-full bg-primary hover:bg-primary/90 mt-2">
                   Đặt sân ngay
                 </Button>
               </Link>
@@ -372,13 +372,13 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
             <CardContent className="pt-4">
               <p className="text-sm font-medium mb-2">Chủ sân</p>
               <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                   {field.owner.fullName?.[0] ?? '?'}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{field.owner.fullName}</p>
                   {field.owner.phone && (
-                    <a href={`tel:${field.owner.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-600">
+                    <a href={`tel:${field.owner.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
                       <Phone className="h-3 w-3" /> {field.owner.phone}
                     </a>
                   )}
