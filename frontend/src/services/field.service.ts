@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, Field } from '@/types';
+import type { ApiResponse, Field, SubFieldAvailability } from '@/types';
 
 export interface FieldFilters {
   search?: string;
@@ -33,7 +33,7 @@ const fieldService = {
     api.get<ApiResponse<{ fields: Field[] }>>('/fields/owner/my-fields'),
 
   checkAvailability: (id: string, params: AvailabilityQuery) =>
-    api.get(`/fields/${id}/availability`, { params }),
+    api.get<ApiResponse<{ availability: SubFieldAvailability[] }>>(`/fields/${id}/availability`, { params }),
 
   createField: (data: FormData) =>
     api.post<ApiResponse<{ field: Field }>>('/fields', data, {

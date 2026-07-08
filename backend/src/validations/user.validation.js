@@ -12,8 +12,6 @@ const updateProfileSchema = z.object({
   playerProfile: z.object({
     positions: z.array(z.enum(['goalkeeper', 'defender', 'midfielder', 'forward'])).max(4).optional(),
     skillLevel: z.enum(['beginner', 'intermediate', 'advanced', 'professional']).optional(),
-    preferredFoot: z.enum(['left', 'right', 'both']).optional(),
-    preferredFieldSize: z.array(z.enum(['5v5', '7v7', '11v11'])).optional(),
     bio: z.string().max(500).optional(),
   }).optional(),
   notifications: z.object({

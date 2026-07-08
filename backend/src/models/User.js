@@ -65,8 +65,6 @@ const userSchema = new mongoose.Schema(
         enum: ['beginner', 'intermediate', 'advanced', 'professional'],
         default: 'beginner',
       },
-      preferredFoot: { type: String, enum: ['left', 'right', 'both'], default: 'right' },
-      preferredFieldSize: { type: [String], default: [] },
       bio: { type: String, default: '' },
       stats: {
         matchesPlayed: { type: Number, default: 0 },
