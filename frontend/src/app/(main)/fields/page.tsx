@@ -66,7 +66,7 @@ export default function FieldsPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
-          <Button onClick={handleSearch} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={handleSearch} className="bg-primary hover:bg-primary/90">
             Tìm kiếm
           </Button>
         </div>
@@ -83,7 +83,7 @@ export default function FieldsPage() {
             <Badge
               key={type}
               variant={filters.fieldType === type ? 'default' : 'outline'}
-              className={`cursor-pointer ${filters.fieldType === type ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-green-50'}`}
+              className={`cursor-pointer ${filters.fieldType === type ? 'bg-primary hover:bg-primary/90' : 'hover:bg-accent'}`}
               onClick={() => toggleFieldType(type)}
             >
               {type}

@@ -18,7 +18,7 @@ import { SKILL_LEVEL_LABELS, SKILL_LEVEL_COLORS } from '@/lib/constants';
 import useAuthStore from '@/stores/authStore';
 import type { Team, TeamMember } from '@/types';
 import { toast } from 'sonner';
-import { Trophy, Swords, Users, MapPin, Shield, UserMinus, Copy, RefreshCw } from 'lucide-react';
+import { Trophy, Users, MapPin, Shield, UserMinus, Copy, RefreshCw } from 'lucide-react';
 
 export default function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -81,9 +81,9 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start gap-6 mb-8">
-        <Avatar className="h-24 w-24 border-4 border-green-100">
+        <Avatar className="h-24 w-24 border-4 border-primary/20">
           <AvatarImage src={team.logo} alt={team.name} />
-          <AvatarFallback className="bg-green-100 text-green-700 font-bold text-3xl">
+          <AvatarFallback className="bg-primary/10 text-primary font-bold text-3xl">
             {team.name.charAt(0)}
           </AvatarFallback>
         </Avatar>
@@ -91,7 +91,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h1 className="text-2xl font-bold text-gray-900">{team.name}</h1>
-            {team.status === 'active' && <Badge className="bg-green-100 text-green-700">Đang hoạt động</Badge>}
+            {team.status === 'active' && <Badge className="bg-primary/10 text-primary">Đang hoạt động</Badge>}
           </div>
 
           <div className="flex flex-wrap gap-2 mb-3">
@@ -135,7 +135,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             <Separator />
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <div className="text-xl font-bold text-green-600">{wins}</div>
+                <div className="text-xl font-bold text-primary">{wins}</div>
                 <div className="text-xs text-muted-foreground">Thắng</div>
               </div>
               <div>
@@ -220,7 +220,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
           <DialogFooter>
             <Button variant="outline" onClick={() => setJoinDialogOpen(false)}>Hủy</Button>
             <Button
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={inviteCode.length < 4 || joinMutation.isPending}
               onClick={() => joinMutation.mutate()}
             >
@@ -242,7 +242,7 @@ function MemberRow({
   onRemove: (uid: string) => void;
 }) {
   const uid = member.user?.id ?? (member.user as unknown as { _id: string })?._id ?? '';
-  const roleBadge = member.role === 'manager' ? 'bg-green-100 text-green-700' : member.role === 'captain' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600';
+  const roleBadge = member.role === 'manager' ? 'bg-primary/10 text-primary' : member.role === 'captain' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600';
   const roleLabel = member.role === 'manager' ? 'Quản lý' : member.role === 'captain' ? 'Đội trưởng' : 'Cầu thủ';
 
   return (

@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, Team, PaginationMeta } from '@/types';
+import type { ApiResponse, Team } from '@/types';
 
 export interface TeamFilters {
   page?: number;

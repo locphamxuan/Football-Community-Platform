@@ -26,15 +26,7 @@ export default function LoginPage() {
   const onSubmit = (data: LoginForm) => login.mutate(data);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <span className="text-4xl">⚽</span>
-          <h1 className="mt-2 text-2xl font-bold text-green-700">Football Platform</h1>
-          <p className="text-sm text-muted-foreground">Nền tảng bóng đá phong trào</p>
-        </div>
-
-        <Card>
+    <Card>
           <CardHeader>
             <CardTitle>Đăng nhập</CardTitle>
             <CardDescription>Nhập thông tin tài khoản để tiếp tục</CardDescription>
@@ -58,7 +50,7 @@ export default function LoginPage() {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Mật khẩu</Label>
-                  <Link href="/forgot-password" className="text-xs text-green-600 hover:underline">
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
                     Quên mật khẩu?
                   </Link>
                 </div>
@@ -75,19 +67,17 @@ export default function LoginPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={login.isPending}>
+              <Button type="submit" className="w-full" disabled={login.isPending}>
                 {login.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Chưa có tài khoản?{' '}
-                <Link href="/register" className="text-green-600 font-medium hover:underline">
+                <Link href="/register" className="text-primary font-medium hover:underline">
                   Đăng ký ngay
                 </Link>
               </p>
             </CardFooter>
           </form>
-        </Card>
-      </div>
-    </div>
+    </Card>
   );
 }

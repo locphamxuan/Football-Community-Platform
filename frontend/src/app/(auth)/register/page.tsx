@@ -45,14 +45,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <span className="text-4xl">⚽</span>
-          <h1 className="mt-2 text-2xl font-bold text-green-700">Football Platform</h1>
-        </div>
-
-        <Card>
+    <Card>
           <CardHeader>
             <CardTitle>Tạo tài khoản</CardTitle>
             <CardDescription>Tham gia cộng đồng bóng đá phong trào</CardDescription>
@@ -104,23 +97,17 @@ export default function RegisterPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
-              <Button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-700"
-                disabled={register_.isPending}
-              >
+              <Button type="submit" className="w-full" disabled={register_.isPending}>
                 {register_.isPending ? 'Đang xử lý...' : 'Đăng ký'}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Đã có tài khoản?{' '}
-                <Link href="/login" className="text-green-600 font-medium hover:underline">
+                <Link href="/login" className="text-primary font-medium hover:underline">
                   Đăng nhập
                 </Link>
               </p>
             </CardFooter>
           </form>
-        </Card>
-      </div>
-    </div>
+    </Card>
   );
 }

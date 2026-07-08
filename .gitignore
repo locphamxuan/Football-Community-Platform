@@ -1,0 +1,14 @@
+# === AI tooling / skills (KHÔNG push lên GitHub) ===
+# Skill UI/UX Pro Max cài vào project qua `uipro init` — chỉ dùng cục bộ
+.claude/
+
+# claude-mem (nếu tạo file cục bộ trong project)
+.claude-mem/
+claude-mem.db*
+
+# Thư mục clone repo AI dùng để tham khảo cục bộ (nếu có)
+ai-tools/
+external-skills/
+
+# === Chung ===
+node_modules/

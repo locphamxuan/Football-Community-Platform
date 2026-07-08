@@ -84,16 +84,16 @@ export default function CreateTeamPage() {
           <CardContent className="space-y-4">
             {/* Logo */}
             <div className="flex items-center gap-4">
-              <div className="relative h-20 w-20 rounded-full bg-green-50 border-2 border-dashed border-green-200 flex items-center justify-center overflow-hidden">
+              <div className="relative h-20 w-20 rounded-full bg-primary/5 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden">
                 {logoPreview ? (
                   <Image src={logoPreview} alt="logo" fill className="object-cover" />
                 ) : (
-                  <Shield className="h-8 w-8 text-green-400" />
+                  <Shield className="h-8 w-8 text-primary/60" />
                 )}
               </div>
               <div>
                 <label htmlFor="logo" className="cursor-pointer">
-                  <div className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700">
+                  <div className="flex items-center gap-2 text-sm text-primary hover:text-primary">
                     <Upload className="h-4 w-4" />
                     <span>Tải logo lên</span>
                   </div>
@@ -168,7 +168,7 @@ export default function CreateTeamPage() {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={mutation.isPending}>
+        <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={mutation.isPending}>
           {mutation.isPending ? 'Đang tạo...' : 'Tạo đội bóng'}
         </Button>
       </form>
