@@ -20,4 +20,15 @@ const cancelBookingSchema = z.object({
   reason: z.string().min(1, 'Cancel reason required').max(500),
 });
 
-module.exports = { createBookingSchema, cancelBookingSchema };
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+const ownerBookingsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  fieldId: z.string().min(1).optional(),
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed', 'no_show']).optional(),
+  startDate: z.string().regex(DATE_ONLY, 'startDate must be YYYY-MM-DD').optional(),
+  endDate: z.string().regex(DATE_ONLY, 'endDate must be YYYY-MM-DD').optional(),
+});
+
+module.exports = { createBookingSchema, cancelBookingSchema, ownerBookingsQuerySchema };

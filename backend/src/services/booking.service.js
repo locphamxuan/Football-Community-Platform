@@ -119,12 +119,121 @@ const getFieldBookings = async (fieldId, ownerId, query) => {
   return { bookings, total, page, limit };
 };
 
+// ─── getOwnerBookings ──────────────────────────────────────────────────────────
+/**
+ * Lịch đặt trên TẤT CẢ sân của một chủ sân (hoặc một sân cụ thể qua query.fieldId).
+ * Gắn kèm tên sân con vì sub-field là sub-document nhúng trong Field, không populate được.
+ */
+const getOwnerBookings = async (ownerId, query) => {
+  const { page, limit, skip } = getPagination(query);
+
+  const fieldFilter = { owner: new mongoose.Types.ObjectId(ownerId) };
+  if (query.fieldId) fieldFilter._id = new mongoose.Types.ObjectId(query.fieldId);
+
+  const fields = await Field.find(fieldFilter).select('name location subFields').lean();
+  if (fields.length === 0) return { bookings: [], total: 0, page, limit };
+
+  const filter = { field: { $in: fields.map((f) => f._id) } };
+  if (query.status) filter.status = query.status;
+  if (query.startDate) filter.date = { $gte: new Date(query.startDate) };
+  if (query.endDate) filter.date = { ...(filter.date || {}), $lte: new Date(query.endDate) };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate('user', 'username fullName avatar phone')
+      .populate('team', 'name logo')
+      .skip(skip)
+      .limit(limit)
+      .sort({ date: -1, startTime: -1 })
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+
+  const fieldMap = new Map(fields.map((f) => [f._id.toString(), f]));
+  const enriched = bookings.map((b) => {
+    const field = fieldMap.get(b.field.toString());
+    const sub = field?.subFields.find((s) => s._id.toString() === b.subField.toString());
+    return {
+      ...b,
+      field: field ? { _id: field._id, name: field.name, location: field.location } : b.field,
+      subFieldName: sub?.name ?? 'Sân con đã gỡ',
+      subFieldType: sub?.fieldType ?? '',
+    };
+  });
+
+  return { bookings: enriched, total, page, limit };
+};
+
+// ─── getOwnerStats ─────────────────────────────────────────────────────────────
+/** Số liệu tổng quan cho dashboard chủ sân. */
+const getOwnerStats = async (ownerId) => {
+  const fields = await Field.find({ owner: ownerId }).select('status rating').lean();
+  const fieldIds = fields.map((f) => f._id);
+
+  const empty = {
+    totalFields: fields.length,
+    activeFields: fields.filter((f) => f.status === 'active').length,
+    averageRating: 0,
+    pendingBookings: 0,
+    todayBookings: 0,
+    completedBookings: 0,
+    monthRevenue: 0,
+  };
+  if (fieldIds.length === 0) return empty;
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTomorrow = new Date(startOfToday.getTime() + 86400000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [statusCounts, todayBookings, revenueAgg] = await Promise.all([
+    Booking.aggregate([
+      { $match: { field: { $in: fieldIds } } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
+    Booking.countDocuments({
+      field: { $in: fieldIds },
+      date: { $gte: startOfToday, $lt: startOfTomorrow },
+      status: { $in: ['pending', 'confirmed'] },
+    }),
+    Booking.aggregate([
+      {
+        $match: {
+          field: { $in: fieldIds },
+          status: 'completed',
+          date: { $gte: startOfMonth },
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } },
+    ]),
+  ]);
+
+  const byStatus = Object.fromEntries(statusCounts.map((s) => [s._id, s.count]));
+  const rated = fields.filter((f) => f.rating?.count > 0);
+  const averageRating = rated.length > 0
+    ? rated.reduce((sum, f) => sum + f.rating.average, 0) / rated.length
+    : 0;
+
+  return {
+    ...empty,
+    averageRating: Math.round(averageRating * 10) / 10,
+    pendingBookings: byStatus.pending ?? 0,
+    todayBookings,
+    completedBookings: byStatus.completed ?? 0,
+    monthRevenue: revenueAgg[0]?.total ?? 0,
+  };
+};
+
 // ─── cancelBooking ─────────────────────────────────────────────────────────────
 const cancelBooking = async (bookingId, userId, reason, isAdmin = false) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new AppError('Booking not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  // Người đặt tự huỷ, hoặc chủ sân từ chối lịch đặt trên sân của mình
   if (!isAdmin && booking.user.toString() !== userId) {
-    throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+    const field = await Field.findById(booking.field).select('owner');
+    if (!field || field.owner.toString() !== userId) {
+      throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+    }
   }
   if (!['pending', 'confirmed'].includes(booking.status)) {
     throw new AppError('Booking cannot be cancelled', HttpStatus.BAD_REQUEST, ErrorCode.BOOKING_NOT_CANCELLABLE);
@@ -187,4 +296,8 @@ const markNoShow = async (bookingId, ownerId) => {
   return Booking.findByIdAndUpdate(bookingId, { status: 'no_show' }, { new: true });
 };
 
-module.exports = { createBooking, getBookingById, getMyBookings, getFieldBookings, cancelBooking, confirmBooking, completeBooking, markNoShow };
+module.exports = {
+  createBooking, getBookingById, getMyBookings, getFieldBookings,
+  getOwnerBookings, getOwnerStats,
+  cancelBooking, confirmBooking, completeBooking, markNoShow,
+};
