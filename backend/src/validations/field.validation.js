@@ -32,7 +32,12 @@ const createFieldSchema = z.object({
   cancellationPolicy: z.string().max(500).optional(),
 });
 
-const updateFieldSchema = createFieldSchema.partial();
+const updateFieldSchema = createFieldSchema.partial().extend({
+  // Chủ sân chỉ được bật/tắt nhận đặt sân — 'pending_approval' do hệ thống quản lý
+  status: z.enum(['active', 'inactive']).optional(),
+  // URL ảnh cần gỡ khỏi sân (ảnh mới vẫn upload qua field `images`)
+  removeImages: z.array(z.string().url()).optional(),
+});
 
 const createSubFieldSchema = z.object({
   name: z.string().min(1).max(50),

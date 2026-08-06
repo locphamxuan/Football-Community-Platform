@@ -26,12 +26,25 @@ const NAV_LINKS = [
   { href: '/teams', label: 'Đội bóng' },
 ];
 
+const MOBILE_USER_LINKS = [
+  { href: '/bookings', label: 'Sân đã đặt' },
+  { href: '/match-requests', label: 'Lời mời thi đấu' },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const [mobileOpen, setMobileOpen] = useState(false);
   // authStore dùng persist (localStorage) — chờ mount để tránh hydration mismatch
   const mounted = useMounted();
+
+  const canManageFields = Boolean(
+    user && (user.roles.includes('field_owner') || user.roles.includes('admin'))
+  );
+  const mobileUserLinks = canManageFields
+    ? [...MOBILE_USER_LINKS, { href: '/owner', label: 'Quản lý sân' }]
+    : MOBILE_USER_LINKS;
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -117,20 +130,16 @@ export default function Navbar() {
                 <Separator className="my-3" />
                 {mounted && isAuthenticated ? (
                   <div className="flex flex-col gap-1">
-                    <Link
-                      href="/bookings"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-lg px-3 py-2.5 text-base font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                    >
-                      Sân đã đặt
-                    </Link>
-                    <Link
-                      href="/match-requests"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-lg px-3 py-2.5 text-base font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                    >
-                      Lời mời thi đấu
-                    </Link>
+                    {mobileUserLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="rounded-lg px-3 py-2.5 text-base font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">

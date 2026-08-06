@@ -24,6 +24,16 @@ const getFieldBookings = catchAsync(async (req, res) => {
   sendSuccess(res, { bookings }, 'Bookings retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
 });
 
+const getOwnerBookings = catchAsync(async (req, res) => {
+  const { bookings, total, page, limit } = await bookingService.getOwnerBookings(req.user.id, req.query);
+  sendSuccess(res, { bookings }, 'Bookings retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
+});
+
+const getOwnerStats = catchAsync(async (req, res) => {
+  const stats = await bookingService.getOwnerStats(req.user.id);
+  sendSuccess(res, { stats });
+});
+
 const cancelBooking = catchAsync(async (req, res) => {
   const isAdmin = req.user.roles.includes('admin');
   const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.body.reason, isAdmin);
@@ -45,4 +55,8 @@ const markNoShow = catchAsync(async (req, res) => {
   sendSuccess(res, { booking }, 'Booking marked as no-show');
 });
 
-module.exports = { createBooking, getBookingById, getMyBookings, getFieldBookings, cancelBooking, confirmBooking, completeBooking, markNoShow };
+module.exports = {
+  createBooking, getBookingById, getMyBookings, getFieldBookings,
+  getOwnerBookings, getOwnerStats,
+  cancelBooking, confirmBooking, completeBooking, markNoShow,
+};

@@ -1,5 +1,12 @@
 import api from './api';
-import type { ApiResponse, Field, SubFieldAvailability } from '@/types';
+import type { ApiResponse, Field, SubField, SubFieldAvailability } from '@/types';
+
+export interface SubFieldPayload {
+  name: string;
+  fieldType: SubField['fieldType'];
+  surface: SubField['surface'];
+  capacity: number;
+}
 
 export interface FieldFilters {
   search?: string;
@@ -46,6 +53,16 @@ const fieldService = {
     }),
 
   deleteField: (id: string) => api.delete(`/fields/${id}`),
+
+  // ── Sân con ────────────────────────────────────────────────────────────────
+  addSubField: (fieldId: string, data: SubFieldPayload) =>
+    api.post<ApiResponse<{ field: Field }>>(`/fields/${fieldId}/sub-fields`, data),
+
+  updateSubField: (fieldId: string, subFieldId: string, data: Partial<SubFieldPayload> & { status?: SubField['status'] }) =>
+    api.patch<ApiResponse<{ field: Field }>>(`/fields/${fieldId}/sub-fields/${subFieldId}`, data),
+
+  deleteSubField: (fieldId: string, subFieldId: string) =>
+    api.delete<ApiResponse<{ field: Field }>>(`/fields/${fieldId}/sub-fields/${subFieldId}`),
 };
 
 export default fieldService;

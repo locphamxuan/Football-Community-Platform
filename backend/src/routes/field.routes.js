@@ -3,6 +3,7 @@ const controller = require('../controllers/field.controller');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
+const parseJsonFields = require('../middleware/parseJsonFields');
 const { uploadMultiple } = require('../middleware/upload');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 const Role = require('../constants/roles');
@@ -13,6 +14,9 @@ const {
 
 const router = Router();
 
+// Các field object/array được client gửi dạng JSON string trong multipart body
+const FIELD_JSON_KEYS = ['location', 'pricing', 'operatingHours', 'amenities', 'rules', 'removeImages'];
+
 // ── Public ────────────────────────────────────────────────────────────────────
 router.get('/',                  controller.getFields);
 router.get('/owner/my-fields',   authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN), controller.getMyFields);
@@ -22,12 +26,14 @@ router.get('/:id/availability',  validate(availabilityQuerySchema, 'query'), con
 // ── Field owner ───────────────────────────────────────────────────────────────
 router.post('/',
   authenticate, authorize(Role.FIELD_OWNER),
-  uploadLimiter, uploadMultiple('images', 8), validate(createFieldSchema),
+  uploadLimiter, uploadMultiple('images', 8),
+  parseJsonFields(FIELD_JSON_KEYS), validate(createFieldSchema),
   controller.createField
 );
 router.patch('/:id',
   authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN),
-  uploadLimiter, uploadMultiple('images', 8), validate(updateFieldSchema),
+  uploadLimiter, uploadMultiple('images', 8),
+  parseJsonFields(FIELD_JSON_KEYS), validate(updateFieldSchema),
   controller.updateField
 );
 router.delete('/:id', authenticate, authorize(Role.FIELD_OWNER, Role.ADMIN), controller.deleteField);

@@ -4,10 +4,19 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const Role = require('../constants/roles');
-const { createBookingSchema, cancelBookingSchema } = require('../validations/booking.validation');
+const { createBookingSchema, cancelBookingSchema, ownerBookingsQuerySchema } = require('../validations/booking.validation');
 
 const router = Router();
 router.use(authenticate);
+
+// ── Field owner / Admin ───────────────────────────────────────────────────────
+// Đặt trước '/:id' để '/owner/...' không bị hiểu là booking id
+router.get('/owner/bookings',
+  authorize(Role.FIELD_OWNER, Role.ADMIN),
+  validate(ownerBookingsQuerySchema, 'query'),
+  controller.getOwnerBookings
+);
+router.get('/owner/stats', authorize(Role.FIELD_OWNER, Role.ADMIN), controller.getOwnerStats);
 
 // ── User ──────────────────────────────────────────────────────────────────────
 router.post('/',             validate(createBookingSchema), controller.createBooking);
