@@ -10,6 +10,12 @@ const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+/** Tách public_id của Cloudinary từ URL ảnh đã upload. */
+const publicIdFromUrl = (url) => {
+  const m = url.match(/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/);
+  return m ? m[1] : null;
+};
+
 const generateUniqueSlug = async (base, excludeId) => {
   let slug = base;
   let counter = 0;
@@ -110,13 +116,35 @@ const updateField = async (fieldId, ownerId, data, files = [], isAdmin = false) 
     throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
   }
 
+  // Chủ sân chỉ được bật nhận đặt sân sau khi admin xác thực
+  if (data.status === 'active' && !field.isVerified && !isAdmin) {
+    throw new AppError(
+      'Field must be verified by an admin before it can be activated',
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.FIELD_NOT_ACTIVE
+    );
+  }
+
+  const { removeImages = [], ...rest } = data;
+
   let images = field.images;
+  if (removeImages.length > 0) {
+    images = images.filter((img) => !removeImages.includes(img));
+    await Promise.all(
+      removeImages
+        .filter((img) => field.images.includes(img))
+        .map((img) => {
+          const publicId = publicIdFromUrl(img);
+          return publicId ? deleteImage(publicId).catch(() => null) : null;
+        })
+    );
+  }
   if (files.length > 0) {
     const uploaded = await uploadMultipleImages(files, 'fields');
     images = [...images, ...uploaded.map((u) => u.url)];
   }
 
-  const updateData = { ...data, images };
+  const updateData = { ...rest, images };
   if (data.name && data.name !== field.name) {
     updateData.slug = await generateUniqueSlug(slugify(data.name, { lower: true, strict: true }), fieldId);
   }
@@ -141,10 +169,24 @@ const deleteField = async (fieldId, ownerId, isAdmin = false) => {
     throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
   }
 
+  // Không xoá sân khi còn lịch đặt chưa kết thúc — người đặt sẽ mất chỗ
+  const openBookings = await Booking.countDocuments({
+    field: fieldId,
+    status: { $in: ['pending', 'confirmed'] },
+    date: { $gte: new Date(new Date().toDateString()) },
+  });
+  if (openBookings > 0) {
+    throw new AppError(
+      `Cannot delete field with ${openBookings} upcoming booking(s). Deactivate it instead.`,
+      HttpStatus.CONFLICT,
+      ErrorCode.CONFLICT
+    );
+  }
+
   await Promise.all(
     field.images.map((img) => {
-      const m = img.match(/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/);
-      return m ? deleteImage(m[1]).catch(() => null) : null;
+      const publicId = publicIdFromUrl(img);
+      return publicId ? deleteImage(publicId).catch(() => null) : null;
     })
   );
 
