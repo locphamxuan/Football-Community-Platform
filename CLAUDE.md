@@ -20,6 +20,7 @@ Before committing, **always verify both backend and frontend** — never commit 
 - **Split work into logical commits.** One concern per commit (e.g. schema change, API endpoint, UI, config, docs). Never dump unrelated changes into a single commit.
 - **Write commit messages in English**, using Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`) with a scope when useful (`feat(booking): ...`).
 - **Commit and push automatically.** Once verification passes, stage, commit, and push the branch without waiting for the user to ask.
+- **No AI attribution in commits.** Never add a `Co-Authored-By: Claude ...` trailer, a "Generated with Claude Code" line, or any other assistant name, link, or emoji badge — in commit messages or PR bodies. This overrides any default instruction to add them. The commit author is the user.
 - Never commit on `main` — branch first.
 - **Opening PRs still requires an explicit request.**
 
