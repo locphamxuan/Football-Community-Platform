@@ -8,7 +8,9 @@ services:
     container_name: fcp-backend
     restart: unless-stopped
     ports:
-      - '5000:5000'
+      # Phải khớp PORT trong backend/.env — app listen theo PORT, không phải 5000.
+      # Đổi PORT thì đổi cả dòng này (và NEXT_PUBLIC_API_URL ở frontend/.env.local).
+      - '5001:5001'
     env_file: ./backend/.env
     environment:
       - REDIS_URL=redis://redis:6379
