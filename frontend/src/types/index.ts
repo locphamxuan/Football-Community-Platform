@@ -112,6 +112,27 @@ export interface Booking {
   createdAt: string;
 }
 
+/**
+ * Booking như chủ sân nhìn thấy: sân con là sub-document nhúng trong Field nên
+ * backend giải tên sẵn thay vì populate.
+ */
+export interface OwnerBooking extends Omit<Booking, 'field'> {
+  field: Pick<Field, '_id' | 'name' | 'location'>;
+  subFieldName: string;
+  subFieldType: '5v5' | '7v7' | '11v11' | '';
+  team?: Pick<Team, '_id' | 'name' | 'logo'>;
+}
+
+export interface OwnerStats {
+  totalFields: number;
+  activeFields: number;
+  averageRating: number;
+  pendingBookings: number;
+  todayBookings: number;
+  completedBookings: number;
+  monthRevenue: number;
+}
+
 // ── Team ─────────────────────────────────────────────────────────────────────
 export interface TeamMember {
   user: Pick<User, 'id' | 'username' | 'fullName' | 'avatar'> & {

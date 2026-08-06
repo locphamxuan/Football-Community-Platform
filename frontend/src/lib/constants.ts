@@ -45,6 +45,46 @@ export const MATCH_REQUEST_STATUS_COLORS: Record<string, string> = {
   completed: 'bg-green-100 text-green-800',
 };
 
+export const SURFACE_LABELS: Record<string, string> = {
+  natural_grass: 'Cỏ tự nhiên',
+  artificial_grass: 'Cỏ nhân tạo',
+  concrete: 'Sân xi măng',
+};
+
+export const AMENITY_LABELS: Record<string, string> = {
+  parking: 'Bãi đỗ xe',
+  shower: 'Phòng tắm',
+  cafeteria: 'Căng tin',
+  changing_room: 'Phòng thay đồ',
+  wifi: 'Wifi',
+  lighting: 'Đèn chiếu sáng',
+  tribunes: 'Khán đài',
+};
+
+export const FIELD_STATUS_LABELS: Record<string, string> = {
+  active: 'Đang hoạt động',
+  inactive: 'Tạm ngưng',
+  pending_approval: 'Chờ duyệt',
+};
+
+export const FIELD_STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-800',
+  inactive: 'bg-gray-100 text-gray-800',
+  pending_approval: 'bg-yellow-100 text-yellow-800',
+};
+
+export const SUBFIELD_STATUS_LABELS: Record<string, string> = {
+  available: 'Sẵn sàng',
+  maintenance: 'Đang bảo trì',
+  closed: 'Đã đóng',
+};
+
+export const SUBFIELD_STATUS_COLORS: Record<string, string> = {
+  available: 'bg-green-100 text-green-800',
+  maintenance: 'bg-yellow-100 text-yellow-800',
+  closed: 'bg-red-100 text-red-800',
+};
+
 export const SKILL_LEVEL_LABELS: Record<string, string> = {
   beginner: 'Mới chơi',
   intermediate: 'Trung bình',
