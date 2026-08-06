@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarDays, LogOut, Swords, User, Users } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, LogOut, Swords, User, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,8 @@ export default function UserMenu() {
   const logout = useLogout();
 
   if (!user) return null;
+
+  const canManageFields = user.roles.includes('field_owner') || user.roles.includes('admin');
 
   const initials = (user.fullName || user.username || '?')
     .split(' ')
@@ -71,6 +73,15 @@ export default function UserMenu() {
           <Users className="size-4" />
           Đội của tôi
         </DropdownMenuItem>
+        {canManageFields && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/owner" />} className="cursor-pointer">
+              <LayoutDashboard className="size-4" />
+              Quản lý sân
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
