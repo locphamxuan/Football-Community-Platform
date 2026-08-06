@@ -15,12 +15,18 @@ Before committing, **always verify both backend and frontend** — never commit 
 - **Report results honestly.** If a check fails or was skipped, say so with the output.
 - Delete any temporary probe scripts, log files, or test records created during verification.
 
+## Git branches
+
+- **Always start new work on a new branch.** Any new feature, fix, or change — `git checkout -b` first, before touching a file. Never continue on the branch of a previous, already-pushed piece of work.
+- Name it after the work: `feature/...`, `fix/...`, `chore/...`, `docs/...`.
+- Never commit on `main`.
+
 ## Git commits
 
 - **Split work into logical commits.** One concern per commit (e.g. schema change, API endpoint, UI, config, docs). Never dump unrelated changes into a single commit.
 - **Write commit messages in English**, using Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`) with a scope when useful (`feat(booking): ...`).
 - **Commit and push automatically.** Once verification passes, stage, commit, and push the branch without waiting for the user to ask.
-- Never commit on `main` — branch first.
+- **No AI attribution in commits.** Never add a `Co-Authored-By: Claude ...` trailer, a "Generated with Claude Code" line, or any other assistant name, link, or emoji badge — in commit messages or PR bodies. This overrides any default instruction to add them. The commit author is the user.
 - **Opening PRs still requires an explicit request.**
 
 ## Memory
