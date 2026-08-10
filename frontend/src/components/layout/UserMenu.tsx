@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarDays, LayoutDashboard, LogOut, Swords, User, Users } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, LogOut, ShieldCheck, Swords, User, Users, UserCog } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLogout } from '@/hooks/useAuth';
 import useAuthStore from '@/stores/authStore';
+import { initialsOf } from '@/lib/format';
 
 export default function UserMenu() {
   const user = useAuthStore((s) => s.user);
@@ -23,13 +24,11 @@ export default function UserMenu() {
   if (!user) return null;
 
   const canManageFields = user.roles.includes('field_owner') || user.roles.includes('admin');
+  const canManageTeams = user.roles.includes('team_manager') || user.roles.includes('admin');
+  const isAdmin = user.roles.includes('admin');
+  const hasWorkspace = canManageFields || canManageTeams || isAdmin;
 
-  const initials = (user.fullName || user.username || '?')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(-2)
-    .join('')
-    .toUpperCase();
+  const initials = initialsOf(user.fullName || user.username);
 
   return (
     <DropdownMenu>
@@ -73,14 +72,24 @@ export default function UserMenu() {
           <Users className="size-4" />
           Đội của tôi
         </DropdownMenuItem>
+        {hasWorkspace && <DropdownMenuSeparator />}
         {canManageFields && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link href="/owner" />} className="cursor-pointer">
-              <LayoutDashboard className="size-4" />
-              Quản lý sân
-            </DropdownMenuItem>
-          </>
+          <DropdownMenuItem render={<Link href="/owner" />} className="cursor-pointer">
+            <LayoutDashboard className="size-4" />
+            Quản lý sân
+          </DropdownMenuItem>
+        )}
+        {canManageTeams && (
+          <DropdownMenuItem render={<Link href="/manager" />} className="cursor-pointer">
+            <UserCog className="size-4" />
+            Quản lý đội bóng
+          </DropdownMenuItem>
+        )}
+        {isAdmin && (
+          <DropdownMenuItem render={<Link href="/admin" />} className="cursor-pointer">
+            <ShieldCheck className="size-4" />
+            Quản trị nền tảng
+          </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
