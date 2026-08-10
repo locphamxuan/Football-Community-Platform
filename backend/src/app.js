@@ -31,7 +31,10 @@ app.use(cookieParser());
 app.use(mongoSanitize()); // chặn NoSQL injection
 
 // ── Logging ───────────────────────────────────────────────────────────────────
-app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+// Trong test, log mỗi request chỉ làm nhiễu kết quả jest
+if (env.NODE_ENV !== 'test') {
+  app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 app.use('/api', globalLimiter);
