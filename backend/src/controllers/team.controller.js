@@ -58,7 +58,18 @@ const regenerateInviteCode = catchAsync(async (req, res) => {
   sendSuccess(res, result, 'Invite code regenerated');
 });
 
+const transferManagement = catchAsync(async (req, res) => {
+  const team = await teamService.transferManagement(req.params.id, req.user.id, req.body.newManagerId);
+  sendSuccess(res, { team }, 'Team management transferred');
+});
+
+const getManagerDashboard = catchAsync(async (req, res) => {
+  const dashboard = await teamService.getManagerDashboard(req.user.id);
+  sendSuccess(res, dashboard);
+});
+
 module.exports = {
   getTeams, getTeamById, getMyTeams, createTeam, updateTeam, deleteTeam,
   joinTeam, leaveTeam, removeMember, updateMember, regenerateInviteCode,
+  transferManagement, getManagerDashboard,
 };

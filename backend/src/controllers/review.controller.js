@@ -40,4 +40,14 @@ const getMyReviews = catchAsync(async (req, res) => {
   sendSuccess(res, { reviews }, 'Reviews retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
 });
 
-module.exports = { getFieldReviews, createReview, updateReview, deleteReview, toggleLike, ownerReply, getMyReviews };
+const getOwnerReviews = catchAsync(async (req, res) => {
+  const { reviews, total, page, limit, unanswered } = await reviewService.getOwnerReviews(req.user.id, req.query);
+  sendSuccess(res, { reviews, unanswered }, 'Reviews retrieved', HttpStatus.OK, {
+    pagination: paginationMeta(total, page, limit),
+  });
+});
+
+module.exports = {
+  getFieldReviews, createReview, updateReview, deleteReview,
+  toggleLike, ownerReply, getMyReviews, getOwnerReviews,
+};

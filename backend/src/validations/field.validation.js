@@ -26,7 +26,7 @@ const createFieldSchema = z.object({
   operatingHours: z.object({
     open: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     close: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-  }).optional(),
+  }).refine((h) => h.open < h.close, { message: 'Closing time must be after opening time' }).optional(),
   amenities: z.array(z.string()).optional(),
   rules: z.array(z.string().max(200)).optional(),
   cancellationPolicy: z.string().max(500).optional(),
@@ -61,10 +61,16 @@ const availabilityQuerySchema = z.object({
   fieldType: z.enum(['5v5', '7v7', '11v11']).optional(),
 });
 
+const verifyFieldSchema = z.object({
+  approve: z.boolean().optional(),
+  note: z.string().max(500).optional(),
+});
+
 module.exports = {
   createFieldSchema,
   updateFieldSchema,
   createSubFieldSchema,
   updateSubFieldSchema,
   availabilityQuerySchema,
+  verifyFieldSchema,
 };

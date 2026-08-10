@@ -39,12 +39,17 @@ export default function Navbar() {
   // authStore dùng persist (localStorage) — chờ mount để tránh hydration mismatch
   const mounted = useMounted();
 
-  const canManageFields = Boolean(
-    user && (user.roles.includes('field_owner') || user.roles.includes('admin'))
-  );
-  const mobileUserLinks = canManageFields
-    ? [...MOBILE_USER_LINKS, { href: '/owner', label: 'Quản lý sân' }]
-    : MOBILE_USER_LINKS;
+  const roles = user?.roles ?? [];
+  const mobileUserLinks = [
+    ...MOBILE_USER_LINKS,
+    ...(roles.includes('field_owner') || roles.includes('admin')
+      ? [{ href: '/owner', label: 'Quản lý sân' }]
+      : []),
+    ...(roles.includes('team_manager') || roles.includes('admin')
+      ? [{ href: '/manager', label: 'Quản lý đội bóng' }]
+      : []),
+    ...(roles.includes('admin') ? [{ href: '/admin', label: 'Quản trị nền tảng' }] : []),
+  ];
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);

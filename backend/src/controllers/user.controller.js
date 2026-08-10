@@ -1,7 +1,6 @@
 const userService = require('../services/user.service');
-const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
+const { sendSuccess } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
-const HttpStatus = require('../constants/httpStatus');
 
 const getMe = catchAsync(async (req, res) => {
   const user = await userService.getMe(req.user.id);
@@ -29,14 +28,4 @@ const updateAvatar = catchAsync(async (req, res) => {
   sendSuccess(res, result, 'Avatar updated successfully');
 });
 
-const getUsers = catchAsync(async (req, res) => {
-  const { users, total, page, limit } = await userService.getUsers(req.query);
-  sendSuccess(res, { users }, 'Users retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
-});
-
-const updateUserStatus = catchAsync(async (req, res) => {
-  const user = await userService.updateUserStatus(req.params.id, req.body.status);
-  sendSuccess(res, { user }, 'User status updated');
-});
-
-module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar, getUsers, updateUserStatus };
+module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar };

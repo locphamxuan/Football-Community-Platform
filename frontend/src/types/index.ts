@@ -88,6 +88,9 @@ export interface Field {
   rules: string[];
   status: 'active' | 'inactive' | 'pending_approval';
   isVerified: boolean;
+  /** Ghi chú của admin khi duyệt hoặc từ chối sân. */
+  moderationNote?: string;
+  moderatedAt?: string;
   rating: { average: number; count: number };
   totalBookings: number;
   createdAt: string;
@@ -126,11 +129,33 @@ export interface OwnerBooking extends Omit<Booking, 'field'> {
 export interface OwnerStats {
   totalFields: number;
   activeFields: number;
+  totalSubFields: number;
   averageRating: number;
   pendingBookings: number;
+  confirmedBookings: number;
   todayBookings: number;
+  upcomingBookings: number;
   completedBookings: number;
+  cancelledBookings: number;
+  noShowBookings: number;
   monthRevenue: number;
+  lastMonthRevenue: number;
+}
+
+/** Lịch sân của đội, như người quản lý đội nhìn thấy. */
+export interface TeamBooking extends Omit<Booking, 'field'> {
+  field: Pick<Field, '_id' | 'name' | 'location' | 'images'>;
+  team?: Pick<Team, '_id' | 'name' | 'logo'>;
+}
+
+/** Một điểm trong biểu đồ doanh thu theo tháng của chủ sân. */
+export interface OwnerRevenuePoint {
+  month: string;
+  label: string;
+  revenue: number;
+  bookings: number;
+  completed: number;
+  cancelled: number;
 }
 
 // ── Team ─────────────────────────────────────────────────────────────────────
@@ -211,6 +236,173 @@ export interface Review {
   ownerReply?: { comment: string; repliedAt: string };
   isVerified: boolean;
   createdAt: string;
+}
+
+/** Đánh giá như chủ sân nhìn thấy — backend chỉ populate tên và địa chỉ sân. */
+export interface OwnerReview extends Omit<Review, 'field'> {
+  field: Pick<Field, '_id' | 'name' | 'location'>;
+}
+
+// ── Billing (chủ sân thuê nền tảng) ──────────────────────────────────────────
+export type PlanCode = 'free' | 'basic' | 'pro';
+
+export interface Plan {
+  code: PlanCode;
+  name: string;
+  monthlyPrice: number;
+  maxFields: number;
+  maxSubFieldsPerField: number;
+  /** -1 nghĩa là không giới hạn. */
+  includedBookingsPerMonth: number;
+  features: string[];
+}
+
+export interface Subscription {
+  _id: string;
+  owner: string;
+  plan: PlanCode;
+  status: 'active' | 'past_due' | 'cancelled';
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  autoRenew: boolean;
+  totalPaid: number;
+  createdAt: string;
+}
+
+export type InvoiceStatus = 'pending' | 'awaiting_confirmation' | 'paid' | 'void';
+
+export interface Invoice {
+  _id: string;
+  code: string;
+  owner: string | Pick<User, 'id' | 'username' | 'fullName' | 'email' | 'avatar'>;
+  plan: PlanCode;
+  description: string;
+  amount: number;
+  periodStart: string;
+  periodEnd: string;
+  status: InvoiceStatus;
+  dueDate: string;
+  paymentReference: string;
+  reportedAt?: string;
+  paidAt?: string;
+  voidReason?: string;
+  createdAt: string;
+}
+
+export interface SubscriptionUsage {
+  totalFields: number;
+  activeFields: number;
+  totalSubFields: number;
+  bookingsThisMonth: number;
+  grossRevenueThisMonth: number;
+}
+
+export interface SubscriptionOverview {
+  subscription: Subscription;
+  plan: Plan;
+  plans: Plan[];
+  usage: SubscriptionUsage;
+  outstandingInvoices: Invoice[];
+  outstandingAmount: number;
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+export interface PlatformOverview {
+  users: {
+    total: number;
+    newThisMonth: number;
+    owners: number;
+    managers: number;
+    admins: number;
+    active: number;
+    banned: number;
+  };
+  fields: { total: number; active: number; inactive: number; pendingApproval: number };
+  teams: { total: number };
+  reviews: { total: number };
+  bookings: {
+    total: number;
+    thisMonth: number;
+    pending: number;
+    completed: number;
+    cancelled: number;
+    /** Tiền khách trả cho chủ sân — không phải doanh thu của nền tảng. */
+    grossMerchandiseValue: number;
+  };
+  platformRevenue: {
+    totalCollected: number;
+    paidInvoices: number;
+    collectedThisMonth: number;
+    mrr: number;
+    pendingAmount: number;
+    awaitingConfirmationCount: number;
+    awaitingConfirmationAmount: number;
+  };
+  planDistribution: { code: PlanCode; name: string; monthlyPrice: number; total: number; active: number }[];
+}
+
+export interface PlatformRevenuePoint {
+  month: string;
+  label: string;
+  platformRevenue: number;
+  paidInvoices: number;
+  bookings: number;
+  grossMerchandiseValue: number;
+  newUsers: number;
+}
+
+/** Một chủ sân trong bảng theo dõi của admin: dùng bao nhiêu, trả bao nhiêu. */
+export interface OwnerSummary {
+  _id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  avatar: string;
+  phone: string;
+  status: User['status'];
+  createdAt: string;
+  totalFields: number;
+  activeFields: number;
+  totalBookings: number;
+  completedBookings: number;
+  grossMerchandiseValue: number;
+  plan: PlanCode;
+  planName: string;
+  subscriptionStatus: Subscription['status'];
+  totalPaid: number;
+  currentPeriodEnd?: string;
+}
+
+export interface OwnerDetail {
+  owner: User;
+  subscription: Subscription | null;
+  plan: Plan;
+  fields: Pick<Field, '_id' | 'name' | 'status' | 'isVerified' | 'rating' | 'totalBookings' | 'subFields' | 'location'>[];
+  invoices: Invoice[];
+  bookingsByStatus: Record<string, { count: number; value: number }>;
+}
+
+// ── Manager (quản lý đội bóng) ───────────────────────────────────────────────
+export interface ManagerDashboard {
+  teams: Team[];
+  totals: {
+    totalTeams: number;
+    totalMembers: number;
+    matchesPlayed: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    winRate: number;
+    averageElo: number;
+  };
+  pendingIncoming: number;
+  pendingOutgoing: number;
+  awaitingResult: number;
+  upcomingMatches: MatchRequest[];
+  upcomingBookings: (Omit<Booking, 'field' | 'user'> & {
+    field: Pick<Field, '_id' | 'name' | 'location'>;
+    team?: Pick<Team, '_id' | 'name' | 'logo'>;
+  })[];
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────

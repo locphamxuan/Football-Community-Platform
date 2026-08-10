@@ -31,4 +31,20 @@ const ownerBookingsQuerySchema = z.object({
   endDate: z.string().regex(DATE_ONLY, 'endDate must be YYYY-MM-DD').optional(),
 });
 
-module.exports = { createBookingSchema, cancelBookingSchema, ownerBookingsQuerySchema };
+const ownerRevenueQuerySchema = z.object({
+  months: z.coerce.number().int().min(1).max(24).optional(),
+});
+
+const teamBookingsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  teamId: z.string().min(1).optional(),
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed', 'no_show']).optional(),
+  startDate: z.string().regex(DATE_ONLY, 'startDate must be YYYY-MM-DD').optional(),
+  endDate: z.string().regex(DATE_ONLY, 'endDate must be YYYY-MM-DD').optional(),
+});
+
+module.exports = {
+  createBookingSchema, cancelBookingSchema,
+  ownerBookingsQuerySchema, ownerRevenueQuerySchema, teamBookingsQuerySchema,
+};

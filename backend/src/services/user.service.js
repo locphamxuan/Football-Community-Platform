@@ -76,10 +76,4 @@ const getUsers = async (query) => {
   return { users, total, page, limit };
 };
 
-const updateUserStatus = async (userId, status) => {
-  const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
-  if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
-  return user;
-};
-
-module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar, getUsers, updateUserStatus };
+module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar, getUsers };

@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, Review } from '@/types';
+import type { ApiResponse, OwnerReview, Review } from '@/types';
 
 const reviewService = {
   getFieldReviews: (fieldId: string, params?: { page?: number; limit?: number; rating?: number }) =>
@@ -24,6 +24,10 @@ const reviewService = {
 
   getMyReviews: (params?: { page?: number; limit?: number }) =>
     api.get<ApiResponse<{ reviews: Review[] }>>('/reviews/me', { params }),
+
+  /** Đánh giá trên mọi sân của chủ sân đang đăng nhập. */
+  getOwnerReviews: (params?: { page?: number; limit?: number; fieldId?: string; rating?: number; unanswered?: 'true' }) =>
+    api.get<ApiResponse<{ reviews: OwnerReview[]; unanswered: number }>>('/reviews/owner/reviews', { params }),
 };
 
 export default reviewService;

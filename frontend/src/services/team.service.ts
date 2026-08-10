@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, Team } from '@/types';
+import type { ApiResponse, ManagerDashboard, Team } from '@/types';
 
 export interface TeamFilters {
   page?: number;
@@ -20,6 +20,10 @@ const teamService = {
 
   getMyTeams: () =>
     api.get<ApiResponse<{ teams: Team[] }>>('/teams/me/my-teams'),
+
+  /** Tổng quan cho người dẫn dắt đội: chỉ tính các đội user là manager. */
+  getManagerDashboard: () =>
+    api.get<ApiResponse<ManagerDashboard>>('/teams/me/dashboard'),
 
   createTeam: (data: FormData) =>
     api.post<ApiResponse<{ team: Team }>>('/teams', data, {
@@ -48,6 +52,9 @@ const teamService = {
 
   regenerateInviteCode: (teamId: string) =>
     api.post<ApiResponse<{ inviteCode: string }>>(`/teams/${teamId}/invite-code/regenerate`),
+
+  transferManagement: (teamId: string, newManagerId: string) =>
+    api.post<ApiResponse<{ team: Team }>>(`/teams/${teamId}/transfer-management`, { newManagerId }),
 };
 
 export default teamService;

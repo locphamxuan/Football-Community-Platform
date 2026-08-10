@@ -29,9 +29,4 @@ const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
-const adminUpdateUserSchema = z.object({
-  status: z.enum(['active', 'inactive', 'banned']).optional(),
-  roles: z.array(z.enum(['user', 'team_manager', 'field_owner', 'admin'])).optional(),
-});
-
-module.exports = { updateProfileSchema, changePasswordSchema, adminUpdateUserSchema };
+module.exports = { updateProfileSchema, changePasswordSchema };

@@ -19,8 +19,14 @@ const getMyBookings = catchAsync(async (req, res) => {
   sendSuccess(res, { bookings }, 'Bookings retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
 });
 
+const getTeamBookings = catchAsync(async (req, res) => {
+  const { bookings, total, page, limit } = await bookingService.getTeamBookings(req.user.id, req.query);
+  sendSuccess(res, { bookings }, 'Bookings retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
+});
+
 const getFieldBookings = catchAsync(async (req, res) => {
-  const { bookings, total, page, limit } = await bookingService.getFieldBookings(req.params.fieldId, req.user.id, req.query);
+  const isAdmin = req.user.roles.includes('admin');
+  const { bookings, total, page, limit } = await bookingService.getFieldBookings(req.params.fieldId, req.user.id, req.query, isAdmin);
   sendSuccess(res, { bookings }, 'Bookings retrieved', HttpStatus.OK, { pagination: paginationMeta(total, page, limit) });
 });
 
@@ -34,6 +40,11 @@ const getOwnerStats = catchAsync(async (req, res) => {
   sendSuccess(res, { stats });
 });
 
+const getOwnerRevenue = catchAsync(async (req, res) => {
+  const series = await bookingService.getOwnerRevenueSeries(req.user.id, req.query.months);
+  sendSuccess(res, { series });
+});
+
 const cancelBooking = catchAsync(async (req, res) => {
   const isAdmin = req.user.roles.includes('admin');
   const booking = await bookingService.cancelBooking(req.params.id, req.user.id, req.body.reason, isAdmin);
@@ -41,22 +52,25 @@ const cancelBooking = catchAsync(async (req, res) => {
 });
 
 const confirmBooking = catchAsync(async (req, res) => {
-  const booking = await bookingService.confirmBooking(req.params.id, req.user.id);
+  const isAdmin = req.user.roles.includes('admin');
+  const booking = await bookingService.confirmBooking(req.params.id, req.user.id, isAdmin);
   sendSuccess(res, { booking }, 'Booking confirmed');
 });
 
 const completeBooking = catchAsync(async (req, res) => {
-  const booking = await bookingService.completeBooking(req.params.id, req.user.id);
+  const isAdmin = req.user.roles.includes('admin');
+  const booking = await bookingService.completeBooking(req.params.id, req.user.id, isAdmin);
   sendSuccess(res, { booking }, 'Booking completed');
 });
 
 const markNoShow = catchAsync(async (req, res) => {
-  const booking = await bookingService.markNoShow(req.params.id, req.user.id);
+  const isAdmin = req.user.roles.includes('admin');
+  const booking = await bookingService.markNoShow(req.params.id, req.user.id, isAdmin);
   sendSuccess(res, { booking }, 'Booking marked as no-show');
 });
 
 module.exports = {
-  createBooking, getBookingById, getMyBookings, getFieldBookings,
-  getOwnerBookings, getOwnerStats,
+  createBooking, getBookingById, getMyBookings, getTeamBookings, getFieldBookings,
+  getOwnerBookings, getOwnerStats, getOwnerRevenue,
   cancelBooking, confirmBooking, completeBooking, markNoShow,
 };

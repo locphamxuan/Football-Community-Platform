@@ -54,6 +54,9 @@ const fieldSchema = new mongoose.Schema(
       default: 'pending_approval',
     },
     isVerified: { type: Boolean, default: false },
+    /** Ghi chú của admin khi duyệt/từ chối sân — chủ sân đọc được để biết cần sửa gì. */
+    moderationNote: { type: String, default: '' },
+    moderatedAt: { type: Date },
     rating: {
       average: { type: Number, default: 0, min: 0, max: 5 },
       count: { type: Number, default: 0 },
