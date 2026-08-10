@@ -1,0 +1,8 @@
+{
+  "name": "@fcp/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hợp đồng API dùng chung giữa frontend/ và mobile/ — chỉ có type, không có runtime",
+  "types": "types.ts",
+  "main": "types.ts"
+}
