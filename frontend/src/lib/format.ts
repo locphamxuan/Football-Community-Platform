@@ -20,6 +20,16 @@ export const formatDate = (d: string) =>
 export const formatDateLong = (d: string) =>
   new Date(d).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+/** Chữ cái đầu cho avatar dự phòng: "Phạm Xuân Lộc" → "XL". */
+export const initialsOf = (name: string) =>
+  (name || '?')
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(-2)
+    .join('')
+    .toUpperCase();
+
 /** Ngày local dạng YYYY-MM-DD (không dùng toISOString để tránh lệch múi giờ). */
 export const toDateInput = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
