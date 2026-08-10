@@ -45,15 +45,21 @@ const createReview = async (userId, data, files = []) => {
   const existing = await Review.findOne({ field: data.fieldId, user: userId });
   if (existing) throw new AppError('You have already reviewed this field', HttpStatus.CONFLICT, ErrorCode.CONFLICT);
 
-  let isVerified = false;
-  if (data.bookingId) {
-    const booking = await Booking.findOne({
-      _id: data.bookingId,
-      user: userId,
-      field: data.fieldId,
-      status: 'completed',
-    });
-    if (booking) isVerified = true;
+  // Chỉ người thực sự đã đá ở sân mới được đánh giá — nếu không, rating sân là con số vô nghĩa
+  const bookingFilter = {
+    user: userId,
+    field: data.fieldId,
+    status: 'completed',
+  };
+  if (data.bookingId) bookingFilter._id = data.bookingId;
+
+  const booking = await Booking.findOne(bookingFilter).sort('-date');
+  if (!booking) {
+    throw new AppError(
+      'You can only review a field after completing a booking there',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN
+    );
   }
 
   let images = [];
@@ -65,11 +71,11 @@ const createReview = async (userId, data, files = []) => {
   const review = await Review.create({
     field: data.fieldId,
     user: userId,
-    booking: data.bookingId || undefined,
+    booking: booking._id,
     rating: data.rating,
     comment: data.comment || '',
     images,
-    isVerified,
+    isVerified: true,
   });
 
   await recalculateFieldRating(review.field);
@@ -141,4 +147,31 @@ const getMyReviews = async (userId, query) => {
   return { reviews, total, page, limit };
 };
 
-module.exports = { getFieldReviews, createReview, updateReview, deleteReview, toggleLike, ownerReply, getMyReviews };
+// ─── getOwnerReviews ──────────────────────────────────────────────────────────
+/** Mọi đánh giá trên các sân của chủ sân, để chủ sân theo dõi và phản hồi. */
+const getOwnerReviews = async (ownerId, query) => {
+  const { page, limit, skip } = getPagination(query);
+
+  const fieldIds = await Field.find({ owner: ownerId }).distinct('_id');
+  if (fieldIds.length === 0) return { reviews: [], total: 0, page, limit, unanswered: 0 };
+
+  const filter = { field: { $in: fieldIds } };
+  if (query.fieldId) filter.field = query.fieldId;
+  if (query.rating) filter.rating = Number(query.rating);
+  if (query.unanswered === 'true') filter['ownerReply.repliedAt'] = { $exists: false };
+
+  const [reviews, total, unanswered] = await Promise.all([
+    Review.find(filter)
+      .populate('user', 'username fullName avatar')
+      .populate('field', 'name location')
+      .skip(skip).limit(limit).sort('-createdAt'),
+    Review.countDocuments(filter),
+    Review.countDocuments({ field: { $in: fieldIds }, 'ownerReply.repliedAt': { $exists: false } }),
+  ]);
+  return { reviews, total, page, limit, unanswered };
+};
+
+module.exports = {
+  getFieldReviews, createReview, updateReview, deleteReview,
+  toggleLike, ownerReply, getMyReviews, getOwnerReviews,
+};
