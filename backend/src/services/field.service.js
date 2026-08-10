@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const slugify = require('slugify');
 const Field = require('../models/Field');
 const Booking = require('../models/Booking');
+const billingService = require('./billing.service');
 const { uploadMultipleImages, deleteImage } = require('../config/cloudinary');
 const { getPagination } = require('../utils/pagination');
 const { cache, CacheKeys, CacheTTL } = require('../config/redis');
@@ -84,6 +85,9 @@ const getFieldById = async (id) => {
 
 // ─── createField ──────────────────────────────────────────────────────────────
 const createField = async (ownerId, data, files = []) => {
+  // Hạn mức số sân phụ thuộc gói thuê bao chủ sân đang dùng
+  await billingService.assertCanCreateField(ownerId);
+
   const slug = await generateUniqueSlug(slugify(data.name, { lower: true, strict: true }));
 
   let images = [];
@@ -200,6 +204,8 @@ const addSubField = async (fieldId, ownerId, data) => {
   if (!field) throw new AppError('Field not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
   if (field.owner.toString() !== ownerId) throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
+  await billingService.assertCanAddSubField(ownerId, field.subFields.length);
+
   field.subFields.push({ ...data, status: 'available' });
   await field.save();
   await cache.del(CacheKeys.field(fieldId));
@@ -227,6 +233,20 @@ const deleteSubField = async (fieldId, subFieldId, ownerId) => {
 
   const sub = field.subFields.id(subFieldId);
   if (!sub) throw new AppError('Sub-field not found', HttpStatus.NOT_FOUND, ErrorCode.SUBFIELD_NOT_FOUND);
+
+  // Gỡ sân con còn lịch sắp tới sẽ khiến khách mất chỗ mà không ai báo
+  const openBookings = await Booking.countDocuments({
+    subField: subFieldId,
+    status: { $in: ['pending', 'confirmed'] },
+    date: { $gte: new Date(new Date().toISOString().slice(0, 10)) },
+  });
+  if (openBookings > 0) {
+    throw new AppError(
+      `Cannot delete a sub-field with ${openBookings} upcoming booking(s). Set it to maintenance instead.`,
+      HttpStatus.CONFLICT,
+      ErrorCode.CONFLICT
+    );
+  }
 
   sub.deleteOne();
   await field.save();
@@ -272,11 +292,37 @@ const checkAvailability = async (fieldId, { date, startTime, endTime, fieldType 
   return result;
 };
 
-const verifyField = async (fieldId) => {
-  const field = await Field.findByIdAndUpdate(fieldId, { isVerified: true, status: 'active' }, { new: true });
+/**
+ * Admin duyệt hoặc từ chối một sân.
+ * Từ chối đưa sân về 'inactive' (không nhận đặt) thay vì xoá, để chủ sân sửa rồi xin duyệt lại.
+ */
+const verifyField = async (fieldId, { approve = true, note = '' } = {}) => {
+  const update = approve
+    ? { isVerified: true, status: 'active', moderationNote: note, moderatedAt: new Date() }
+    : { isVerified: false, status: 'inactive', moderationNote: note, moderatedAt: new Date() };
+
+  const field = await Field.findByIdAndUpdate(fieldId, update, { new: true })
+    .populate('owner', 'username fullName email');
   if (!field) throw new AppError('Field not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
   await cache.del(CacheKeys.field(fieldId));
   return field;
+};
+
+/** Chủ sân gửi sân (mới hoặc bị từ chối) sang hàng chờ duyệt của admin. */
+const submitForApproval = async (fieldId, ownerId) => {
+  const field = await Field.findById(fieldId);
+  if (!field) throw new AppError('Field not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  if (field.owner.toString() !== ownerId) throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+  if (field.isVerified) {
+    throw new AppError('Field is already verified', HttpStatus.BAD_REQUEST, ErrorCode.CONFLICT);
+  }
+  if (field.subFields.length === 0) {
+    throw new AppError('Add at least one sub-field before requesting approval', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+  }
+
+  const updated = await Field.findByIdAndUpdate(fieldId, { status: 'pending_approval' }, { new: true });
+  await cache.del(CacheKeys.field(fieldId));
+  return updated;
 };
 
 const getMyFields = (ownerId) => Field.find({ owner: ownerId }).sort('-createdAt');
@@ -284,6 +330,6 @@ const getMyFields = (ownerId) => Field.find({ owner: ownerId }).sort('-createdAt
 module.exports = {
   getFields, getFieldById, createField, updateField, deleteField,
   addSubField, updateSubField, deleteSubField,
-  checkAvailability, verifyField, getMyFields,
+  checkAvailability, verifyField, submitForApproval, getMyFields,
   calculatePrice,
 };

@@ -58,11 +58,18 @@ const deleteSubField = catchAsync(async (req, res) => {
 });
 
 const verifyField = catchAsync(async (req, res) => {
-  const field = await fieldService.verifyField(req.params.id);
-  sendSuccess(res, { field }, 'Field verified');
+  const approve = req.body.approve !== false;
+  const field = await fieldService.verifyField(req.params.id, { approve, note: req.body.note });
+  sendSuccess(res, { field }, approve ? 'Field approved' : 'Field rejected');
+});
+
+const submitForApproval = catchAsync(async (req, res) => {
+  const field = await fieldService.submitForApproval(req.params.id, req.user.id);
+  sendSuccess(res, { field }, 'Field submitted for approval');
 });
 
 module.exports = {
   getFields, getFieldById, getMyFields, createField, updateField, deleteField,
-  checkAvailability, addSubField, updateSubField, deleteSubField, verifyField,
+  checkAvailability, addSubField, updateSubField, deleteSubField,
+  verifyField, submitForApproval,
 };

@@ -9,7 +9,7 @@ const { uploadLimiter } = require('../middleware/rateLimiter');
 const Role = require('../constants/roles');
 const {
   createFieldSchema, updateFieldSchema,
-  createSubFieldSchema, updateSubFieldSchema, availabilityQuerySchema,
+  createSubFieldSchema, updateSubFieldSchema, availabilityQuerySchema, verifyFieldSchema,
 } = require('../validations/field.validation');
 
 const router = Router();
@@ -43,7 +43,8 @@ router.post('/:id/sub-fields',              authenticate, authorize(Role.FIELD_O
 router.patch('/:id/sub-fields/:subFieldId', authenticate, authorize(Role.FIELD_OWNER), validate(updateSubFieldSchema), controller.updateSubField);
 router.delete('/:id/sub-fields/:subFieldId', authenticate, authorize(Role.FIELD_OWNER), controller.deleteSubField);
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
-router.patch('/:id/verify', authenticate, authorize(Role.ADMIN), controller.verifyField);
+// ── Duyệt sân ─────────────────────────────────────────────────────────────────
+router.patch('/:id/submit', authenticate, authorize(Role.FIELD_OWNER), controller.submitForApproval);
+router.patch('/:id/verify', authenticate, authorize(Role.ADMIN), validate(verifyFieldSchema), controller.verifyField);
 
 module.exports = router;
