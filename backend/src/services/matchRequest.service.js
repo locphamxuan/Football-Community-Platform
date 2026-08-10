@@ -65,7 +65,8 @@ const getMatchRequests = async (userId, query) => {
     $or: [{ requesterTeam: { $in: teamIds } }, { opponentTeam: { $in: teamIds } }],
   };
   if (query.status) filter.status = query.status;
-  if (query.teamId) {
+  // Lọc theo một đội cụ thể, nhưng chỉ trong số đội user thực sự thuộc về
+  if (query.teamId && teamIds.some((id) => id.toString() === query.teamId)) {
     filter.$or = [{ requesterTeam: query.teamId }, { opponentTeam: query.teamId }];
   }
 
@@ -114,6 +115,12 @@ const submitResult = async (requestId, userId, { requesterScore, opponentScore }
   const request = await MatchRequest.findById(requestId);
   if (!request) throw new AppError('Match request not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
   if (request.status !== 'accepted') throw new AppError('Match must be accepted before submitting result', HttpStatus.BAD_REQUEST, ErrorCode.CONFLICT);
+
+  // Không thể nhập tỉ số cho trận chưa đá — ELO sẽ bị thổi phồng bằng các trận ma
+  const kickOff = new Date(`${request.date.toISOString().slice(0, 10)}T${request.startTime}:00Z`);
+  if (kickOff.getTime() > Date.now()) {
+    throw new AppError('Cannot submit a result before the match has started', HttpStatus.BAD_REQUEST, ErrorCode.CONFLICT);
+  }
 
   const requesterTeam = await Team.findById(request.requesterTeam);
   const opponentTeam = await Team.findById(request.opponentTeam);

@@ -1,6 +1,8 @@
 const { z } = require('zod');
 
 const createMatchRequestSchema = z.object({
+  // Bắt buộc: Zod loại bỏ key lạ, thiếu field này thì service không biết đội nào gửi lời mời
+  requesterTeamId: z.string().min(1, 'Requester team ID required'),
   opponentTeamId: z.string().min(1, 'Opponent team ID required'),
   date: z
     .string()
@@ -18,4 +20,8 @@ const submitResultSchema = z.object({
   opponentScore: z.number().int().min(0).max(99),
 });
 
-module.exports = { createMatchRequestSchema, submitResultSchema };
+const respondToRequestSchema = z.object({
+  accept: z.boolean(),
+});
+
+module.exports = { createMatchRequestSchema, submitResultSchema, respondToRequestSchema };
