@@ -1,12 +1,10 @@
 const { Router } = require('express');
 const controller = require('../controllers/user.controller');
 const authenticate = require('../middleware/authenticate');
-const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const { uploadSingle } = require('../middleware/upload');
 const { uploadLimiter } = require('../middleware/rateLimiter');
-const Role = require('../constants/roles');
-const { updateProfileSchema, changePasswordSchema, adminUpdateUserSchema } = require('../validations/user.validation');
+const { updateProfileSchema, changePasswordSchema } = require('../validations/user.validation');
 
 const router = Router();
 router.use(authenticate);
@@ -18,10 +16,7 @@ router.patch('/me/password', validate(changePasswordSchema), controller.changePa
 router.patch('/me/avatar',   uploadLimiter, uploadSingle, controller.updateAvatar);
 
 // ── Public profile (authenticated) ───────────────────────────────────────────
+// Quản trị người dùng nằm ở /admin/users — giữ một đầu mối duy nhất cho thao tác admin
 router.get('/:id',           controller.getUserById);
-
-// ── Admin ─────────────────────────────────────────────────────────────────────
-router.get('/',              authorize(Role.ADMIN), controller.getUsers);
-router.patch('/:id/status',  authorize(Role.ADMIN), validate(adminUpdateUserSchema), controller.updateUserStatus);
 
 module.exports = router;
