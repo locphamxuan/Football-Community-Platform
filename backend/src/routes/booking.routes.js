@@ -4,7 +4,10 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const Role = require('../constants/roles');
-const { createBookingSchema, cancelBookingSchema, ownerBookingsQuerySchema } = require('../validations/booking.validation');
+const {
+  createBookingSchema, cancelBookingSchema,
+  ownerBookingsQuerySchema, ownerRevenueQuerySchema, teamBookingsQuerySchema,
+} = require('../validations/booking.validation');
 
 const router = Router();
 router.use(authenticate);
@@ -17,10 +20,20 @@ router.get('/owner/bookings',
   controller.getOwnerBookings
 );
 router.get('/owner/stats', authorize(Role.FIELD_OWNER, Role.ADMIN), controller.getOwnerStats);
+router.get('/owner/revenue',
+  authorize(Role.FIELD_OWNER, Role.ADMIN),
+  validate(ownerRevenueQuerySchema, 'query'),
+  controller.getOwnerRevenue
+);
 
 // ── User ──────────────────────────────────────────────────────────────────────
 router.post('/',             validate(createBookingSchema), controller.createBooking);
 router.get('/my-bookings',   controller.getMyBookings);
+
+// ── Quản lý đội ───────────────────────────────────────────────────────────────
+// Hai đoạn nên không đụng '/:id'; service tự lọc theo đội mà user làm quản lý
+router.get('/team/bookings', validate(teamBookingsQuerySchema, 'query'), controller.getTeamBookings);
+
 router.get('/:id',           controller.getBookingById);
 router.patch('/:id/cancel',  validate(cancelBookingSchema), controller.cancelBooking);
 
