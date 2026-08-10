@@ -92,6 +92,58 @@ export const SKILL_LEVEL_LABELS: Record<string, string> = {
   professional: 'Chuyên nghiệp',
 };
 
+export const ROLE_LABELS: Record<string, string> = {
+  user: 'Người chơi',
+  team_manager: 'Quản lý đội',
+  field_owner: 'Chủ sân',
+  admin: 'Quản trị viên',
+};
+
+export const ROLE_COLORS: Record<string, string> = {
+  user: 'bg-gray-100 text-gray-700',
+  team_manager: 'bg-blue-100 text-blue-700',
+  field_owner: 'bg-emerald-100 text-emerald-700',
+  admin: 'bg-purple-100 text-purple-700',
+};
+
+export const USER_STATUS_LABELS: Record<string, string> = {
+  active: 'Đang hoạt động',
+  inactive: 'Tạm ngưng',
+  banned: 'Bị cấm',
+};
+
+export const USER_STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-800',
+  inactive: 'bg-gray-100 text-gray-800',
+  banned: 'bg-red-100 text-red-800',
+};
+
+export const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+  active: 'Đang hiệu lực',
+  past_due: 'Chưa thanh toán',
+  cancelled: 'Đã huỷ gia hạn',
+};
+
+export const SUBSCRIPTION_STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-800',
+  past_due: 'bg-amber-100 text-amber-800',
+  cancelled: 'bg-gray-100 text-gray-800',
+};
+
+export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  pending: 'Chờ thanh toán',
+  awaiting_confirmation: 'Chờ đối soát',
+  paid: 'Đã thanh toán',
+  void: 'Đã huỷ',
+};
+
+export const INVOICE_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-800',
+  awaiting_confirmation: 'bg-blue-100 text-blue-800',
+  paid: 'bg-green-100 text-green-800',
+  void: 'bg-gray-100 text-gray-800',
+};
+
 export const SKILL_LEVEL_COLORS: Record<string, string> = {
   beginner: 'bg-gray-100 text-gray-700',
   intermediate: 'bg-blue-100 text-blue-700',

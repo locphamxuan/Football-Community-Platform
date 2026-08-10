@@ -54,6 +54,14 @@ const fieldService = {
 
   deleteField: (id: string) => api.delete(`/fields/${id}`),
 
+  /** Chủ sân gửi sân sang hàng chờ duyệt của admin. */
+  submitForApproval: (id: string) =>
+    api.patch<ApiResponse<{ field: Field }>>(`/fields/${id}/submit`),
+
+  /** Admin duyệt hoặc từ chối sân. */
+  verifyField: (id: string, approve: boolean, note?: string) =>
+    api.patch<ApiResponse<{ field: Field }>>(`/fields/${id}/verify`, { approve, note }),
+
   // ── Sân con ────────────────────────────────────────────────────────────────
   addSubField: (fieldId: string, data: SubFieldPayload) =>
     api.post<ApiResponse<{ field: Field }>>(`/fields/${fieldId}/sub-fields`, data),

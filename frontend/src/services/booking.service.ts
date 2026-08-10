@@ -1,10 +1,21 @@
 import api from './api';
-import type { ApiResponse, Booking, OwnerBooking, OwnerStats } from '@/types';
+import type {
+  ApiResponse, Booking, OwnerBooking, OwnerRevenuePoint, OwnerStats, TeamBooking,
+} from '@/types';
 
 export interface OwnerBookingFilters {
   page?: number;
   limit?: number;
   fieldId?: string;
+  status?: Booking['status'];
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface TeamBookingFilters {
+  page?: number;
+  limit?: number;
+  teamId?: string;
   status?: Booking['status'];
   startDate?: string;
   endDate?: string;
@@ -31,6 +42,10 @@ const bookingService = {
   getMyBookings: (params?: Record<string, unknown>) =>
     api.get<ApiResponse<{ bookings: Booking[] }>>('/bookings/my-bookings', { params }),
 
+  /** Lịch sân của các đội mà user đang dẫn dắt. */
+  getTeamBookings: (params?: TeamBookingFilters) =>
+    api.get<ApiResponse<{ bookings: TeamBooking[] }>>('/bookings/team/bookings', { params }),
+
   getFieldBookings: (fieldId: string, params?: Record<string, unknown>) =>
     api.get<ApiResponse<{ bookings: Booking[] }>>(`/bookings/field/${fieldId}`, { params }),
 
@@ -40,6 +55,10 @@ const bookingService = {
 
   getOwnerStats: () =>
     api.get<ApiResponse<{ stats: OwnerStats }>>('/bookings/owner/stats'),
+
+  /** Doanh thu và lượt đặt theo tháng, dùng cho biểu đồ dashboard chủ sân. */
+  getOwnerRevenue: (months = 6) =>
+    api.get<ApiResponse<{ series: OwnerRevenuePoint[] }>>('/bookings/owner/revenue', { params: { months } }),
 
   cancelBooking: (id: string, reason: string) =>
     api.patch<ApiResponse<{ booking: Booking }>>(`/bookings/${id}/cancel`, { reason }),
