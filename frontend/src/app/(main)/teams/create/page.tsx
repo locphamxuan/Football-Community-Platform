@@ -50,7 +50,8 @@ export default function CreateTeamPage() {
       Object.entries(data).forEach(([k, v]) => {
         if (v !== undefined && v !== '') fd.append(k, String(v));
       });
-      if (logoFile) fd.append('file', logoFile);
+      // Backend nhận file logo qua field 'image' (multer .single('image'))
+      if (logoFile) fd.append('image', logoFile);
       return teamService.createTeam(fd);
     },
     onSuccess: (res) => {
