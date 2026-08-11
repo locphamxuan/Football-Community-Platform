@@ -28,14 +28,6 @@ const generateUniqueSlug = async (base, excludeId) => {
   }
 };
 
-const calculatePrice = (pricing, date, startTime, duration) => {
-  const isWeekend = [0, 6].includes(date.getDay());
-  const slots = isWeekend ? pricing.weekend : pricing.weekday;
-  const hour = parseInt(startTime.split(':')[0], 10);
-  const pricePerHour = hour < 12 ? slots.morning : hour < 18 ? slots.afternoon : slots.evening;
-  return pricePerHour * duration;
-};
-
 // ─── getFields ────────────────────────────────────────────────────────────────
 const getFields = async (query) => {
   const { page, limit, skip } = getPagination(query);
@@ -331,5 +323,4 @@ module.exports = {
   getFields, getFieldById, createField, updateField, deleteField,
   addSubField, updateSubField, deleteSubField,
   checkAvailability, verifyField, submitForApproval, getMyFields,
-  calculatePrice,
 };

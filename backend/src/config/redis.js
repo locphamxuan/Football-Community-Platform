@@ -3,6 +3,7 @@ const env = require('./env');
 const logger = require('../utils/logger');
 
 let client;
+let ready = false;
 
 const getRedisClient = () => {
   if (!client) {
@@ -13,9 +14,9 @@ const getRedisClient = () => {
       lazyConnect: true,
     });
 
-    client.on('connect', () => logger.info('Redis connected'));
-    client.on('error', (err) => logger.error('Redis error:', err.message));
-    client.on('close', () => logger.warn('Redis connection closed'));
+    client.on('ready', () => { ready = true; logger.info('Redis ready'); });
+    client.on('error', (err) => { ready = false; logger.error('Redis error:', err.message); });
+    client.on('close', () => { ready = false; logger.warn('Redis connection closed'); });
   }
   return client;
 };
@@ -27,60 +28,78 @@ const connectRedis = async () => {
 const disconnectRedis = async () => {
   if (client) {
     await client.quit();
+    ready = false;
     logger.info('Redis disconnected gracefully');
   }
 };
 
-// ---- Cache helpers ----
+/** Trạng thái Redis cho health check — không mở kết nối mới nếu chưa có. */
+const getRedisStatus = () => {
+  if (!client) return 'disconnected';
+  return ready ? 'ready' : client.status;
+};
+
+/**
+ * Redis ở đây là tầng tăng tốc, không phải nguồn sự thật: MongoDB vẫn trả lời
+ * được mọi câu hỏi mà cache trả lời. Nên một sự cố Redis chỉ được làm chậm
+ * request, không được làm hỏng nó — mọi thao tác đi qua `safe` và rơi về giá
+ * trị mặc định khi lỗi.
+ *
+ * Đánh đổi: `exists` trả về false khi Redis chết, nên access token đã logout
+ * vẫn dùng được cho tới khi hết hạn (tối đa JWT_ACCESS_EXPIRES_IN). Chấp nhận
+ * được vì phương án còn lại là chặn toàn bộ người dùng khi Redis chớp tắt.
+ */
+const safe = async (label, operation, fallback) => {
+  try {
+    return await operation();
+  } catch (err) {
+    logger.error(`Redis ${label} failed:`, err.message);
+    return fallback;
+  }
+};
+
 const cache = {
-  get: (key) => getRedisClient().get(key),
+  get: (key) => safe('get', () => getRedisClient().get(key), null),
 
-  set: async (key, value, ttlSeconds) => {
-    if (ttlSeconds) {
-      await getRedisClient().setex(key, ttlSeconds, value);
-    } else {
-      await getRedisClient().set(key, value);
-    }
-  },
+  set: (key, value, ttlSeconds) => safe('set', () => (
+    ttlSeconds
+      ? getRedisClient().setex(key, ttlSeconds, value)
+      : getRedisClient().set(key, value)
+  ), null),
 
-  del: (...keys) => keys.length > 0 ? getRedisClient().del(...keys) : Promise.resolve(),
+  del: (...keys) => (
+    keys.length > 0
+      ? safe('del', () => getRedisClient().del(...keys), 0)
+      : Promise.resolve(0)
+  ),
 
   getJSON: async (key) => {
-    const data = await getRedisClient().get(key);
-    return data ? JSON.parse(data) : null;
+    const data = await cache.get(key);
+    if (!data) return null;
+    // Giá trị hỏng trong cache không được làm vỡ request — bỏ qua như cache miss
+    return safe('parse', () => JSON.parse(data), null);
   },
 
-  setJSON: (key, value, ttlSeconds) =>
-    cache.set(key, JSON.stringify(value), ttlSeconds),
+  setJSON: (key, value, ttlSeconds) => cache.set(key, JSON.stringify(value), ttlSeconds),
 
   exists: async (key) => {
-    const result = await getRedisClient().exists(key);
+    const result = await safe('exists', () => getRedisClient().exists(key), 0);
     return result === 1;
   },
-
-  incr: (key) => getRedisClient().incr(key),
-  expire: (key, ttl) => getRedisClient().expire(key, ttl),
 };
 
 const CacheKeys = {
   field: (id) => `field:${id}`,
-  fieldSearch: (hash) => `fields:search:${hash}`,
   fieldAvailability: (fieldId, date) => `field:availability:${fieldId}:${date}`,
-  popularFields: (city) => `fields:popular:${city}`,
-  team: (id) => `team:${id}`,
-  userSession: (userId) => `user:session:${userId}`,
   blacklistedToken: (jti) => `blacklist:token:${jti}`,
-  unreadNotifications: (userId) => `user:unread:${userId}`,
 };
 
 const CacheTTL = {
-  FIELD: 600,            // 10 min
-  FIELD_SEARCH: 300,     // 5 min
-  FIELD_AVAILABILITY: 30,// 30 sec
-  POPULAR: 3600,         // 1 hour
-  TEAM: 600,             // 10 min
-  USER_SESSION: 900,     // 15 min (same as access token)
-  AI_REPORT: 3600,       // 1 hour
+  FIELD: 600,             // 10 phút
+  FIELD_AVAILABILITY: 30, // 30 giây — lịch trống đổi liên tục
 };
 
-module.exports = { connectRedis, disconnectRedis, getRedisClient, cache, CacheKeys, CacheTTL };
+module.exports = {
+  connectRedis, disconnectRedis, getRedisClient, getRedisStatus,
+  cache, CacheKeys, CacheTTL,
+};

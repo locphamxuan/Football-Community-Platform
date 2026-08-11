@@ -1,6 +1,8 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-10
+> Cập nhật lần cuối: 2026-08-11
+>
+> Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
 Nền tảng cộng đồng bóng đá: người chơi tìm sân và đặt sân, đội bóng thách đấu nhau, chủ sân quản lý sân và trả phí thuê bao cho nền tảng, admin vận hành.
 
@@ -38,16 +40,26 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Mobile: Jest + jest-expo + Testing Library React Native.
 - CI chạy lint/typecheck/test/build riêng cho từng phía, có path filter.
 
+**Phủ test, Redis/rate limit, tài liệu** (nhánh `feature/codegraph-tests-redis-docs`)
+- Backend 497 test: mọi endpoint được kiểm ba cổng (401 / 403 / 400) và cả đường đi thành công; quy tắc nghiệp vụ của booking, billing, team, review, field, match request, auth đều có test riêng. `routes/`, `controllers/`, `middleware/`, `validations/` đạt 100% statement.
+- Rate limit đếm trên Redis (dùng chung giữa các instance, không mất khi deploy), thêm limiter riêng cho request ghi, mọi limiter trả cùng một khuôn dạng lỗi JSON.
+- Cache Redis không còn làm vỡ request khi Redis chết; `/health` báo trạng thái Redis.
+- Frontend: test cho interceptor axios và authStore.
+- `docs/` — tài liệu đầy đủ về sản phẩm, kiến trúc, API, nghiệp vụ, vận hành, lộ trình.
+- CodeGraph (`.mcp.json`) để agent tra cứu codebase bằng đồ thị thay vì grep.
+
 ## Đang làm / còn dở
 
 - `mobile/` mới có màn hình bảng giá thuê bao để chứng minh app đọc đúng hợp đồng API. **Bước tiếp theo:** điều hướng (expo-router), màn đăng nhập + lưu token, rồi màn tìm sân.
-- Chưa mở PR cho hai nhánh `feature/role-dashboards-and-billing` và `chore/testing-and-mobile-workspace`.
+- Chưa mở PR cho ba nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
-- Thanh toán đặt sân trực tuyến (hiện chỉ có tiền mặt / chuyển khoản ghi nhận thủ công).
-- Thông báo đẩy cho mobile khi có lời mời thi đấu hoặc lịch đặt được xác nhận.
-- Job tự phát hành hoá đơn thuê bao hàng tháng (`node-cron` đã có trong dependency nhưng chưa dùng).
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
+
+1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
+2. Thông báo in-app + đẩy cho mobile (lời mời thi đấu, lịch đặt được xác nhận).
+3. Mobile bắt kịp web: điều hướng, đăng nhập, tìm sân, đặt sân.
 
 ## Quyết định và bẫy cần nhớ
 
@@ -58,3 +70,7 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - **`shared/types.ts` chỉ chứa type.** Thêm giá trị runtime vào đó là phải cấu hình thêm cho cả Next.js lẫn Metro.
 - **RNTL 14 có `render()` bất đồng bộ.** Quên `await` thì `screen` rỗng và lỗi báo rất khó hiểu ("render function has not been called").
 - Cổng: backend 5001, frontend 3001. Container `fcp-backend` tự khởi động cùng Docker và chiếm cổng 5001 — `docker stop fcp-backend` trước khi chạy backend từ source.
+- **Redis chết thì `cache.exists` trả `false`**, nên access token đã logout vẫn dùng được cho tới khi hết hạn (≤ 15 phút). Đổi lại, một sự cố Redis không còn đăng xuất toàn bộ người dùng. Lý do đầy đủ ở [`docs/05-redis-rate-limit.md`](../docs/05-redis-rate-limit.md).
+- **Gia hạn thuê bao chạy kiểu "lười"** ngay lúc đọc, không có cron. `node-cron` đã bị gỡ khỏi dependency vì không dùng tới.
+- **Chỉ có một hàm tính giá** (`calcPrice` trong `booking.service.js`). Hàm thứ hai `calculatePrice` trong `field.service.js` tính sai (lấy giá của giờ bắt đầu cho cả buổi) và đã bị xoá — đừng tạo lại.
+- **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").

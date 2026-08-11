@@ -10,10 +10,14 @@ const required = (key) => {
 };
 
 const optional = (key, defaultVal = '') => process.env[key] ?? defaultVal;
+const number = (key, defaultVal) => parseInt(optional(key, defaultVal), 10);
+const flag = (key, defaultVal) => optional(key, defaultVal) === 'true';
+
+const nodeEnv = optional('NODE_ENV', 'development');
 
 const env = {
-  NODE_ENV: optional('NODE_ENV', 'development'),
-  PORT: parseInt(optional('PORT', '5000'), 10),
+  NODE_ENV: nodeEnv,
+  PORT: number('PORT', '5000'),
   CLIENT_URL: optional('CLIENT_URL', 'http://localhost:3000'),
 
   MONGODB_URI: required('MONGODB_URI'),
@@ -31,13 +35,21 @@ const env = {
   CLOUDINARY_API_SECRET: required('CLOUDINARY_API_SECRET'),
 
   EMAIL_HOST: optional('EMAIL_HOST', 'smtp.gmail.com'),
-  EMAIL_PORT: parseInt(optional('EMAIL_PORT', '587'), 10),
+  EMAIL_PORT: number('EMAIL_PORT', '587'),
   EMAIL_USER: required('EMAIL_USER'),
   EMAIL_PASS: required('EMAIL_PASS'),
   EMAIL_FROM: optional('EMAIL_FROM', 'Football Platform <noreply@footballplatform.com>'),
 
-  RATE_LIMIT_WINDOW_MS: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
-  RATE_LIMIT_MAX: parseInt(optional('RATE_LIMIT_MAX', '100'), 10),
+  // ── Rate limit ──────────────────────────────────────────────────────────────
+  // Cửa sổ chung cho limiter toàn cục; auth/upload/ghi có cửa sổ riêng cố định.
+  RATE_LIMIT_WINDOW_MS: number('RATE_LIMIT_WINDOW_MS', '900000'),
+  RATE_LIMIT_MAX: number('RATE_LIMIT_MAX', '300'),
+  RATE_LIMIT_AUTH_MAX: number('RATE_LIMIT_AUTH_MAX', '10'),
+  RATE_LIMIT_WRITE_MAX: number('RATE_LIMIT_WRITE_MAX', '60'),
+  RATE_LIMIT_UPLOAD_MAX: number('RATE_LIMIT_UPLOAD_MAX', '20'),
+  // Đếm lượt trên Redis để nhiều instance dùng chung hạn mức. Tắt trong test:
+  // test không có Redis và cũng cần bộ đếm reset theo từng file.
+  RATE_LIMIT_USE_REDIS: flag('RATE_LIMIT_USE_REDIS', nodeEnv === 'test' ? 'false' : 'true'),
 };
 
 module.exports = env;
