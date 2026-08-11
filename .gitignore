@@ -10,5 +10,8 @@ claude-mem.db*
 ai-tools/
 external-skills/
 
+# CodeGraph: index cục bộ của từng máy. `.mcp.json` thì có commit.
+.codegraph/
+
 # === Chung ===
 node_modules/
