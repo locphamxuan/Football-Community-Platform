@@ -8,6 +8,8 @@ const logger = winston.createLogger({
   format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), json()),
   transports: [
     new winston.transports.Console({
+      // Test cố tình bắn lỗi để kiểm tra nhánh xử lý; in ra chỉ làm nhiễu kết quả
+      silent: env.NODE_ENV === 'test',
       format:
         env.NODE_ENV === 'production'
           ? combine(timestamp(), json())
