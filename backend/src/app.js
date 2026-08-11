@@ -6,7 +6,8 @@ const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 
 const env = require('./config/env');
-const { globalLimiter } = require('./middleware/rateLimiter');
+const { getRedisStatus } = require('./config/redis');
+const { globalLimiter, writeLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -37,11 +38,18 @@ if (env.NODE_ENV !== 'test') {
 }
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-app.use('/api', globalLimiter);
+// Trần chung cho mọi request, cộng thêm trần chặt hơn cho các request ghi.
+app.use('/api', globalLimiter, writeLimiter);
 
 // ── Health check ──────────────────────────────────────────────────────────────
+// Không nằm dưới /api nên không bị rate limit — probe của Docker gọi liên tục.
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', env: env.NODE_ENV, timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    env: env.NODE_ENV,
+    redis: getRedisStatus(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
