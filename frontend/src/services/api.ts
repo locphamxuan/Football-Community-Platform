@@ -30,7 +30,11 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !original._retry) {
+    // Chính lời gọi refresh mà 401 (refresh token hết hạn) thì phải để lỗi đi tiếp:
+    // đẩy nó vào hàng đợi là tự chờ chính mình, request treo vĩnh viễn.
+    const isRefreshCall = original.url?.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && !original._retry && !isRefreshCall) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
