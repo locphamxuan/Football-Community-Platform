@@ -4,8 +4,8 @@
 
 | Phía | Công cụ | Lệnh | Số test |
 |---|---|---|---|
-| `backend/` | Jest + supertest | `npm test` | 497 |
-| `frontend/` | Vitest + Testing Library | `npm test` | 37 |
+| `backend/` | Jest + supertest | `npm test` | 533 |
+| `frontend/` | Vitest + Testing Library | `npm test` | 48 |
 | `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 15 |
 
 ## Backend
@@ -75,6 +75,8 @@ Test nằm cạnh file nó kiểm (`format.test.ts` bên cạnh `format.ts`).
 - `src/components/dashboard/*.test.tsx` — các trạng thái component thật sự render
 - `src/services/api.test.ts` — interceptor của axios: gắn token, tự làm mới khi 401, hàng đợi
 - `src/stores/authStore.test.ts` — token vào `sessionStorage`, không lọt vào `localStorage`
+- `src/components/notifications/*.test.tsx`, `src/components/layout/NotificationBell.test.tsx` —
+  thông báo đã đọc / chưa đọc, huy hiệu số chưa đọc
 
 Test interceptor **thay `api.defaults.adapter`** thay vì mock cả axios, nên logic thật sự
 được chạy qua. Cách này đã tìm ra một lỗi treo request khi chính lời gọi refresh trả 401.

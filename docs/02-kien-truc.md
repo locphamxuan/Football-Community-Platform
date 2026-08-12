@@ -96,3 +96,9 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
   cron hàng tháng. Không cần job nền, và không bao giờ phát hành trùng hoá đơn.
 - **Ảnh đi qua multipart/form-data**, nên mọi field tới backend đều là chuỗi. Schema Zod cho
   các form đó phải dùng `z.coerce` hoặc helper `booleanish`.
+- **Thông báo là hệ quả, không phải điều kiện.** `notify()` được gọi *sau* khi hành động đã
+  thành công và nuốt mọi lỗi. Một lần ghi thông báo hỏng không được cuộn ngược việc đã làm xong.
+- **`connectRedis()` phải chịu được client đã kết nối sẵn.** `rate-limit-redis` nạp script Lua
+  ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
+  `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném
+  "Redis is already connecting/connected" và server chết ngay lúc khởi động.

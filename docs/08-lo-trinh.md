@@ -46,16 +46,24 @@ sang trạng thái `awaiting_payment` cho tới khi cọc xong. Quy tắc hoàn 
 **Vì sao.** Hiện toàn bộ tương tác dựa vào email hoặc việc người dùng tự mở app. Lời mời thi đấu
 và xác nhận lịch đặt là hai việc **nhạy cảm thời gian** — biết muộn là mất trận.
 
-**Phạm vi.**
+**✅ Đã xong — phần in-app.** Collection `Notification`, bốn endpoint dưới `/notifications`,
+bảy sự kiện được bắn từ booking / thách đấu / hoá đơn, số chưa đọc cache trên Redis, chuông
+trên web hỏi lại mỗi 60 giây. Quy tắc và lý do:
+[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app).
 
-- Collection `Notification` + endpoint `GET /notifications`, `PATCH /notifications/:id/read`.
-- Sự kiện cần bắn: lịch đặt được xác nhận / bị từ chối, có lời mời thi đấu, lời mời được trả lời,
-  đối thủ đã nhập tỉ số, hoá đơn mới, hoá đơn sắp tới hạn.
-- Đẩy cho mobile bằng Expo Push: lưu `expoPushToken` trên `User`, tôn trọng cờ
-  `notifications.push` đã có sẵn trong hồ sơ.
-- Đếm số chưa đọc nên cache trên Redis.
+**Còn lại.**
 
-**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện trên, và
+- **Đẩy cho mobile bằng Expo Push**: lưu `expoPushToken` trên `User`, tôn trọng cờ
+  `notifications.push` đã có sẵn trong hồ sơ. Phải làm sau [2.2](#22-mobile-bắt-kịp-web) —
+  chưa có màn đăng nhập trên mobile thì không có thiết bị nào để đăng ký token.
+- **Tắt được từng loại thông báo.** Hồ sơ hiện chỉ có cờ `notifications.email` và
+  `notifications.push` cho tất cả; cần tách theo `type`.
+- **Nhắc hoá đơn sắp tới hạn.** Đây là loại duy nhất trong danh sách ban đầu **không** gắn với
+  một hành động của ai cả, nên không có chỗ nào để `notify()` bám vào. Nó cần một job nền —
+  mà dự án đã cố tình không có cron (xem [gia hạn "lười"](04-nghiep-vu.md#gia-hạn-lười)).
+  Làm nó là mở lại quyết định đó, nên tách riêng chứ không nhét kèm.
+
+**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện, và
 người dùng tắt được từng loại.
 
 ### 2.2 Mobile bắt kịp web

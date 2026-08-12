@@ -144,6 +144,33 @@ Toàn bộ nhóm này cần đăng nhập.
 | GET | `/invoices` | 🏟 👑 | Query: `page, limit, status` |
 | POST | `/invoices/:id/report-payment` | 🏟 👑 | `paymentReference` (3–100 ký tự) |
 
+## Thông báo — `/notifications`
+
+Toàn bộ nhóm này cần đăng nhập. Hộp thư là của riêng từng người, không phân vai trò:
+mọi truy vấn đều bị chặn cứng bằng `recipient = người gọi`, nên không có endpoint nào
+đọc được thông báo của người khác.
+
+| Method | Đường dẫn | Quyền | Body / Ghi chú |
+|---|---|---|---|
+| GET | `/` | 🔒 | Query: `page, limit, unread` (`'true'`/`'false'`), `type`. Trả `notifications`, `unreadCount` và `meta.pagination` trong một lần gọi |
+| GET | `/unread-count` | 🔒 | Chỉ số chưa đọc; đọc từ Redis nếu còn hạn |
+| PATCH | `/read-all` | 🔒 | Đánh dấu toàn bộ đã đọc, trả `modified` |
+| PATCH | `/:id/read` | 🔒 | Idempotent. Thông báo của người khác trả 404 chứ không phải 403 — không xác nhận là nó tồn tại |
+
+`type` nhận đúng bảy giá trị dưới đây; giá trị lạ trả 400 chứ không âm thầm trả danh sách rỗng:
+
+| `type` | Bắn khi | Người nhận |
+|---|---|---|
+| `booking_created` | Có lịch đặt mới | Chủ sân |
+| `booking_confirmed` | Chủ sân xác nhận lịch | Người đặt |
+| `booking_cancelled` | Lịch bị huỷ | Bên còn lại |
+| `match_request_received` | Có lời mời thi đấu | Quản lý đội được mời |
+| `match_request_answered` | Lời mời được nhận hoặc từ chối | Người gửi lời mời |
+| `match_result_submitted` | Một bên nhập tỉ số | Quản lý đội còn lại |
+| `invoice_issued` | Phát hành hoá đơn thuê bao | Chủ sân |
+
+Quy tắc và lý do: [04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app).
+
 ## Quản trị — `/admin`
 
 Toàn bộ nhóm này chỉ dành cho 👑.

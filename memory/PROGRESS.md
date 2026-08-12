@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-11
+> Cập nhật lần cuối: 2026-08-12
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -48,18 +48,24 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - `docs/` — tài liệu đầy đủ về sản phẩm, kiến trúc, API, nghiệp vụ, vận hành, lộ trình.
 - CodeGraph (`.mcp.json`) để agent tra cứu codebase bằng đồ thị thay vì grep.
 
+**Thông báo in-app** (nhánh `feature/notifications`)
+- Hộp thư thông báo: bảy sự kiện nhạy cảm thời gian (lịch đặt mới / được xác nhận / bị huỷ, lời mời thi đấu, lời mời được trả lời, đối thủ nhập tỉ số, hoá đơn mới) tự bắn tới đúng người nhận.
+- Bốn endpoint dưới `/notifications`, số chưa đọc cache trên Redis, thông báo tự hết hạn sau 90 ngày.
+- Web: chuông trên thanh điều hướng (hỏi lại mỗi 60 giây) và trang `/notifications`.
+
 ## Đang làm / còn dở
 
 - `mobile/` mới có màn hình bảng giá thuê bao để chứng minh app đọc đúng hợp đồng API. **Bước tiếp theo:** điều hướng (expo-router), màn đăng nhập + lưu token, rồi màn tìm sân.
-- Chưa mở PR cho ba nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs` (nhánh sau xây trên nhánh trước).
+- **Thông báo đẩy (Expo Push) chưa làm** — phải chờ mobile có màn đăng nhập, vì chưa có thiết bị nào để đăng ký `expoPushToken`. Tắt/bật theo từng loại thông báo cũng chưa có: hồ sơ mới chỉ có cờ `notifications.email` / `notifications.push` cho tất cả.
+- Chưa mở PR cho bốn nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
 Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
-2. Thông báo in-app + đẩy cho mobile (lời mời thi đấu, lịch đặt được xác nhận).
-3. Mobile bắt kịp web: điều hướng, đăng nhập, tìm sân, đặt sân.
+2. Mobile bắt kịp web: điều hướng, đăng nhập, tìm sân, đặt sân — và mở đường cho thông báo đẩy.
+3. Chat trong lời mời thi đấu, để hai đội chốt trận không phải nhảy sang Zalo.
 
 ## Quyết định và bẫy cần nhớ
 
@@ -73,4 +79,6 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **Redis chết thì `cache.exists` trả `false`**, nên access token đã logout vẫn dùng được cho tới khi hết hạn (≤ 15 phút). Đổi lại, một sự cố Redis không còn đăng xuất toàn bộ người dùng. Lý do đầy đủ ở [`docs/05-redis-rate-limit.md`](../docs/05-redis-rate-limit.md).
 - **Gia hạn thuê bao chạy kiểu "lười"** ngay lúc đọc, không có cron. `node-cron` đã bị gỡ khỏi dependency vì không dùng tới.
 - **Chỉ có một hàm tính giá** (`calcPrice` trong `booking.service.js`). Hàm thứ hai `calculatePrice` trong `field.service.js` tính sai (lấy giá của giờ bắt đầu cho cả buổi) và đã bị xoá — đừng tạo lại.
+- **Thông báo không được làm hỏng hành động gốc.** `notify()` chạy sau khi việc chính đã xong và nuốt mọi lỗi. Đừng đặt nó vào giữa luồng nghiệp vụ, và đừng bỏ `actorId` — thiếu nó là người dùng tự nhận thông báo về chính việc mình vừa làm.
+- **`connectRedis()` không được gọi `connect()` vô điều kiện.** `rate-limit-redis` nạp script Lua ngay lúc `require('./app')` và lệnh đó đã tự mở kết nối; gọi lại ném "Redis is already connecting/connected" và server chết lúc khởi động. Đây từng là lỗi thật, chỉ lộ ra khi chạy `node src/server.js` chứ test không bắt được.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").
