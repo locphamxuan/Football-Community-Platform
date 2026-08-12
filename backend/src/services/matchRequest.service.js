@@ -2,6 +2,9 @@ const MatchRequest = require('../models/MatchRequest');
 const Team = require('../models/Team');
 const { getPagination } = require('../utils/pagination');
 const { calculateElo } = require('../utils/elo');
+const { formatSlotLabel } = require('../utils/datetime');
+const { notify } = require('./notification.service');
+const { NotificationType } = require('../constants/notifications');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
@@ -50,6 +53,13 @@ const createMatchRequest = async (userId, data) => {
     message: data.message || '',
   });
 
+  await notify(opponentTeam.manager, {
+    type: NotificationType.MATCH_REQUEST_RECEIVED,
+    title: `${requesterTeam.name} muốn thi đấu với đội bạn`,
+    body: `${formatSlotLabel(data.date, data.startTime, data.endTime)} · ${data.fieldSize}`,
+    link: '/match-requests',
+  }, userId);
+
   return MatchRequest.findById(request._id).populate(populateOptions);
 };
 
@@ -97,7 +107,22 @@ const respondToRequest = async (requestId, userId, accept) => {
   if (!isMgr && !isCaptain) throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
   const status = accept ? 'accepted' : 'rejected';
-  return MatchRequest.findByIdAndUpdate(requestId, { status, respondedAt: new Date() }, { new: true }).populate(populateOptions);
+  const updated = await MatchRequest.findByIdAndUpdate(
+    requestId,
+    { status, respondedAt: new Date() },
+    { new: true }
+  ).populate(populateOptions);
+
+  await notify(request.requestedBy, {
+    type: NotificationType.MATCH_REQUEST_ANSWERED,
+    title: accept
+      ? `${opponentTeam.name} đã nhận lời thách đấu`
+      : `${opponentTeam.name} đã từ chối lời thách đấu`,
+    body: formatSlotLabel(request.date, request.startTime, request.endTime),
+    link: '/match-requests',
+  }, userId);
+
+  return updated;
 };
 
 // ─── cancelRequest ────────────────────────────────────────────────────────────
@@ -185,6 +210,16 @@ const submitResult = async (requestId, userId, { requesterScore, opponentScore }
         'eloChange.opponent': elo.changeB,
       }),
     ]);
+  }
+
+  // Trận chỉ được tính Elo khi cả hai bên cùng nhập; bên kia phải biết là đang chờ mình.
+  if (!updated.result.confirmedByRequester || !updated.result.confirmedByOpponent) {
+    await notify(isFromRequester ? opponentTeam.manager : requesterTeam.manager, {
+      type: NotificationType.MATCH_RESULT_SUBMITTED,
+      title: 'Đối thủ đã nhập tỉ số',
+      body: `${requesterTeam.name} ${requesterScore} – ${opponentScore} ${opponentTeam.name} · xác nhận để tính Elo`,
+      link: '/match-requests',
+    }, userId);
   }
 
   return MatchRequest.findById(requestId).populate(populateOptions);
