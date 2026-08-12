@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import Logo from '@/components/layout/Logo';
+import NotificationBell from '@/components/layout/NotificationBell';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import UserMenu from '@/components/layout/UserMenu';
 import useAuthStore from '@/stores/authStore';
@@ -27,6 +28,7 @@ const NAV_LINKS = [
 ];
 
 const MOBILE_USER_LINKS = [
+  { href: '/notifications', label: 'Thông báo' },
   { href: '/bookings', label: 'Sân đã đặt' },
   { href: '/match-requests', label: 'Lời mời thi đấu' },
 ];
@@ -79,6 +81,8 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Chuông gọi API nên chỉ dựng khi đã đăng nhập và đã mount */}
+          {mounted && isAuthenticated && <NotificationBell />}
           <ThemeToggle />
 
           {/* Auth section (desktop) */}

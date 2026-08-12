@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCompactPrice, formatDate, formatPrice, initialsOf, toDateInput } from './format';
+import { formatCompactPrice, formatDate, formatPrice, formatRelativeTime, initialsOf, toDateInput } from './format';
 
 /** Intl chèn ký tự khoảng trắng đặc biệt — so sánh phần số cho ổn định giữa các môi trường. */
 const digitsOf = (s: string) => s.replace(/\D/g, '');
@@ -70,5 +70,17 @@ describe('toDateInput', () => {
 describe('formatDate', () => {
   it('hiển thị theo định dạng ngày/tháng/năm', () => {
     expect(formatDate('2026-08-10T00:00:00.000Z')).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+  });
+});
+
+describe('formatRelativeTime', () => {
+  it('mốc vài phút trước đọc bằng tiếng Việt, có hậu tố "trước"', () => {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString();
+    expect(formatRelativeTime(fiveMinutesAgo)).toBe('5 phút trước');
+  });
+
+  it('mốc trong tương lai đọc bằng hậu tố "nữa"', () => {
+    const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
+    expect(formatRelativeTime(inTwoHours)).toBe('khoảng 2 giờ nữa');
   });
 });

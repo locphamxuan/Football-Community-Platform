@@ -1,3 +1,6 @@
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
+
 const priceFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
   currency: 'VND',
@@ -16,6 +19,10 @@ export const formatCompactPrice = (n: number) => {
 
 export const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+/** Khoảng cách tới hiện tại, kiểu "2 giờ trước" — thông báo đọc bằng thời gian tương đối. */
+export const formatRelativeTime = (d: string) =>
+  formatDistanceToNow(new Date(d), { addSuffix: true, locale: vi });
 
 export const formatDateLong = (d: string) =>
   new Date(d).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
