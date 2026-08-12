@@ -1,12 +1,21 @@
 {
   "name": "mobile",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
     "expo": "~57.0.11",
+    "expo-constants": "~57.0.10",
+    "expo-device": "~57.0.1",
+    "expo-linking": "~57.0.5",
+    "expo-notifications": "~57.0.10",
+    "expo-router": "~57.0.12",
+    "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.2"
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.0.1",
