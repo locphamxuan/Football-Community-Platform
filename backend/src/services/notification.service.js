@@ -1,4 +1,6 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const { sendExpoPush } = require('./push.service');
 const { getPagination } = require('../utils/pagination');
 const { cache, CacheKeys, CacheTTL } = require('../config/redis');
 const logger = require('../utils/logger');
@@ -32,6 +34,18 @@ const notify = async (recipientId, payload, actorId = null) => {
       link: payload.link || '',
     });
     await invalidateUnread(recipientId);
+
+    // Đẩy sau khi đã ghi: hộp thư in-app là nguồn sự thật, đẩy chỉ là lớp báo sớm.
+    // Không có thiết bị nào đăng ký thì đây chỉ là một truy vấn rẻ rồi thôi.
+    const recipient = await User.findById(recipientId).select('expoPushTokens notifications');
+    if (recipient) {
+      await sendExpoPush(recipient, {
+        title: notification.title,
+        body: notification.body,
+        link: notification.link,
+      });
+    }
+
     return notification;
   } catch (err) {
     logger.error('Notification create failed:', err.message);

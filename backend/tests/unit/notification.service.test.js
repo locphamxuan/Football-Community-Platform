@@ -1,4 +1,7 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
+// Đẩy Expo có test riêng ở push.service.test.js; ở đây chỉ cần nó không gọi mạng.
+jest.mock('../../src/services/push.service');
+jest.mock('../../src/models/User', () => ({ findById: jest.fn() }));
 jest.mock('../../src/models/Notification', () => ({
   create: jest.fn(),
   find: jest.fn(),
@@ -8,6 +11,8 @@ jest.mock('../../src/models/Notification', () => ({
 }));
 
 const Notification = require('../../src/models/Notification');
+const User = require('../../src/models/User');
+const { sendExpoPush } = require('../../src/services/push.service');
 const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');
 const notificationService = require('../../src/services/notification.service');
 const { NotificationType } = require('../../src/constants/notifications');
@@ -27,10 +32,15 @@ const mockQuery = (value) => ({
   skip: () => ({ limit: () => ({ sort: () => Promise.resolve(value) }) }),
 });
 
+const mockRecipient = (user) => {
+  User.findById.mockReturnValue({ select: () => Promise.resolve(user) });
+};
+
 beforeEach(() => {
   resetCache();
   Notification.create.mockResolvedValue({ _id: NOTIFICATION_ID, ...payload });
   Notification.countDocuments.mockResolvedValue(0);
+  mockRecipient({ _id: USER_ID, expoPushTokens: [], notifications: { push: true } });
 });
 
 describe('notify', () => {
@@ -68,6 +78,27 @@ describe('notify', () => {
     Notification.create.mockRejectedValue(new Error('Mongo down'));
 
     await expect(notificationService.notify(USER_ID, payload)).resolves.toBeNull();
+  });
+
+  it('đẩy sang thiết bị của người nhận sau khi đã ghi vào hộp thư', async () => {
+    const recipient = { _id: USER_ID, expoPushTokens: ['ExponentPushToken[x]'], notifications: { push: true } };
+    mockRecipient(recipient);
+
+    await notificationService.notify(USER_ID, payload);
+
+    expect(Notification.create).toHaveBeenCalled();
+    expect(sendExpoPush).toHaveBeenCalledWith(recipient, {
+      title: payload.title,
+      body: payload.body,
+      link: payload.link,
+    });
+  });
+
+  it('người nhận không còn tồn tại thì bỏ qua đẩy, không nổ', async () => {
+    mockRecipient(null);
+
+    await expect(notificationService.notify(USER_ID, payload)).resolves.not.toBeNull();
+    expect(sendExpoPush).not.toHaveBeenCalled();
   });
 
   it('xoá cache số chưa đọc để chuông thấy thông báo mới ngay', async () => {

@@ -1,5 +1,10 @@
 const { z } = require('zod');
 
+/** Token đẩy do Expo cấp; chuỗi khác dạng này chỉ tốn một vòng gọi mạng để bị từ chối. */
+const pushTokenSchema = z.object({
+  token: z.string().regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, 'Invalid Expo push token'),
+});
+
 const updateProfileSchema = z.object({
   fullName: z.string().min(2).max(100).trim().optional(),
   phone: z.string().regex(/^(0|\+84)[0-9]{9}$/, 'Invalid Vietnamese phone number').optional(),
@@ -29,4 +34,4 @@ const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
-module.exports = { updateProfileSchema, changePasswordSchema };
+module.exports = { updateProfileSchema, changePasswordSchema, pushTokenSchema };

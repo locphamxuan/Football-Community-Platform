@@ -22,7 +22,8 @@ app.use(cors({
   origin: env.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  // X-Client cho app di động tự khai mình là mobile (xem auth.controller)
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Client'],
 }));
 
 // ── Body parsing ───────────────────────────────────────────────────────────────

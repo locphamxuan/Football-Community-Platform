@@ -80,6 +80,12 @@ const userSchema = new mongoose.Schema(
       email: { type: Boolean, default: true },
       push: { type: Boolean, default: true },
     },
+    /**
+     * Token đẩy Expo, một cái cho mỗi thiết bị đã đăng nhập.
+     * Là mảng chứ không phải một chuỗi: một người dùng điện thoại lẫn máy tính bảng
+     * mà chỉ lưu một token thì mỗi lần đăng nhập máy này lại tắt thông báo của máy kia.
+     */
+    expoPushTokens: { type: [String], default: [] },
     lastSeen: { type: Date, default: Date.now },
   },
   {

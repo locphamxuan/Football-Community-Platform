@@ -78,6 +78,38 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.status).toBe(400);
     expect(authService.login).not.toHaveBeenCalled();
   });
+
+  it('client mobile nhận được refresh token trong body để cất vào Keychain', async () => {
+    authService.login.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: '1', email: 'probe@example.com' },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Client', 'mobile')
+      .send({ email: 'probe@example.com', password: 'Probe1234' });
+
+    expect(res.body.data.refreshToken).toBe('refresh-token');
+    // Cookie vẫn được đặt như cũ — không phía nào bị hạ mức bảo vệ vì phía kia
+    expect(res.headers['set-cookie'].join()).toMatch(/refreshToken=refresh-token;.*HttpOnly/i);
+  });
+
+  it('giá trị X-Client lạ vẫn bị coi như web', async () => {
+    authService.login.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: '1' },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .set('X-Client', 'curl')
+      .send({ email: 'probe@example.com', password: 'Probe1234' });
+
+    expect(res.body.data.refreshToken).toBeUndefined();
+  });
 });
 
 describe('POST /api/v1/auth/refresh-token', () => {
@@ -104,6 +136,27 @@ describe('POST /api/v1/auth/refresh-token', () => {
     await request(app).post('/api/v1/auth/refresh-token').send({ refreshToken: 'from-body' });
 
     expect(authService.refreshToken).toHaveBeenCalledWith('from-body', expect.any(String), expect.any(String));
+  });
+
+  it('client mobile nhận lại refresh token xoay vòng trong body', async () => {
+    authService.refreshToken.mockResolvedValue({ accessToken: 'new-access', refreshToken: 'new-refresh' });
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .set('X-Client', 'mobile')
+      .send({ refreshToken: 'from-body' });
+
+    expect(res.body.data.refreshToken).toBe('new-refresh');
+  });
+
+  it('web không thấy refresh token trong body', async () => {
+    authService.refreshToken.mockResolvedValue({ accessToken: 'new-access', refreshToken: 'new-refresh' });
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({ refreshToken: 'from-body' });
+
+    expect(res.body.data.refreshToken).toBeUndefined();
   });
 });
 
