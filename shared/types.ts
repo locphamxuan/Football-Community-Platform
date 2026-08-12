@@ -254,6 +254,29 @@ export interface OwnerReview extends Omit<Review, 'field'> {
   field: Pick<Field, '_id' | 'name' | 'location'>;
 }
 
+// ── Notification ─────────────────────────────────────────────────────────────
+/** Giữ khớp với `backend/src/constants/notifications.js`. */
+export type NotificationType =
+  | 'booking_created'
+  | 'booking_confirmed'
+  | 'booking_cancelled'
+  | 'match_request_received'
+  | 'match_request_answered'
+  | 'match_result_submitted'
+  | 'invoice_issued';
+
+export interface Notification {
+  _id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  /** Đường dẫn trong app tới đối tượng liên quan; rỗng nghĩa là không có gì để mở. */
+  link: string;
+  /** null = chưa đọc. */
+  readAt: string | null;
+  createdAt: string;
+}
+
 // ── Billing (chủ sân thuê nền tảng) ──────────────────────────────────────────
 export type PlanCode = 'free' | 'basic' | 'pro';
 
