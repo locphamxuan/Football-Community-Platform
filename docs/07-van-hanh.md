@@ -52,7 +52,13 @@ cd mobile && npm install && npm start
 ```
 
 Mobile trên **giả lập Android** phải gọi `10.0.2.2:5001`, không phải `127.0.0.1:5001` —
-localhost trong giả lập là chính nó.
+localhost trong giả lập là chính nó. Chạy trên máy thật hoặc trỏ tới server thì đặt
+`EXPO_PUBLIC_API_URL` (ví dụ `EXPO_PUBLIC_API_URL=http://192.168.1.10:5001/api/v1`).
+
+**Thông báo đẩy cần development build.** Expo Go trên Android từ SDK 53 không cấp được push
+token, và `getExpoPushTokenAsync` cần `eas.projectId` trong `app.json`. Thiếu một trong hai thì
+app vẫn chạy bình thường, chỉ là không có thông báo đẩy — mọi nhánh hỏng đều trả `null` chứ
+không ném lỗi.
 
 ## Kiểm tra sức khoẻ
 

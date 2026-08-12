@@ -4,9 +4,9 @@
 
 | Phía | Công cụ | Lệnh | Số test |
 |---|---|---|---|
-| `backend/` | Jest + supertest | `npm test` | 533 |
+| `backend/` | Jest + supertest | `npm test` | 557 |
 | `frontend/` | Vitest + Testing Library | `npm test` | 48 |
-| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 15 |
+| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 52 |
 
 ## Backend
 
@@ -87,6 +87,13 @@ Test interceptor **thay `api.defaults.adapter`** thay vì mock cả axios, nên 
 lỗi báo rất khó hiểu ("render function has not been called").
 
 `jest-expo` cần gói `test-renderer`, không phải `react-test-renderer`.
+
+**Sau `fireEvent`, chờ bằng `waitFor` trước khi kết thúc test.** Bỏ qua bước đó thì React
+cảnh báo "overlapping act() calls" và test *kế tiếp* trong cùng file mới là test hỏng — rất
+mất công lần ra.
+
+`src/lib/session.ts` giữ token trong biến module, nên test của nó gọi `jest.resetModules()`
+rồi `require` lại ở từng ca; nếu không, phiên của ca trước rò sang ca sau.
 
 ## Nên test gì
 

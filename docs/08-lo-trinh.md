@@ -51,11 +51,15 @@ bảy sự kiện được bắn từ booking / thách đấu / hoá đơn, số
 trên web hỏi lại mỗi 60 giây. Quy tắc và lý do:
 [04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app).
 
+**✅ Đã xong — phần đẩy.** `User.expoPushTokens` (mảng, một token cho mỗi thiết bị,
+`select: false`), hai endpoint đăng ký / gỡ thiết bị, `notify()` bắn kèm thông báo đẩy khi hồ sơ
+bật `notifications.push`, token chết bị dọn khi Expo báo `DeviceNotRegistered`. App mobile tự
+đăng ký thiết bị lúc đăng nhập và gỡ lúc đăng xuất.
+
 **Còn lại.**
 
-- **Đẩy cho mobile bằng Expo Push**: lưu `expoPushToken` trên `User`, tôn trọng cờ
-  `notifications.push` đã có sẵn trong hồ sơ. Phải làm sau [2.2](#22-mobile-bắt-kịp-web) —
-  chưa có màn đăng nhập trên mobile thì không có thiết bị nào để đăng ký token.
+- **Kiểm trên thiết bị thật.** Expo Go trên Android từ SDK 53 không lấy được push token —
+  cần một development build, và cần `eas.projectId` trong cấu hình app.
 - **Tắt được từng loại thông báo.** Hồ sơ hiện chỉ có cờ `notifications.email` và
   `notifications.push` cho tất cả; cần tách theo `type`.
 - **Nhắc hoá đơn sắp tới hạn.** Đây là loại duy nhất trong danh sách ban đầu **không** gắn với
@@ -68,18 +72,15 @@ người dùng tắt được từng loại.
 
 ### 2.2 Mobile bắt kịp web
 
-**Vì sao.** Mobile mới có một màn hình bảng giá để chứng minh app đọc đúng hợp đồng API.
-Người chơi phong trào dùng điện thoại là chính.
+**Vì sao.** Người chơi phong trào dùng điện thoại là chính.
 
-**Phạm vi, theo thứ tự.**
+**✅ Đã xong — toàn bộ phần dành cho người chơi.** `expo-router` với 5 tab, đăng nhập / đăng ký /
+quên mật khẩu, tìm sân và chi tiết sân, đặt sân với kiểm tra khung giờ trống, lịch đặt kèm huỷ và
+đánh giá, đội bóng (tạo, tham gia, rời), lời mời thi đấu và nhập tỉ số, hộp thư thông báo, hồ sơ.
+Kiến trúc và lý do: [02 — Kiến trúc](02-kien-truc.md#mobile-một-màn-hình-đi-qua-đâu).
 
-1. `expo-router` + điều hướng tab.
-2. Đăng nhập, lưu token bằng `expo-secure-store` (**không** dùng AsyncStorage cho token).
-3. Tìm sân + trang chi tiết sân.
-4. Đặt sân và xem lịch đặt của mình.
-5. Đội bóng và lời mời thi đấu.
-
-**Xong khi.** Một người chơi làm trọn được vòng "tìm sân → đặt → xem lịch" trên điện thoại.
+**Còn lại.** Màn hình dành cho chủ sân, quản lý đội và admin — mobile hiện chỉ phục vụ người chơi;
+ba vai trò kia vẫn làm việc trên web, nơi có bảng biểu và báo cáo rộng.
 
 ### 2.3 Chat trong lời mời thi đấu
 

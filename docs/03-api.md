@@ -38,6 +38,10 @@ object/array phải gửi dưới dạng chuỗi JSON (xem `parseJsonFields`).
 Các endpoint đăng ký / đăng nhập / quên mật khẩu bị giới hạn bởi `authLimiter`
 (mặc định 10 lần / 15 phút, xem [05](05-redis-rate-limit.md)).
 
+**Client gửi header `X-Client: mobile`** thì `/login` và `/refresh-token` trả thêm
+`refreshToken` ngay trong `data`, ngoài cookie. App di động không có cookie jar đáng tin cậy
+nhưng có Keychain/Keystore để cất token; web không gửi header này nên vẫn chỉ nhận cookie.
+
 ## Người dùng — `/users`
 
 Toàn bộ nhóm này cần đăng nhập.
@@ -48,7 +52,13 @@ Toàn bộ nhóm này cần đăng nhập.
 | PATCH | `/me` | 🔒 | `fullName?, phone?, dateOfBirth?, gender?, location?, playerProfile?, notifications?` |
 | PATCH | `/me/password` | 🔒 | `currentPassword, newPassword, confirmPassword` |
 | PATCH | `/me/avatar` | 🔒 | `multipart`, field `image`. Thiếu file trả 400 |
+| POST | `/me/push-tokens` | 🔒 | `token` (dạng `ExponentPushToken[...]`). Đăng ký thiết bị nhận thông báo đẩy; trả `devices` |
+| DELETE | `/me/push-tokens` | 🔒 | `token`. Gỡ đúng thiết bị này, các thiết bị khác giữ nguyên |
 | GET | `/:id` | 🔒 | Hồ sơ công khai của người khác |
+
+Token đẩy được lưu thành **mảng** trên `User` (một người có thể vừa dùng điện thoại vừa dùng
+máy tính bảng) và mang `select: false` — Expo không xác thực người gửi, ai cầm được token là
+đẩy được thông báo về máy đó, nên không endpoint nào được trả nó ra.
 
 ## Sân — `/fields`
 
