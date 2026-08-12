@@ -82,6 +82,30 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
 - Logout đưa `jti` của access token vào danh sách thu hồi trên Redis cho tới khi token hết hạn.
 - Mỗi tài khoản giữ tối đa **5 phiên** gần nhất.
 
+## Mobile: một màn hình đi qua đâu
+
+```
+app/                    expo-router — file nào cũng là một route
+  _layout.tsx           SafeArea → React Query → AuthProvider → Stack
+  (tabs)/               5 tab: tìm sân, lịch đặt, đội bóng, thông báo, hồ sơ
+  (auth)/               đăng nhập, đăng ký, quên mật khẩu
+src/services/           một facade cho mỗi nhóm endpoint, trả type của @fcp/shared
+src/lib/authFetch.ts    gọi API kèm access token, tự làm mới khi 401
+src/lib/session.ts      nơi duy nhất giữ token (Keychain/Keystore + bản sao trong RAM)
+src/lib/push.ts         xin quyền và lấy Expo push token
+src/components/         Screen, Button, TextField, Badge, Loading, EmptyState, ErrorState
+```
+
+Điều hướng theo file (`expo-router`) chứ không khai báo tay như React Navigation: cấu trúc
+thư mục chính là sơ đồ màn hình, và deep link từ thông báo đẩy chỉ là một đường dẫn.
+
+**Không chặn người chưa đăng nhập ở cửa vào.** Tìm sân, xem chi tiết sân và đọc đánh giá là
+công khai; màn nào cần phiên thì bọc `RequireAuth` và mời đăng nhập ngay tại chỗ. Bắt đăng
+nhập trước khi cho xem gì cả là cách nhanh nhất để mất người dùng mới.
+
+**Token nằm trong Keychain/Keystore, không phải AsyncStorage** — AsyncStorage là file thường,
+đọc được trên máy đã root hoặc qua bản sao lưu.
+
 ## Những quyết định đáng nhớ
 
 - **Backend là JavaScript thuần**, không TypeScript — theo yêu cầu ban đầu của chủ dự án.
@@ -96,3 +120,14 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
   cron hàng tháng. Không cần job nền, và không bao giờ phát hành trùng hoá đơn.
 - **Ảnh đi qua multipart/form-data**, nên mọi field tới backend đều là chuỗi. Schema Zod cho
   các form đó phải dùng `z.coerce` hoặc helper `booleanish`.
+- **Thông báo là hệ quả, không phải điều kiện.** `notify()` được gọi *sau* khi hành động đã
+  thành công và nuốt mọi lỗi. Một lần ghi thông báo hỏng không được cuộn ngược việc đã làm xong.
+- **Mobile gom mọi lần làm mới token vào một promise.** Mở app là hàng loạt request cùng nhận
+  401; mỗi request tự gọi `/auth/refresh-token` thì backend coi các lần sau là token dùng lại
+  và huỷ sạch phiên. Cờ gom nhóm phải được dọn trong `.finally` chứ **không** trong thân hàm
+  `async`: nhánh "chưa có refresh token" chạy hết mà không hề `await`, nên phép gán cờ xảy ra
+  *sau* lúc dọn và ghi đè lại — cờ kẹt vĩnh viễn và từ đó không lần nào làm mới được nữa.
+- **`connectRedis()` phải chịu được client đã kết nối sẵn.** `rate-limit-redis` nạp script Lua
+  ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
+  `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném
+  "Redis is already connecting/connected" và server chết ngay lúc khởi động.

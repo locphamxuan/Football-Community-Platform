@@ -1,3 +1,5 @@
+// Thông báo có test riêng ở notification.service.test.js; ở đây chỉ cần nó không chạm Mongo.
+jest.mock('../../src/services/notification.service');
 jest.mock('../../src/models/Subscription', () => ({ findOne: jest.fn(), findById: jest.fn(), create: jest.fn() }));
 jest.mock('../../src/models/Invoice', () => ({
   find: jest.fn(), findById: jest.fn(), create: jest.fn(),

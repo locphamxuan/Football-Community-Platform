@@ -1,3 +1,5 @@
+// Thông báo có test riêng ở notification.service.test.js; ở đây chỉ cần nó không chạm Mongo.
+jest.mock('../../src/services/notification.service');
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
 jest.mock('../../src/models/Booking', () => ({
   findById: jest.fn(),
@@ -13,6 +15,7 @@ jest.mock('../../src/models/Team', () => ({ findOne: jest.fn() }));
 
 const Booking = require('../../src/models/Booking');
 const Field = require('../../src/models/Field');
+const { notify } = require('../../src/services/notification.service');
 const bookingService = require('../../src/services/booking.service');
 
 const OWNER_ID = '000000000000000000000002';
@@ -35,6 +38,7 @@ const makeBooking = (overrides = {}) => ({
   field: FIELD_ID,
   date: `${dateAt(0)}T00:00:00.000Z`,
   startTime: '23:00',
+  endTime: '23:30',
   status: 'confirmed',
   ...overrides,
 });
@@ -108,6 +112,57 @@ describe('cancelBooking — cửa sổ huỷ 2 tiếng', () => {
 
     await expect(bookingService.cancelBooking(BOOKING_ID, BOOKER_ID, 'Thử'))
       .rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('thông báo đi kèm sự kiện đặt sân', () => {
+  /** Đối số của lần gọi notify duy nhất trong một thao tác. */
+  const notifyCall = () => {
+    const [recipient, payload, actorId] = notify.mock.calls[0];
+    return { recipient: recipient.toString(), payload, actorId };
+  };
+
+  it('người đặt huỷ thì chủ sân được báo, kèm lý do', async () => {
+    Booking.findById.mockResolvedValue(bookingStartingIn(5));
+
+    await bookingService.cancelBooking(BOOKING_ID, BOOKER_ID, 'Bận việc');
+
+    const { recipient, payload, actorId } = notifyCall();
+    expect(recipient).toBe(OWNER_ID);
+    expect(payload).toMatchObject({ type: 'booking_cancelled', link: '/owner/bookings' });
+    expect(payload.body).toContain('Bận việc');
+    expect(actorId).toBe(BOOKER_ID);
+  });
+
+  it('chủ sân từ chối thì người đặt được báo', async () => {
+    Booking.findById.mockResolvedValue(bookingStartingIn(0.5));
+
+    await bookingService.cancelBooking(BOOKING_ID, OWNER_ID, 'Sân hỏng');
+
+    const { recipient, payload } = notifyCall();
+    expect(recipient).toBe(BOOKER_ID);
+    expect(payload).toMatchObject({ type: 'booking_cancelled', link: '/bookings' });
+  });
+
+  it('xác nhận lịch thì người đặt được báo', async () => {
+    Booking.findById.mockResolvedValue(bookingStartingIn(5, { status: 'pending' }));
+    mockUpdateReturns({ status: 'confirmed' });
+
+    await bookingService.confirmBooking(BOOKING_ID, OWNER_ID);
+
+    const { recipient, payload, actorId } = notifyCall();
+    expect(recipient).toBe(BOOKER_ID);
+    expect(payload).toMatchObject({ type: 'booking_confirmed', link: '/bookings' });
+    expect(payload.body).toContain('Sân Probe');
+    expect(actorId).toBe(OWNER_ID);
+  });
+
+  it('thao tác thất bại thì không bắn thông báo nào', async () => {
+    Booking.findById.mockResolvedValue(bookingStartingIn(1));
+
+    await expect(bookingService.cancelBooking(BOOKING_ID, BOOKER_ID, 'Bận')).rejects.toBeDefined();
+
+    expect(notify).not.toHaveBeenCalled();
   });
 });
 

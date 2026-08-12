@@ -4,9 +4,9 @@
 
 | Phía | Công cụ | Lệnh | Số test |
 |---|---|---|---|
-| `backend/` | Jest + supertest | `npm test` | 497 |
-| `frontend/` | Vitest + Testing Library | `npm test` | 37 |
-| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 15 |
+| `backend/` | Jest + supertest | `npm test` | 557 |
+| `frontend/` | Vitest + Testing Library | `npm test` | 48 |
+| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 52 |
 
 ## Backend
 
@@ -75,6 +75,8 @@ Test nằm cạnh file nó kiểm (`format.test.ts` bên cạnh `format.ts`).
 - `src/components/dashboard/*.test.tsx` — các trạng thái component thật sự render
 - `src/services/api.test.ts` — interceptor của axios: gắn token, tự làm mới khi 401, hàng đợi
 - `src/stores/authStore.test.ts` — token vào `sessionStorage`, không lọt vào `localStorage`
+- `src/components/notifications/*.test.tsx`, `src/components/layout/NotificationBell.test.tsx` —
+  thông báo đã đọc / chưa đọc, huy hiệu số chưa đọc
 
 Test interceptor **thay `api.defaults.adapter`** thay vì mock cả axios, nên logic thật sự
 được chạy qua. Cách này đã tìm ra một lỗi treo request khi chính lời gọi refresh trả 401.
@@ -85,6 +87,13 @@ Test interceptor **thay `api.defaults.adapter`** thay vì mock cả axios, nên 
 lỗi báo rất khó hiểu ("render function has not been called").
 
 `jest-expo` cần gói `test-renderer`, không phải `react-test-renderer`.
+
+**Sau `fireEvent`, chờ bằng `waitFor` trước khi kết thúc test.** Bỏ qua bước đó thì React
+cảnh báo "overlapping act() calls" và test *kế tiếp* trong cùng file mới là test hỏng — rất
+mất công lần ra.
+
+`src/lib/session.ts` giữ token trong biến module, nên test của nó gọi `jest.resetModules()`
+rồi `require` lại ở từng ca; nếu không, phiên của ca trước rò sang ca sau.
 
 ## Nên test gì
 

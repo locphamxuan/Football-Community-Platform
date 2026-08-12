@@ -53,6 +53,31 @@ const updateAvatar = async (userId, file) => {
   return { avatar: url };
 };
 
+/**
+ * Đăng ký thiết bị nhận thông báo đẩy. `$addToSet` để mở app nhiều lần không nhân bản token,
+ * và để cùng một thiết bị đăng nhập lại không tạo bản ghi thứ hai.
+ */
+const addPushToken = async (userId, token) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { expoPushTokens: token } },
+    { new: true }
+  ).select('expoPushTokens');
+  if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  return { devices: user.expoPushTokens.length };
+};
+
+/** Gỡ token lúc đăng xuất — người dùng đã rời thiết bị này thì không được nhận thông báo nữa. */
+const removePushToken = async (userId, token) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $pull: { expoPushTokens: token } },
+    { new: true }
+  ).select('expoPushTokens');
+  if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  return { devices: user.expoPushTokens.length };
+};
+
 const getUsers = async (query) => {
   const { page, limit, skip } = getPagination(query);
   const filter = {};
@@ -76,4 +101,7 @@ const getUsers = async (query) => {
   return { users, total, page, limit };
 };
 
-module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar, getUsers };
+module.exports = {
+  getMe, getUserById, updateProfile, changePassword, updateAvatar,
+  addPushToken, removePushToken, getUsers,
+};

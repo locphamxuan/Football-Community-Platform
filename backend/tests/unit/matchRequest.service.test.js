@@ -1,3 +1,5 @@
+// Thông báo có test riêng ở notification.service.test.js; ở đây chỉ cần nó không chạm Mongo.
+jest.mock('../../src/services/notification.service');
 jest.mock('../../src/models/MatchRequest', () => ({
   findById: jest.fn(), findOne: jest.fn(), find: jest.fn(),
   findByIdAndUpdate: jest.fn(), create: jest.fn(), countDocuments: jest.fn(),
@@ -8,6 +10,7 @@ jest.mock('../../src/models/Team', () => ({
 
 const MatchRequest = require('../../src/models/MatchRequest');
 const Team = require('../../src/models/Team');
+const { notify } = require('../../src/services/notification.service');
 const matchRequestService = require('../../src/services/matchRequest.service');
 
 const MANAGER_A = '000000000000000000000001';
@@ -50,7 +53,17 @@ beforeEach(() => {
 });
 
 describe('respondToRequest', () => {
-  const pending = { _id: REQUEST_ID, status: 'pending', opponentTeam: { _id: TEAM_B } };
+  // date/startTime/endTime là required trong schema — thiếu chúng thì fixture không
+  // giống bất kỳ document thật nào và test bỏ lọt lỗi ở nhánh dựng thông báo.
+  const pending = {
+    _id: REQUEST_ID,
+    status: 'pending',
+    opponentTeam: { _id: TEAM_B },
+    requestedBy: { toString: () => MANAGER_A },
+    date: hoursFromNow(48),
+    startTime: '18:00',
+    endTime: '20:00',
+  };
 
   it('quản lý đội được mời chấp nhận được', async () => {
     MatchRequest.findById.mockReturnValue(mockPopulated(pending));
@@ -179,5 +192,67 @@ describe('submitResult', () => {
 
     expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(TEAM_A, expect.objectContaining({ 'stats.eloRating': 1200 }));
     expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(TEAM_B, expect.objectContaining({ 'stats.eloRating': 1200 }));
+  });
+});
+
+describe('thông báo đi kèm lời mời thi đấu', () => {
+  const notifyCall = () => {
+    const [recipient, payload, actorId] = notify.mock.calls[0];
+    return { recipient: recipient.toString(), payload, actorId };
+  };
+
+  it('trả lời lời mời thì người gửi được báo', async () => {
+    MatchRequest.findById.mockReturnValue(mockPopulated({
+      _id: REQUEST_ID,
+      status: 'pending',
+      opponentTeam: { _id: TEAM_B },
+      requestedBy: { toString: () => MANAGER_A },
+      date: hoursFromNow(48),
+      startTime: '18:00',
+      endTime: '20:00',
+    }));
+    Team.findById.mockResolvedValue(fakeTeam(TEAM_B, MANAGER_B));
+    MatchRequest.findByIdAndUpdate.mockReturnValue(mockPopulated({ status: 'accepted' }));
+
+    await matchRequestService.respondToRequest(REQUEST_ID, MANAGER_B, true);
+
+    const { recipient, payload, actorId } = notifyCall();
+    expect(recipient).toBe(MANAGER_A);
+    expect(payload).toMatchObject({ type: 'match_request_answered', link: '/match-requests' });
+    expect(actorId).toBe(MANAGER_B);
+  });
+
+  it('một bên nhập tỉ số thì bên kia được nhắc xác nhận', async () => {
+    MatchRequest.findById
+      .mockResolvedValueOnce(acceptedRequest())
+      .mockReturnValueOnce(mockPopulated({ _id: REQUEST_ID }));
+    Team.findById
+      .mockResolvedValueOnce(fakeTeam(TEAM_A, MANAGER_A))
+      .mockResolvedValueOnce(fakeTeam(TEAM_B, MANAGER_B));
+    MatchRequest.findByIdAndUpdate.mockResolvedValueOnce({
+      result: { confirmedByRequester: true, confirmedByOpponent: false },
+    });
+
+    await matchRequestService.submitResult(REQUEST_ID, MANAGER_A, { requesterScore: 2, opponentScore: 1 });
+
+    const { recipient, payload } = notifyCall();
+    expect(recipient).toBe(MANAGER_B);
+    expect(payload.type).toBe('match_result_submitted');
+  });
+
+  it('cả hai bên đã xác nhận thì thôi nhắc — trận đã đóng', async () => {
+    MatchRequest.findById
+      .mockResolvedValueOnce(acceptedRequest())
+      .mockReturnValueOnce(mockPopulated({ _id: REQUEST_ID }));
+    Team.findById
+      .mockResolvedValueOnce(fakeTeam(TEAM_A, MANAGER_A))
+      .mockResolvedValueOnce(fakeTeam(TEAM_B, MANAGER_B));
+    MatchRequest.findByIdAndUpdate.mockResolvedValueOnce({
+      result: { confirmedByRequester: true, confirmedByOpponent: true },
+    });
+
+    await matchRequestService.submitResult(REQUEST_ID, MANAGER_B, { requesterScore: 2, opponentScore: 1 });
+
+    expect(notify).not.toHaveBeenCalled();
   });
 });

@@ -28,4 +28,17 @@ const updateAvatar = catchAsync(async (req, res) => {
   sendSuccess(res, result, 'Avatar updated successfully');
 });
 
-module.exports = { getMe, getUserById, updateProfile, changePassword, updateAvatar };
+const addPushToken = catchAsync(async (req, res) => {
+  const result = await userService.addPushToken(req.user.id, req.body.token);
+  sendSuccess(res, result, 'Push token registered');
+});
+
+const removePushToken = catchAsync(async (req, res) => {
+  const result = await userService.removePushToken(req.user.id, req.body.token);
+  sendSuccess(res, result, 'Push token removed');
+});
+
+module.exports = {
+  getMe, getUserById, updateProfile, changePassword, updateAvatar,
+  addPushToken, removePushToken,
+};

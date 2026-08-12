@@ -5,6 +5,8 @@ const Invoice = require('../models/Invoice');
 const Field = require('../models/Field');
 const Booking = require('../models/Booking');
 const { getPagination } = require('../utils/pagination');
+const { notify } = require('./notification.service');
+const { NotificationType } = require('../constants/notifications');
 const { PLANS, PlanCode, getPlan, SubscriptionStatus, InvoiceStatus } = require('../constants/plans');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
@@ -41,7 +43,8 @@ const monthRange = (date = new Date()) => {
 
 const issueInvoice = async (subscription, { periodStart, periodEnd, description }) => {
   const plan = getPlan(subscription.plan);
-  return Invoice.create({
+  const dueDate = addDays(periodStart, PAYMENT_TERM_DAYS);
+  const invoice = await Invoice.create({
     code: generateInvoiceCode(),
     owner: subscription.owner,
     subscription: subscription._id,
@@ -50,9 +53,20 @@ const issueInvoice = async (subscription, { periodStart, periodEnd, description 
     amount: plan.monthlyPrice,
     periodStart,
     periodEnd,
-    dueDate: addDays(periodStart, PAYMENT_TERM_DAYS),
+    dueDate,
     status: InvoiceStatus.PENDING,
   });
+
+  // Hoá đơn được phát hành âm thầm lúc gia hạn "lười", không do chủ sân bấm nút nào —
+  // không báo thì họ chỉ biết khi thuê bao đã past_due và sân bị chặn.
+  await notify(subscription.owner, {
+    type: NotificationType.INVOICE_ISSUED,
+    title: `Hoá đơn mới ${invoice.code}`,
+    body: `${invoice.description} · ${invoice.amount.toLocaleString('vi-VN')}đ · hạn ${dueDate.toLocaleDateString('vi-VN')}`,
+    link: '/owner/billing',
+  });
+
+  return invoice;
 };
 
 /**

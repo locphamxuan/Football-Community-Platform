@@ -150,3 +150,13 @@ export const SKILL_LEVEL_COLORS: Record<string, string> = {
   advanced: 'bg-orange-100 text-orange-700',
   professional: 'bg-purple-100 text-purple-700',
 };
+
+export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  booking_created: 'Lịch đặt mới',
+  booking_confirmed: 'Lịch đặt được xác nhận',
+  booking_cancelled: 'Lịch đặt bị huỷ',
+  match_request_received: 'Lời mời thi đấu',
+  match_request_answered: 'Phản hồi lời mời',
+  match_result_submitted: 'Kết quả trận đấu',
+  invoice_issued: 'Hoá đơn mới',
+};

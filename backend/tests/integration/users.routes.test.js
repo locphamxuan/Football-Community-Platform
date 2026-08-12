@@ -13,6 +13,8 @@ describe('toàn bộ /api/v1/users cần đăng nhập', () => {
     ['patch', '/api/v1/users/me/password'],
     ['patch', '/api/v1/users/me/avatar'],
     ['get', '/api/v1/users/000000000000000000000002'],
+    ['post', '/api/v1/users/me/push-tokens'],
+    ['delete', '/api/v1/users/me/push-tokens'],
   ])('%s %s trả 401 khi thiếu token', async (method, url) => {
     const res = await request(app)[method](url);
     expect(res.status).toBe(401);
@@ -138,5 +140,44 @@ describe('GET /api/v1/users/:id', () => {
 
     expect(res.status).toBe(200);
     expect(userService.getUserById).toHaveBeenCalledWith('000000000000000000000002');
+  });
+});
+
+describe('thiết bị nhận thông báo đẩy', () => {
+  const TOKEN = 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]';
+
+  it('đăng ký thiết bị', async () => {
+    userService.addPushToken.mockResolvedValue({ devices: 1 });
+
+    const res = await request(app)
+      .post('/api/v1/users/me/push-tokens')
+      .set(asUser())
+      .send({ token: TOKEN });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.devices).toBe(1);
+    expect(userService.addPushToken).toHaveBeenCalledWith(USER_ID, TOKEN);
+  });
+
+  it('gỡ thiết bị lúc đăng xuất', async () => {
+    userService.removePushToken.mockResolvedValue({ devices: 0 });
+
+    const res = await request(app)
+      .delete('/api/v1/users/me/push-tokens')
+      .set(asUser())
+      .send({ token: TOKEN });
+
+    expect(res.status).toBe(200);
+    expect(userService.removePushToken).toHaveBeenCalledWith(USER_ID, TOKEN);
+  });
+
+  it.each([
+    ['token của Firebase chứ không phải Expo', { token: 'fcm-abc' }],
+    ['thiếu token', {}],
+  ])('trả 400 khi %s', async (_label, body) => {
+    const res = await request(app).post('/api/v1/users/me/push-tokens').set(asUser()).send(body);
+
+    expect(res.status).toBe(400);
+    expect(userService.addPushToken).not.toHaveBeenCalled();
   });
 });

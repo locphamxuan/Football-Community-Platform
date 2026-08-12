@@ -149,3 +149,40 @@ hoá đơn nào chưa thanh toán. Hoá đơn đã `paid` thì không huỷ đư
 - Admin từ chối → sân về `inactive` kèm `moderationNote`, **không xoá** — để chủ sân sửa rồi xin duyệt lại.
 - Không xoá được sân (hoặc sân con) còn lịch đặt chưa kết thúc — người đặt sẽ mất chỗ mà không ai báo.
 - Toạ độ lưu theo GeoJSON `[lng, lat]`, mặc định `[0, 0]` khi không có, để index `2dsphere` không vỡ.
+
+## Thông báo in-app
+
+Bảy sự kiện **nhạy cảm thời gian** được bắn cho bên còn lại: có lịch đặt mới, lịch được xác nhận,
+lịch bị huỷ, có lời mời thi đấu, lời mời được trả lời, đối thủ đã nhập tỉ số, hoá đơn mới.
+Danh sách đầy đủ kèm người nhận: [03 — Tham chiếu API](03-api.md#thông-báo--notifications).
+
+Ba quy tắc quyết định cách tầng này hành xử:
+
+**Thông báo không bao giờ làm hỏng hành động gốc.** `notify()` nuốt mọi lỗi và trả `null`.
+Thông báo là hệ quả của một việc **đã thành công** — lịch đã xác nhận, hoá đơn đã phát hành.
+Để một lần ghi hỏng cuộn ngược việc đó là đánh đổi ngược: người dùng mất việc chính chỉ vì
+cái chuông không kêu.
+
+**Không tự bắn cho chính người vừa hành động.** `notify()` nhận thêm `actorId` và bỏ qua khi
+người nhận trùng người gây ra sự kiện. Chủ sân tự huỷ lịch trên sân mình không cần được báo
+là mình vừa huỷ.
+
+**Chỉ thêm loại thông báo cho việc biết muộn là mất mát.** Thêm sự kiện tham khảo
+(ai đó xem sân, đội có thành viên mới) làm chuông kêu tới mức người dùng tắt hẳn — và thế là
+mất luôn cả những thông báo thật sự quan trọng.
+
+Hai chi tiết vận hành:
+
+- **Số chưa đọc cache trên Redis** (`notif:unread:<userId>`, TTL 5 phút), xoá ngay khi có
+  thông báo mới hoặc khi đánh dấu đã đọc. Chuông hỏi con số này trên mọi trang; đếm lại trong
+  Mongo mỗi lần là lãng phí. Redis chết thì rơi về đếm thẳng trong Mongo, không vỡ request.
+- **Thông báo tự hết hạn sau 90 ngày** bằng TTL index trên `createdAt`. Hộp thư không được
+  phình vô hạn, và thông báo quá hạn ba tháng thì không còn ai đọc.
+
+Web hỏi lại mỗi 60 giây (polling), **chưa** dùng WebSocket: một kết nối thường trực cho mỗi
+tab là cái giá quá đắt so với việc biết sớm hơn vài chục giây.
+
+- Cài đặt: `backend/src/services/notification.service.js`, các lời gọi `notify()` nằm ngay tại
+  service của sự kiện (booking / matchRequest / billing)
+- Test: `backend/tests/unit/notification.service.test.js`,
+  `backend/tests/integration/notifications.routes.test.js`

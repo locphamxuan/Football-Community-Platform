@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-11
+> Cập nhật lần cuối: 2026-08-12
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -48,18 +48,33 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - `docs/` — tài liệu đầy đủ về sản phẩm, kiến trúc, API, nghiệp vụ, vận hành, lộ trình.
 - CodeGraph (`.mcp.json`) để agent tra cứu codebase bằng đồ thị thay vì grep.
 
+**Thông báo in-app** (nhánh `feature/notifications`)
+- Hộp thư thông báo: bảy sự kiện nhạy cảm thời gian (lịch đặt mới / được xác nhận / bị huỷ, lời mời thi đấu, lời mời được trả lời, đối thủ nhập tỉ số, hoá đơn mới) tự bắn tới đúng người nhận.
+- Bốn endpoint dưới `/notifications`, số chưa đọc cache trên Redis, thông báo tự hết hạn sau 90 ngày.
+- Web: chuông trên thanh điều hướng (hỏi lại mỗi 60 giây) và trang `/notifications`.
+- Đẩy tới điện thoại bằng Expo Push: mỗi thiết bị một token trong `User.expoPushTokens`, tôn trọng cờ `notifications.push`, token chết bị dọn khi Expo báo `DeviceNotRegistered`.
+
+**App mobile cho người chơi** (nhánh `feature/mobile-app`)
+- Điều hướng `expo-router` với 5 tab: tìm sân, lịch đặt, đội bóng, thông báo, hồ sơ.
+- Đăng nhập / đăng ký / quên mật khẩu, token cất trong Keychain–Keystore, tự làm mới khi hết hạn.
+- Tìm sân, chi tiết sân kèm đánh giá, đặt sân có kiểm tra khung giờ trống, huỷ đơn và viết đánh giá.
+- Đội bóng (tạo, tham gia, rời), lời mời thi đấu và nhập tỉ số, hộp thư thông báo có deep link, hồ sơ.
+- Thiết bị tự đăng ký nhận thông báo đẩy lúc đăng nhập và được gỡ lúc đăng xuất.
+
 ## Đang làm / còn dở
 
-- `mobile/` mới có màn hình bảng giá thuê bao để chứng minh app đọc đúng hợp đồng API. **Bước tiếp theo:** điều hướng (expo-router), màn đăng nhập + lưu token, rồi màn tìm sân.
-- Chưa mở PR cho ba nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs` (nhánh sau xây trên nhánh trước).
+- **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
+- Mobile mới phục vụ **người chơi**. Chủ sân, quản lý đội và admin vẫn làm việc trên web.
+- Tắt/bật theo từng loại thông báo chưa có: hồ sơ mới chỉ có cờ `notifications.email` / `notifications.push` cho tất cả.
+- Chưa mở PR cho năm nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
 Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
-2. Thông báo in-app + đẩy cho mobile (lời mời thi đấu, lịch đặt được xác nhận).
-3. Mobile bắt kịp web: điều hướng, đăng nhập, tìm sân, đặt sân.
+2. Chat trong lời mời thi đấu, để hai đội chốt trận không phải nhảy sang Zalo.
+3. Tắt/bật thông báo theo từng loại, thay cho một cờ chung.
 
 ## Quyết định và bẫy cần nhớ
 
@@ -73,4 +88,9 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **Redis chết thì `cache.exists` trả `false`**, nên access token đã logout vẫn dùng được cho tới khi hết hạn (≤ 15 phút). Đổi lại, một sự cố Redis không còn đăng xuất toàn bộ người dùng. Lý do đầy đủ ở [`docs/05-redis-rate-limit.md`](../docs/05-redis-rate-limit.md).
 - **Gia hạn thuê bao chạy kiểu "lười"** ngay lúc đọc, không có cron. `node-cron` đã bị gỡ khỏi dependency vì không dùng tới.
 - **Chỉ có một hàm tính giá** (`calcPrice` trong `booking.service.js`). Hàm thứ hai `calculatePrice` trong `field.service.js` tính sai (lấy giá của giờ bắt đầu cho cả buổi) và đã bị xoá — đừng tạo lại.
+- **Thông báo không được làm hỏng hành động gốc.** `notify()` chạy sau khi việc chính đã xong và nuốt mọi lỗi. Đừng đặt nó vào giữa luồng nghiệp vụ, và đừng bỏ `actorId` — thiếu nó là người dùng tự nhận thông báo về chính việc mình vừa làm.
+- **`connectRedis()` không được gọi `connect()` vô điều kiện.** `rate-limit-redis` nạp script Lua ngay lúc `require('./app')` và lệnh đó đã tự mở kết nối; gọi lại ném "Redis is already connecting/connected" và server chết lúc khởi động. Đây từng là lỗi thật, chỉ lộ ra khi chạy `node src/server.js` chứ test không bắt được.
+- **Token đẩy là `select: false`.** Expo không xác thực người gửi: ai cầm được token là đẩy được thông báo về máy đó. Mọi truy vấn cần nó phải `.select('expoPushTokens')` tường minh.
+- **Cờ gom nhóm refresh token phải dọn trong `.finally`.** Dọn trong thân hàm `async` thì nhánh "chưa có refresh token" (chạy hết mà không `await`) bị chính phép gán ghi đè, cờ kẹt lại và app không bao giờ làm mới token nữa. Test bắt được lỗi này chỉ khi các ca chạy chung một file.
+- **Sau `fireEvent` trong test RNTL phải `waitFor`.** Không thì test *kế tiếp* trong cùng file mới hỏng, kèm cảnh báo "overlapping act()" rất khó lần ra.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").

@@ -12,6 +12,14 @@ const COOKIE_OPTIONS = {
   path: '/api/v1/auth',
 };
 
+/**
+ * Web giữ refresh token trong cookie `httpOnly` để XSS không đọc được. App di động không có
+ * cookie jar đáng tin cậy để dựa vào, nhưng lại có Keychain / Keystore — chỗ cất tương đương.
+ * Nên khi client tự khai là mobile thì trả thêm token trong body để nó tự cất; cookie vẫn
+ * giữ nguyên cho web, không phía nào bị hạ mức bảo vệ vì phía kia.
+ */
+const wantsTokenInBody = (req) => req.headers['x-client'] === 'mobile';
+
 const register = catchAsync(async (req, res) => {
   const result = await authService.register(req.body);
   sendSuccess(res, result, result.message, HttpStatus.CREATED);
@@ -23,7 +31,11 @@ const login = catchAsync(async (req, res) => {
   const result = await authService.login(req.body, deviceInfo, ipAddress);
 
   res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
-  sendSuccess(res, { accessToken: result.accessToken, user: result.user }, 'Login successful');
+  sendSuccess(res, {
+    accessToken: result.accessToken,
+    user: result.user,
+    ...(wantsTokenInBody(req) ? { refreshToken: result.refreshToken } : {}),
+  }, 'Login successful');
 });
 
 const refreshToken = catchAsync(async (req, res) => {
@@ -35,7 +47,10 @@ const refreshToken = catchAsync(async (req, res) => {
   const result = await authService.refreshToken(token, deviceInfo, req.ip || '');
 
   res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
-  sendSuccess(res, { accessToken: result.accessToken }, 'Token refreshed');
+  sendSuccess(res, {
+    accessToken: result.accessToken,
+    ...(wantsTokenInBody(req) ? { refreshToken: result.refreshToken } : {}),
+  }, 'Token refreshed');
 });
 
 const logout = catchAsync(async (req, res) => {

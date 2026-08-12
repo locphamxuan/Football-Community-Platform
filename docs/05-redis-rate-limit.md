@@ -3,6 +3,11 @@
 Redis làm hai việc: **cache** và **bộ đếm rate limit**. Backend không boot được nếu không
 kết nối được Redis (`connectRedis` chạy trong `server.js`).
 
+> `connectRedis()` phải chịu được client **đã kết nối sẵn**: `rate-limit-redis` nạp script Lua
+> ngay khi middleware được tạo, tức là lúc `require('./app')` — trước khi `server.js` gọi tới —
+> và lệnh đó đã tự mở kết nối. Gọi `connect()` lần nữa ném
+> `Redis is already connecting/connected` và server chết ngay lúc khởi động.
+
 ## Cache
 
 | Khoá | TTL | Xoá khi nào |
@@ -10,9 +15,13 @@ kết nối được Redis (`connectRedis` chạy trong `server.js`).
 | `field:{id}` | 10 phút | Sửa sân, thêm/sửa/xoá sân con, duyệt sân, có đánh giá mới |
 | `field:availability:{fieldId}:{YYYY-MM-DD}` | 30 giây | Tạo / huỷ / hoàn thành / đánh vắng một lượt đặt |
 | `blacklist:token:{jti}` | 15 phút | Tự hết hạn cùng access token |
+| `notif:unread:{userId}` | 5 phút | Có thông báo mới, đánh dấu đã đọc một hoặc tất cả |
 
 TTL của lịch trống cố tình để rất ngắn: lịch sân đổi liên tục, một phút dữ liệu cũ là đủ để
 hai người đặt trùng khung giờ.
+
+Số thông báo chưa đọc bị xoá cache ngay khi nó đổi, nên TTL 5 phút chỉ là lưới an toàn phòng
+khi một lần xoá thất bại. Chuông hỏi con số này trên mọi trang của mọi người dùng đang online.
 
 ### Redis là tầng tăng tốc, không phải nguồn sự thật
 

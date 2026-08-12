@@ -4,6 +4,9 @@ const Field = require('../models/Field');
 const Team = require('../models/Team');
 const { getPagination } = require('../utils/pagination');
 const { cache, CacheKeys } = require('../config/redis');
+const { formatSlotLabel } = require('../utils/datetime');
+const { notify } = require('./notification.service');
+const { NotificationType } = require('../constants/notifications');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
@@ -165,6 +168,13 @@ const createBooking = async (userId, data) => {
   }
 
   await invalidateAvailability(field._id, bookingDate);
+
+  await notify(field.owner, {
+    type: NotificationType.BOOKING_CREATED,
+    title: 'Có lịch đặt mới chờ xác nhận',
+    body: `${field.name} · ${formatSlotLabel(bookingDate, data.startTime, data.endTime)}`,
+    link: '/owner/bookings',
+  }, userId);
 
   return Booking.findById(booking._id).populate('field', 'name location images pricing');
 };
@@ -422,10 +432,9 @@ const cancelBooking = async (bookingId, userId, reason, isAdmin = false) => {
   if (!booking) throw new AppError('Booking not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
   const isBooker = booking.user.toString() === userId;
-  if (!isAdmin && !isBooker) {
-    // Chủ sân từ chối lịch đặt trên sân của mình
-    await assertFieldOwnership(booking.field, userId, false);
-  }
+  // Ai huỷ cũng cần nạp sân: chủ sân để kiểm quyền (chỉ được từ chối lịch trên sân của mình),
+  // người đặt và admin để biết phải báo huỷ cho chủ sân nào.
+  const field = await assertFieldOwnership(booking.field, userId, isAdmin || isBooker);
 
   if (!['pending', 'confirmed'].includes(booking.status)) {
     throw new AppError('Booking cannot be cancelled', HttpStatus.BAD_REQUEST, ErrorCode.BOOKING_NOT_CANCELLABLE);
@@ -455,6 +464,16 @@ const cancelBooking = async (bookingId, userId, reason, isAdmin = false) => {
   ).populate('field', 'name location images pricing');
 
   await invalidateAvailability(booking.field, booking.date);
+
+  // Huỷ luôn có hai phía: bên còn lại phải biết ngay để bán lại khung giờ hoặc tìm sân khác.
+  const slot = `${field.name} · ${formatSlotLabel(booking.date, booking.startTime, booking.endTime)}`;
+  await notify(isBooker ? field.owner : booking.user, {
+    type: NotificationType.BOOKING_CANCELLED,
+    title: isBooker ? 'Khách đã huỷ lịch đặt' : 'Lịch đặt của bạn đã bị huỷ',
+    body: reason ? `${slot} — lý do: ${reason}` : slot,
+    link: isBooker ? '/owner/bookings' : '/bookings',
+  }, userId);
+
   return updated;
 };
 
@@ -462,14 +481,26 @@ const cancelBooking = async (bookingId, userId, reason, isAdmin = false) => {
 const confirmBooking = async (bookingId, ownerId, isAdmin = false) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new AppError('Booking not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
-  await assertFieldOwnership(booking.field, ownerId, isAdmin);
+  const field = await assertFieldOwnership(booking.field, ownerId, isAdmin);
 
   if (booking.status !== 'pending') {
     throw new AppError('Only pending bookings can be confirmed', HttpStatus.BAD_REQUEST, ErrorCode.BOOKING_NOT_CANCELLABLE);
   }
 
-  return Booking.findByIdAndUpdate(bookingId, { status: 'confirmed', confirmedAt: new Date() }, { new: true })
-    .populate('field', 'name location images pricing');
+  const updated = await Booking.findByIdAndUpdate(
+    bookingId,
+    { status: 'confirmed', confirmedAt: new Date() },
+    { new: true }
+  ).populate('field', 'name location images pricing');
+
+  await notify(booking.user, {
+    type: NotificationType.BOOKING_CONFIRMED,
+    title: 'Lịch đặt đã được xác nhận',
+    body: `${field.name} · ${formatSlotLabel(booking.date, booking.startTime, booking.endTime)}`,
+    link: '/bookings',
+  }, ownerId);
+
+  return updated;
 };
 
 // ─── completeBooking ───────────────────────────────────────────────────────────
