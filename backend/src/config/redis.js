@@ -92,11 +92,15 @@ const CacheKeys = {
   field: (id) => `field:${id}`,
   fieldAvailability: (fieldId, date) => `field:availability:${fieldId}:${date}`,
   blacklistedToken: (jti) => `blacklist:token:${jti}`,
+  unreadNotifications: (userId) => `notif:unread:${userId}`,
 };
 
 const CacheTTL = {
   FIELD: 600,             // 10 phút
   FIELD_AVAILABILITY: 30, // 30 giây — lịch trống đổi liên tục
+  // Chuông thông báo được hỏi trên mọi trang; đếm lại trong Mongo mỗi lần là lãng phí.
+  // Cache bị xoá ngay khi có thông báo mới hoặc khi đánh dấu đã đọc, nên TTL chỉ là lưới an toàn.
+  UNREAD_NOTIFICATIONS: 300,
 };
 
 module.exports = {
