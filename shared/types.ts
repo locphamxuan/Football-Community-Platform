@@ -53,6 +53,7 @@ export interface User {
       eloRating: number;
     };
   };
+  notifications: { email: boolean; push: boolean };
   createdAt: string;
 }
 
