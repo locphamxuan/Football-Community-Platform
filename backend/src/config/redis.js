@@ -21,8 +21,20 @@ const getRedisClient = () => {
   return client;
 };
 
+/**
+ * `lazyConnect` để dành quyền mở kết nối cho hàm này, nhưng `rate-limit-redis` nạp
+ * script Lua ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi
+ * `server.js` gọi tới đây — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần
+ * nữa ném "Redis is already connecting/connected" và server chết ngay lúc khởi động.
+ */
 const connectRedis = async () => {
-  await getRedisClient().connect();
+  const redis = getRedisClient();
+  if (redis.status === 'wait' || redis.status === 'end') {
+    await redis.connect();
+    return;
+  }
+  // Đang kết nối dở: `ping` xếp hàng cho tới khi sẵn sàng, và xác nhận Redis trả lời thật.
+  if (redis.status !== 'ready') await redis.ping();
 };
 
 const disconnectRedis = async () => {
