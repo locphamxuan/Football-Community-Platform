@@ -14,14 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import fieldService from '@/services/field.service';
 import reviewService from '@/services/review.service';
 import useAuthStore from '@/stores/authStore';
+import { formatPrice } from '@/lib/format';
 import type { Review } from '@/types';
 import { toast } from 'sonner';
 import { Star, MapPin, Clock, Phone, CheckCircle, Car, Droplets, Utensils, Wifi, ThumbsUp, MessageSquare, Volleyball } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
   parking: <Car className="h-4 w-4" />,

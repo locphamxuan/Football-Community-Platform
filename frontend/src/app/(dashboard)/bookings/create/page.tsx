@@ -23,15 +23,13 @@ import {
 import SlotPicker from '@/components/bookings/SlotPicker';
 import fieldService from '@/services/field.service';
 import bookingService from '@/services/booking.service';
+import { formatPrice } from '@/lib/format';
 import type { ApiResponse, Field } from '@/types';
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Tiền mặt tại sân' },
   { value: 'bank_transfer', label: 'Chuyển khoản' },
 ] as const;
-
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
 /** Sinh mốc giờ bước 30 phút trong khung giờ mở cửa. */
 const buildTimeOptions = (open: string, close: string) => {
