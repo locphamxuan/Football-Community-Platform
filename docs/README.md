@@ -1,6 +1,6 @@
 # Tài liệu Football Community Platform
 
-> Cập nhật lần cuối: 2026-08-12
+> Cập nhật lần cuối: 2026-08-13
 
 Đây là tài liệu chính thức của dự án. `memory/PROGRESS.md` trả lời "dự án đang ở đâu";
 thư mục này trả lời "dự án là gì, chạy thế nào, và đi tiếp về đâu".

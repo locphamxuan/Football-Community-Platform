@@ -56,19 +56,22 @@ trên web hỏi lại mỗi 60 giây. Quy tắc và lý do:
 bật `notifications.push`, token chết bị dọn khi Expo báo `DeviceNotRegistered`. App mobile tự
 đăng ký thiết bị lúc đăng nhập và gỡ lúc đăng xuất.
 
+**✅ Đã xong — tắt theo từng loại.** `User.notifications.mutedTypes` (danh sách chọn-không-nhận),
+endpoint riêng `PATCH /users/me/notifications`, trang cài đặt trên web (`/notifications/settings`)
+và màn hình tương ứng trên mobile. Tắt một loại là tắt cả hộp thư lẫn thông báo đẩy — lý do:
+[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app). Cờ `notifications.email` đã bị xoá
+vì không luồng nào đọc tới.
+
 **Còn lại.**
 
 - **Kiểm trên thiết bị thật.** Expo Go trên Android từ SDK 53 không lấy được push token —
   cần một development build, và cần `eas.projectId` trong cấu hình app.
-- **Tắt được từng loại thông báo.** Hồ sơ hiện chỉ có cờ `notifications.email` và
-  `notifications.push` cho tất cả; cần tách theo `type`.
 - **Nhắc hoá đơn sắp tới hạn.** Đây là loại duy nhất trong danh sách ban đầu **không** gắn với
   một hành động của ai cả, nên không có chỗ nào để `notify()` bám vào. Nó cần một job nền —
   mà dự án đã cố tình không có cron (xem [gia hạn "lười"](04-nghiep-vu.md#gia-hạn-lười)).
   Làm nó là mở lại quyết định đó, nên tách riêng chứ không nhét kèm.
 
-**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện, và
-người dùng tắt được từng loại.
+**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện.
 
 ### 2.2 Mobile bắt kịp web
 

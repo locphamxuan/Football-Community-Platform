@@ -171,6 +171,21 @@ là mình vừa huỷ.
 (ai đó xem sân, đội có thành viên mới) làm chuông kêu tới mức người dùng tắt hẳn — và thế là
 mất luôn cả những thông báo thật sự quan trọng.
 
+**Tắt một loại là tắt trên mọi kênh.** `User.notifications.mutedTypes` là danh sách
+**chọn-không-nhận**; loại nằm trong đó thì `notify()` dừng ngay từ đầu — không ghi vào hộp thư,
+cũng không đẩy tới điện thoại. Một nút tắt chỉ có tác dụng một nửa (im trên điện thoại nhưng
+chuông vẫn đỏ) bị người dùng đọc thành "nút này hỏng". Sự kiện gốc vẫn tra được ở trang lịch đặt,
+lời mời thi đấu hoặc hoá đơn — hộp thư là lớp tiện lợi, không phải bản ghi duy nhất.
+
+Danh sách chọn-không-nhận chứ không phải chọn-có-nhận: mặc định rỗng nên một loại thông báo
+thêm về sau tự bật cho mọi người, không cần migration và không khiến cả nền tảng im lặng cho tới
+khi từng người vào bật tay. Cờ `notifications.push` vẫn là công tắc tổng cho riêng kênh đẩy —
+tắt nó thì thông báo vẫn vào hộp thư.
+
+> Cờ `notifications.email` cũ đã bị xoá: không có luồng nào đọc tới nó (email chỉ dùng cho xác
+> minh tài khoản và đặt lại mật khẩu — hai việc giao dịch, không được phép tắt). Giữ lại một
+> công tắc không nối vào đâu chỉ là nói dối người dùng.
+
 Hai chi tiết vận hành:
 
 - **Số chưa đọc cache trên Redis** (`notif:unread:<userId>`, TTL 5 phút), xoá ngay khi có
@@ -183,6 +198,8 @@ Web hỏi lại mỗi 60 giây (polling), **chưa** dùng WebSocket: một kết
 tab là cái giá quá đắt so với việc biết sớm hơn vài chục giây.
 
 - Cài đặt: `backend/src/services/notification.service.js`, các lời gọi `notify()` nằm ngay tại
-  service của sự kiện (booking / matchRequest / billing)
+  service của sự kiện (booking / matchRequest / billing); tuỳ chọn ghi ở
+  `user.service.js > updateNotificationPrefs`
 - Test: `backend/tests/unit/notification.service.test.js`,
+  `backend/tests/unit/user.service.test.js`,
   `backend/tests/integration/notifications.routes.test.js`

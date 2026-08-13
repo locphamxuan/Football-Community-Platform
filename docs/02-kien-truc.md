@@ -127,6 +127,11 @@ nhập trước khi cho xem gì cả là cách nhanh nhất để mất người
   và huỷ sạch phiên. Cờ gom nhóm phải được dọn trong `.finally` chứ **không** trong thân hàm
   `async`: nhánh "chưa có refresh token" chạy hết mà không hề `await`, nên phép gán cờ xảy ra
   *sau* lúc dọn và ghi đè lại — cờ kẹt vĩnh viễn và từ đó không lần nào làm mới được nữa.
+- **Mongoose không làm phẳng object lồng nhau trong lệnh cập nhật.**
+  `findByIdAndUpdate(id, { notifications: { push: false } })` **ghi đè cả cụm** `notifications`
+  chứ không chỉ đổi `push`; các trường anh em biến mất lặng lẽ và Mongoose trả lại giá trị
+  mặc định lúc đọc, nên nhìn qua tưởng vẫn đúng. Trường nào có anh em thì phải cập nhật bằng
+  đường dẫn có dấu chấm (`'notifications.push'`) — xem `user.service.js > updateNotificationPrefs`.
 - **`connectRedis()` phải chịu được client đã kết nối sẵn.** `rate-limit-redis` nạp script Lua
   ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
   `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném
