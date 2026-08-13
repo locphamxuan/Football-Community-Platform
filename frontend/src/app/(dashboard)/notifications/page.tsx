@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,16 +42,28 @@ export default function NotificationsPage() {
             {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Bạn đã đọc hết thông báo'}
           </p>
         </div>
-        {unreadCount > 0 && (
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => markAllRead.mutate()}
+              disabled={markAllRead.isPending}
+            >
+              Đánh dấu đã đọc hết
+            </Button>
+          )}
           <Button
-            variant="outline"
+            variant="ghost"
+            size="icon"
+            nativeButton={false}
             className="cursor-pointer"
-            onClick={() => markAllRead.mutate()}
-            disabled={markAllRead.isPending}
+            aria-label="Cài đặt thông báo"
+            render={<Link href="/notifications/settings" />}
           >
-            Đánh dấu đã đọc hết
+            <Settings className="size-4" />
           </Button>
-        )}
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'all' | 'unread')} className="mb-6">

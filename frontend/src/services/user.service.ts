@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, User } from '@/types';
+import type { ApiResponse, NotificationType, User } from '@/types';
 
 export interface UpdateProfilePayload {
   fullName?: string;
@@ -13,6 +13,12 @@ export interface UpdateProfilePayload {
   };
 }
 
+/** `mutedTypes` gửi lên là **toàn bộ** danh sách loại đang tắt, không phải phần thêm bớt. */
+export interface NotificationPrefsPayload {
+  push?: boolean;
+  mutedTypes?: NotificationType[];
+}
+
 export interface ChangePasswordPayload {
   currentPassword: string;
   newPassword: string;
@@ -24,6 +30,9 @@ const userService = {
 
   updateProfile: (data: UpdateProfilePayload) =>
     api.patch<ApiResponse<{ user: User }>>('/users/me', data),
+
+  updateNotificationPrefs: (data: NotificationPrefsPayload) =>
+    api.patch<ApiResponse<{ user: User }>>('/users/me/notifications', data),
 
   changePassword: (data: ChangePasswordPayload) =>
     api.patch<ApiResponse<null>>('/users/me/password', data),
