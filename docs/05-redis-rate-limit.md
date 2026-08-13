@@ -55,6 +55,24 @@ Vì sao tách `writeLimiter`: một request ghi (tạo booking, đổi gói, nh�
 
 `/health` nằm ngoài `/api` nên **không bị đếm** — probe của Docker gọi nó liên tục.
 
+### Đếm theo tài khoản, không phải theo IP
+
+Người dùng đã đăng nhập được đếm theo `user:<id>`, khách vãng lai mới đếm theo IP.
+
+Lý do: ở Việt Nam 4G đi qua CGNAT và cả một văn phòng chung một IP công cộng. Đếm thuần theo
+IP nghĩa là vài người dùng bình thường đủ làm cạn hạn mức của tất cả những người còn lại đứng
+sau cùng một đường mạng.
+
+Khoá được lấy từ access token và **chữ ký phải được xác minh**, không chỉ giải mã: tin `sub`
+trong một token bịa là mở cửa cho hạn mức vô hạn — kẻ tấn công chỉ cần đổi token mỗi request.
+Token hỏng hoặc hết hạn thì rơi về IP.
+
+Limiter gắn ở mức `/api`, tức là **chạy trước `authenticate`**, nên nó không đọc được
+`req.user` mà phải tự đọc header — đừng "dọn" chỗ này thành `req.user.id`.
+
+`authLimiter` trên thực tế vẫn đếm theo IP vì request đăng nhập chưa có token, và đó đúng là
+điều mong muốn: kẻ dò mật khẩu không có tài khoản nào để bị đếm theo.
+
 ### Bộ đếm nằm trên Redis
 
 `rate-limit-redis` giữ bộ đếm trên Redis thay vì trong RAM của tiến trình. Nhờ vậy:
