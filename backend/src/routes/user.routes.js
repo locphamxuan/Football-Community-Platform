@@ -5,7 +5,7 @@ const validate = require('../middleware/validate');
 const { uploadSingle } = require('../middleware/upload');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 const {
-  updateProfileSchema, changePasswordSchema, pushTokenSchema,
+  updateProfileSchema, updateNotificationsSchema, changePasswordSchema, pushTokenSchema,
 } = require('../validations/user.validation');
 
 const router = Router();
@@ -17,7 +17,8 @@ router.patch('/me',          validate(updateProfileSchema), controller.updatePro
 router.patch('/me/password', validate(changePasswordSchema), controller.changePassword);
 router.patch('/me/avatar',   uploadLimiter, uploadSingle, controller.updateAvatar);
 
-// ── Thiết bị nhận thông báo đẩy ───────────────────────────────────────────────
+// ── Thông báo ────────────────────────────────────────────────────────────────
+router.patch('/me/notifications', validate(updateNotificationsSchema), controller.updateNotificationPrefs);
 router.post('/me/push-tokens',   validate(pushTokenSchema), controller.addPushToken);
 router.delete('/me/push-tokens', validate(pushTokenSchema), controller.removePushToken);
 

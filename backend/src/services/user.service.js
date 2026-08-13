@@ -24,6 +24,24 @@ const updateProfile = async (userId, data) => {
   return user;
 };
 
+/**
+ * Ghi tuỳ chọn thông báo bằng **đường dẫn có dấu chấm**.
+ *
+ * Mongoose không làm phẳng object lồng nhau trong lệnh cập nhật: đưa
+ * `{ notifications: { push: false } }` vào là ghi đè nguyên cụm `notifications`, cuốn
+ * theo cả `mutedTypes`. Gạt công tắc đẩy trên điện thoại mà mất sạch danh sách loại
+ * đã tắt là lỗi không ai ngờ tới, và không có gì báo cho biết.
+ */
+const updateNotificationPrefs = async (userId, prefs) => {
+  const update = {};
+  if (prefs.push !== undefined) update['notifications.push'] = prefs.push;
+  if (prefs.mutedTypes !== undefined) update['notifications.mutedTypes'] = prefs.mutedTypes;
+
+  const user = await User.findByIdAndUpdate(userId, update, { new: true, runValidators: true });
+  if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  return user;
+};
+
 const changePassword = async (userId, { currentPassword, newPassword }) => {
   const user = await User.findById(userId).select('+password');
   if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
@@ -102,6 +120,6 @@ const getUsers = async (query) => {
 };
 
 module.exports = {
-  getMe, getUserById, updateProfile, changePassword, updateAvatar,
+  getMe, getUserById, updateProfile, updateNotificationPrefs, changePassword, updateAvatar,
   addPushToken, removePushToken, getUsers,
 };

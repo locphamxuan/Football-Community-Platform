@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { NOTIFICATION_TYPES } = require('../constants/notifications');
 
 const refreshTokenSchema = new mongoose.Schema(
   {
@@ -76,9 +77,16 @@ const userSchema = new mongoose.Schema(
         eloRating: { type: Number, default: 1200 },
       },
     },
+    /**
+     * Tuỳ chọn thông báo.
+     *
+     * `mutedTypes` là danh sách **chọn-không-nhận**: mặc định rỗng, nên một loại thông báo
+     * thêm sau này tự bật cho mọi người và không cần migration. Danh sách chọn-có-nhận thì
+     * ngược lại — thêm loại mới là cả nền tảng im lặng cho tới khi từng người vào bật tay.
+     */
     notifications: {
-      email: { type: Boolean, default: true },
       push: { type: Boolean, default: true },
+      mutedTypes: { type: [{ type: String, enum: NOTIFICATION_TYPES }], default: [] },
     },
     /**
      * Token đẩy Expo, một cái cho mỗi thiết bị đã đăng nhập.

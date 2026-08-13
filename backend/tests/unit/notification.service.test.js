@@ -94,11 +94,38 @@ describe('notify', () => {
     });
   });
 
-  it('người nhận không còn tồn tại thì bỏ qua đẩy, không nổ', async () => {
+  it('người nhận không còn tồn tại thì bỏ qua hẳn — không ai đọc được hộp thư đó nữa', async () => {
     mockRecipient(null);
 
-    await expect(notificationService.notify(USER_ID, payload)).resolves.not.toBeNull();
+    await expect(notificationService.notify(USER_ID, payload)).resolves.toBeNull();
+    expect(Notification.create).not.toHaveBeenCalled();
     expect(sendExpoPush).not.toHaveBeenCalled();
+  });
+
+  it('loại đã tắt thì không vào cả hộp thư lẫn thiết bị', async () => {
+    mockRecipient({
+      _id: USER_ID,
+      expoPushTokens: ['ExponentPushToken[x]'],
+      notifications: { push: true, mutedTypes: [NotificationType.BOOKING_CONFIRMED] },
+    });
+
+    const result = await notificationService.notify(USER_ID, payload);
+
+    expect(result).toBeNull();
+    expect(Notification.create).not.toHaveBeenCalled();
+    expect(sendExpoPush).not.toHaveBeenCalled();
+  });
+
+  it('tắt loại này không làm im loại khác', async () => {
+    mockRecipient({
+      _id: USER_ID,
+      expoPushTokens: [],
+      notifications: { push: true, mutedTypes: [NotificationType.INVOICE_ISSUED] },
+    });
+
+    await notificationService.notify(USER_ID, payload);
+
+    expect(Notification.create).toHaveBeenCalled();
   });
 
   it('xoá cache số chưa đọc để chuông thấy thông báo mới ngay', async () => {

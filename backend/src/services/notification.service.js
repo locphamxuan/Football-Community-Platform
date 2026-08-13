@@ -26,6 +26,14 @@ const notify = async (recipientId, payload, actorId = null) => {
   if (actorId && recipientId.toString() === actorId.toString()) return null;
 
   try {
+    // Đọc tuỳ chọn trước khi ghi. Loại đã tắt thì không tạo cả bản ghi in-app: một nút tắt
+    // chỉ có tác dụng một nửa — im trên điện thoại nhưng chuông vẫn đỏ — người dùng đọc
+    // thành "nút này hỏng". Sự kiện gốc vẫn tra được ở lịch đặt / hoá đơn, hộp thư chỉ là
+    // lớp tiện lợi chứ không phải bản ghi duy nhất.
+    const recipient = await User.findById(recipientId).select('expoPushTokens notifications');
+    if (!recipient) return null;
+    if (recipient.notifications?.mutedTypes?.includes(payload.type)) return null;
+
     const notification = await Notification.create({
       recipient: recipientId,
       type: payload.type,
@@ -36,15 +44,11 @@ const notify = async (recipientId, payload, actorId = null) => {
     await invalidateUnread(recipientId);
 
     // Đẩy sau khi đã ghi: hộp thư in-app là nguồn sự thật, đẩy chỉ là lớp báo sớm.
-    // Không có thiết bị nào đăng ký thì đây chỉ là một truy vấn rẻ rồi thôi.
-    const recipient = await User.findById(recipientId).select('expoPushTokens notifications');
-    if (recipient) {
-      await sendExpoPush(recipient, {
-        title: notification.title,
-        body: notification.body,
-        link: notification.link,
-      });
-    }
+    await sendExpoPush(recipient, {
+      title: notification.title,
+      body: notification.body,
+      link: notification.link,
+    });
 
     return notification;
   } catch (err) {

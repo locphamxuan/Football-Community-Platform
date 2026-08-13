@@ -17,6 +17,11 @@ const updateProfile = catchAsync(async (req, res) => {
   sendSuccess(res, { user }, 'Profile updated successfully');
 });
 
+const updateNotificationPrefs = catchAsync(async (req, res) => {
+  const user = await userService.updateNotificationPrefs(req.user.id, req.body);
+  sendSuccess(res, { user }, 'Notification preferences updated');
+});
+
 const changePassword = catchAsync(async (req, res) => {
   const result = await userService.changePassword(req.user.id, req.body);
   sendSuccess(res, result, result.message);
@@ -39,6 +44,6 @@ const removePushToken = catchAsync(async (req, res) => {
 });
 
 module.exports = {
-  getMe, getUserById, updateProfile, changePassword, updateAvatar,
+  getMe, getUserById, updateProfile, updateNotificationPrefs, changePassword, updateAvatar,
   addPushToken, removePushToken,
 };

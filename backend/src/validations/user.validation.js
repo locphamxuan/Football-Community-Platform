@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { NOTIFICATION_TYPES } = require('../constants/notifications');
 
 /** Token đẩy do Expo cấp; chuỗi khác dạng này chỉ tốn một vòng gọi mạng để bị từ chối. */
 const pushTokenSchema = z.object({
@@ -19,10 +20,19 @@ const updateProfileSchema = z.object({
     skillLevel: z.enum(['beginner', 'intermediate', 'advanced', 'professional']).optional(),
     bio: z.string().max(500).optional(),
   }).optional(),
-  notifications: z.object({
-    email: z.boolean().optional(),
-    push: z.boolean().optional(),
-  }).optional(),
+});
+
+/**
+ * Tuỳ chọn thông báo đi qua endpoint riêng chứ không nhét vào `updateProfileSchema`:
+ * cập nhật hồ sơ gửi cả cụm `notifications` sẽ ghi đè danh sách loại đã tắt
+ * (xem `updateNotificationPrefs` trong user.service.js).
+ *
+ * Loại lạ phải bị chặn ở đây — lọt xuống model thì `enum` của Mongoose ném ra
+ * ValidationError 500 thay vì 400 kèm tên trường sai.
+ */
+const updateNotificationsSchema = z.object({
+  push: z.boolean().optional(),
+  mutedTypes: z.array(z.enum(NOTIFICATION_TYPES)).optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -34,4 +44,6 @@ const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
-module.exports = { updateProfileSchema, changePasswordSchema, pushTokenSchema };
+module.exports = {
+  updateProfileSchema, updateNotificationsSchema, changePasswordSchema, pushTokenSchema,
+};
