@@ -79,7 +79,9 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
 - **Refresh token** (JWT, mặc định 7 ngày) chỉ mang `sub` và `jti`. Nằm trong cookie `httpOnly`, path `/api/v1/auth`.
 - Refresh token được **băm trước khi lưu**; mỗi lần refresh thì xoay token. Dùng lại một
   token đã xoay = dấu hiệu bị đánh cắp → hệ thống xoá sạch mọi phiên của user đó.
-- Logout đưa `jti` của access token vào danh sách thu hồi trên Redis cho tới khi token hết hạn.
+- Logout đưa `jti` của access token vào danh sách thu hồi trên Redis, **TTL lấy từ `exp` của
+  chính token đó** chứ không phải một hằng số: TTL cứng 15 phút sẽ ngắn hơn token ngay khi
+  `JWT_ACCESS_EXPIRES_IN` được đặt dài hơn, và token đã đăng xuất sống lại trong khoảng chênh.
 - Mỗi tài khoản giữ tối đa **5 phiên** gần nhất.
 
 ## Mobile: một màn hình đi qua đâu
@@ -95,6 +97,7 @@ src/lib/authFetch.ts    gọi API kèm access token, tự làm mới khi 401
 src/lib/session.ts      nơi duy nhất giữ token (Keychain/Keystore + bản sao trong RAM)
 src/lib/push.ts         xin quyền và lấy Expo push token
 src/lib/roles.ts        vai trò nào được vào khu quản lý — tab và cổng màn hình đọc chung
+src/lib/notificationLinks.ts  đổi `link` (đường dẫn web) của thông báo sang route mobile
 src/components/         Screen, Button, TextField, Badge, Loading, EmptyState, ErrorState
 ```
 
@@ -107,6 +110,10 @@ nhập trước khi cho xem gì cả là cách nhanh nhất để mất người
 
 **Token nằm trong Keychain/Keystore, không phải AsyncStorage** — AsyncStorage là file thường,
 đọc được trên máy đã root hoặc qua bản sao lưu.
+
+**Thông báo mang `link` của web, mobile phải dịch** (`src/lib/notificationLinks.ts`). Thêm một
+màn hình mới cho vai trò nào thì phải quay lại bảng này — link chưa được dịch lại vẫn "chạy",
+chỉ là đưa người dùng tới nhầm màn hình, nên không có lỗi nào nổ ra để nhắc.
 
 **Quyền vào khu quản lý chỉ khai báo một lần** (`src/lib/roles.ts`). Thanh tab dùng nó để ẩn
 hẳn tab "Quản lý", `RequireRole` dùng nó để chặn cửa màn hình. Hai nơi chép rời nhau thì sớm
