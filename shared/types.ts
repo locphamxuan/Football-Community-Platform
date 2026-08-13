@@ -53,7 +53,8 @@ export interface User {
       eloRating: number;
     };
   };
-  notifications: { email: boolean; push: boolean };
+  /** `mutedTypes` là danh sách chọn-không-nhận: rỗng nghĩa là nhận hết. */
+  notifications: { push: boolean; mutedTypes: NotificationType[] };
   createdAt: string;
 }
 
