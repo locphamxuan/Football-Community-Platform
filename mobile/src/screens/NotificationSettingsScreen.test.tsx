@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider, notifyManager } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { User } from '@fcp/shared';
 import NotificationSettingsScreen from './NotificationSettingsScreen';
+import { renderWithQuery } from '../testing/renderWithQuery';
 import { useAuth } from '../lib/auth';
 import { userService } from '../services/user.service';
 
@@ -13,13 +13,6 @@ jest.mock('../services/user.service', () => ({
 
 const mockAuth = useAuth as jest.Mock;
 const mockUpdate = userService.updateNotificationPrefs as jest.Mock;
-
-/**
- * Mặc định react-query gom thông báo đổi trạng thái rồi bắn qua `setTimeout(0)`. Cái hẹn giờ
- * đó nổ sau khi test đã kết thúc và cây đã bị gỡ, nên cảnh báo act() hiện lên ở test kế tiếp —
- * chạy riêng từng test thì sạch, chạy cả file mới thấy. Cho nó chạy thẳng là hết hàng đợi treo.
- */
-notifyManager.setScheduler((callback) => callback());
 
 const refreshUser = jest.fn();
 
@@ -43,21 +36,7 @@ const settled = () =>
   });
 
 // RNTL 14 render bất đồng bộ (React 19 concurrent) — luôn phải await
-const renderScreen = () => {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      // `gcTime` mặc định 5 phút để lại một hẹn giờ treo sau khi test xong; jest báo
-      // "worker process has failed to exit gracefully" và phải giết worker.
-      mutations: { gcTime: 0 },
-    },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <NotificationSettingsScreen />
-    </QueryClientProvider>
-  );
-};
+const renderScreen = () => renderWithQuery(<NotificationSettingsScreen />);
 
 beforeEach(() => {
   jest.clearAllMocks();
