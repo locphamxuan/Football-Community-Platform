@@ -67,11 +67,16 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Web: `/notifications/settings` (vào từ nút bánh răng ở hộp thư). Mobile: màn hình "Cài đặt thông báo" mở từ hồ sơ.
 - Cờ `notifications.email` bị xoá — không luồng nào đọc tới nó.
 
+**Khu quản lý trên mobile** (nhánh `feature/mobile-owner-screens`)
+- Tab "Quản lý" chỉ hiện với chủ sân / quản lý đội / admin; người chơi thuần không thấy tab (`href: null`).
+- Chủ sân: số liệu sân, duyệt lịch đặt (xác nhận, hoàn thành, khách không đến, huỷ kèm lý do), bật tắt nhận đặt từng sân.
+- Quyền vào khu quản lý khai báo một lần ở `mobile/src/lib/roles.ts`, tab và `RequireRole` dùng chung.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
-- Mobile mới phục vụ **người chơi**. Chủ sân, quản lý đội và admin vẫn làm việc trên web.
-- Chưa mở PR cho sáu nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences` (nhánh sau xây trên nhánh trước).
+- Mobile còn thiếu **tạo/sửa sân** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
+- Chưa mở PR cho bảy nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
@@ -79,7 +84,7 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
 2. Chat trong lời mời thi đấu, để hai đội chốt trận không phải nhảy sang Zalo.
-3. Màn hình chủ sân / quản lý đội / admin trên mobile — ba vai trò này vẫn phải mở web.
+3. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 
 ## Quyết định và bẫy cần nhớ
 
@@ -100,5 +105,6 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **Sau `fireEvent` trong test RNTL phải `waitFor`.** Không thì test *kế tiếp* trong cùng file mới hỏng, kèm cảnh báo "overlapping act()" rất khó lần ra.
 - **Mongoose ghi đè cả cụm khi cập nhật object lồng nhau.** `findByIdAndUpdate(id, { notifications: { push: false } })` xoá luôn các trường anh em trong `notifications`; đọc lại thấy giá trị mặc định nên nhìn qua tưởng vẫn đúng. Phải ghi bằng đường dẫn có dấu chấm.
 - **Test RNTL dùng react-query phải cho `notifyManager` chạy đồng bộ** (`setScheduler((cb) => cb())`) và đặt `mutations.gcTime: 0`. Mặc định react-query hẹn giờ `setTimeout(0)` để gom thông báo và giữ cache 5 phút: cái đầu bắn cảnh báo act() vào **test kế tiếp** (chạy riêng thì sạch), cái sau khiến jest phải giết worker vì còn hẹn giờ treo.
+- **Chữ trên nút trùng nhãn bộ lọc thì `getByText` ném "Found multiple elements".** Màn lịch đặt có chip lọc "Hoàn thành" lẫn nút "Hoàn thành". Cách sửa đúng không phải đổi chữ mà là đặt `accessibilityLabel` riêng cho từng đơn ("Hoàn thành lịch của Nguyễn Văn A") — trong một danh sách, trình đọc màn hình cũng chỉ nghe thấy một dãy nút giống hệt nhau.
 - **jsdom không có `PointerEvent`**, mà Base UI dựng nó trong handler click của Switch. Thiếu polyfill trong `vitest.setup.ts` thì `onCheckedChange` im lặng không chạy và lỗi nổ ngoài stack của test.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").

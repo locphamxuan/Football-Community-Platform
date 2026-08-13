@@ -82,8 +82,13 @@ quên mật khẩu, tìm sân và chi tiết sân, đặt sân với kiểm tra 
 đánh giá, đội bóng (tạo, tham gia, rời), lời mời thi đấu và nhập tỉ số, hộp thư thông báo, hồ sơ.
 Kiến trúc và lý do: [02 — Kiến trúc](02-kien-truc.md#mobile-một-màn-hình-đi-qua-đâu).
 
-**Còn lại.** Màn hình dành cho chủ sân, quản lý đội và admin — mobile hiện chỉ phục vụ người chơi;
-ba vai trò kia vẫn làm việc trên web, nơi có bảng biểu và báo cáo rộng.
+**✅ Đã xong — khu quản lý cho chủ sân và quản lý đội.** Tab "Quản lý" chỉ hiện với tài khoản có
+vai trò quản lý (`href: null` gỡ hẳn tab, thay vì dẫn tới một màn hình từ chối). Bên trong: số liệu
+sân của chủ sân, duyệt lịch đặt (xác nhận / hoàn thành / khách không đến / huỷ kèm lý do), bật tắt
+nhận đặt từng sân, và lối vào phần đội bóng của quản lý đội.
+
+**Còn lại.** Hai việc cố ý để trên web vì cần màn hình rộng: **tạo và sửa sân** (biểu mẫu có ảnh,
+bảng giá, sân con) và **toàn bộ khu admin** (bảng đối soát, duyệt sân, quản lý người dùng).
 
 ### 2.3 Chat trong lời mời thi đấu
 
