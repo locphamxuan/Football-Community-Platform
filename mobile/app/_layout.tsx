@@ -41,6 +41,7 @@ export default function RootLayout() {
             <Stack.Screen name="teams/create" options={{ title: 'Tạo đội' }} />
             <Stack.Screen name="match-requests" options={{ title: 'Lời mời thi đấu' }} />
             <Stack.Screen name="plans" options={{ title: 'Gói thuê bao' }} />
+            <Stack.Screen name="notification-settings" options={{ title: 'Cài đặt thông báo' }} />
           </Stack>
           <StatusBar style="dark" />
         </AuthProvider>

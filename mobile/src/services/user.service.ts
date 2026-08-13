@@ -1,4 +1,4 @@
-import type { Review, User } from '@fcp/shared';
+import type { NotificationType, Review, User } from '@fcp/shared';
 import { apiFetch } from '../lib/api';
 import { authFetch } from '../lib/authFetch';
 import { toQueryString } from './field.service';
@@ -9,8 +9,15 @@ export const userService = {
     phone?: string;
     location?: { city?: string; district?: string };
     playerProfile?: { positions?: string[]; skillLevel?: string; bio?: string };
-    notifications?: { email?: boolean; push?: boolean };
   }) => authFetch<{ user: User }>('/users/me', { method: 'PATCH', body: payload }),
+
+  /**
+   * Tuỳ chọn thông báo có endpoint riêng: `PATCH /users/me` ghi đè cả cụm `notifications`,
+   * nên gạt công tắc đẩy qua đường đó sẽ xoá sạch danh sách loại đã tắt.
+   * `mutedTypes` gửi lên là **toàn bộ** danh sách đang tắt, không phải phần thêm bớt.
+   */
+  updateNotificationPrefs: (payload: { push?: boolean; mutedTypes?: NotificationType[] }) =>
+    authFetch<{ user: User }>('/users/me/notifications', { method: 'PATCH', body: payload }),
 
   changePassword: (payload: {
     currentPassword: string;
