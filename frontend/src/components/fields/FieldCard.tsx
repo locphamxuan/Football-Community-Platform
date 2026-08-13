@@ -3,14 +3,12 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Field } from '@/types';
+import { formatPrice } from '@/lib/format';
 import { Star, MapPin, Clock, Volleyball } from 'lucide-react';
 
 interface Props {
   field: Field;
 }
-
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
 export default function FieldCard({ field }: Props) {
   const minPrice = Math.min(

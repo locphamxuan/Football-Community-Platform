@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { AxiosError } from 'axios';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,15 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import bookingService from '@/services/booking.service';
-import type { Booking } from '@/types';
+import { formatDateLong, formatPrice } from '@/lib/format';
+import type { ApiResponse, Booking } from '@/types';
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS } from '@/lib/constants';
 import { CalendarDays, Clock, MapPin } from 'lucide-react';
-
-const formatDate = (d: string) =>
-  new Date(d).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
 export default function MyBookingsPage() {
   const qc = useQueryClient();
@@ -41,20 +37,28 @@ export default function MyBookingsPage() {
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       bookingService.cancelBooking(id, reason),
     onSuccess: () => {
-      toast.success('Đã hủy booking');
+      toast.success('Đã huỷ lịch đặt.');
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
       setCancelDialog({ open: false, bookingId: '' });
       setCancelReason('');
     },
-    onError: () => toast.error('Không thể hủy booking'),
+    // Lý do từ chối là quy tắc nghiệp vụ ("phải huỷ trước giờ đá 2 tiếng") — nuốt nó đi
+    // rồi báo một câu chung chung là để người dùng bấm lại mãi mà không hiểu vì sao.
+    onError: (err: AxiosError<ApiResponse<null>>) =>
+      toast.error(err.response?.data?.message ?? 'Không huỷ được lịch đặt'),
   });
 
   const bookings: Booking[] = data?.data?.data?.bookings ?? [];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Lịch đặt sân của tôi</h1>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Lịch đặt sân của tôi</h1>
+          <p className="text-muted-foreground">
+            Huỷ được cho tới trước giờ đá 2 tiếng
+          </p>
+        </div>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? 'all')}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Trạng thái" />
@@ -70,7 +74,7 @@ export default function MyBookingsPage() {
 
       {isLoading ? (
         <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
+          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
         </div>
       ) : bookings.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
@@ -98,7 +102,7 @@ export default function MyBookingsPage() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <CalendarDays className="h-3.5 w-3.5" />
-                        {formatDate(booking.date)}
+                        {formatDateLong(booking.date)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
@@ -117,7 +121,7 @@ export default function MyBookingsPage() {
                         className="text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => setCancelDialog({ open: true, bookingId: booking._id })}
                       >
-                        Hủy đặt sân
+                        Huỷ đặt sân
                       </Button>
                     )}
                   </div>
@@ -132,13 +136,13 @@ export default function MyBookingsPage() {
       <Dialog open={cancelDialog.open} onOpenChange={(o) => setCancelDialog((d) => ({ ...d, open: o }))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hủy đặt sân</DialogTitle>
+            <DialogTitle>Huỷ đặt sân</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reason">Lý do hủy</Label>
+            <Label htmlFor="reason">Lý do huỷ</Label>
             <Input
               id="reason"
-              placeholder="Nhập lý do hủy..."
+              placeholder="Ví dụ: đội không đủ người"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
             />
@@ -152,7 +156,7 @@ export default function MyBookingsPage() {
               disabled={!cancelReason.trim() || cancelMutation.isPending}
               onClick={() => cancelMutation.mutate({ id: cancelDialog.bookingId, reason: cancelReason })}
             >
-              {cancelMutation.isPending ? 'Đang hủy...' : 'Xác nhận hủy'}
+              {cancelMutation.isPending ? 'Đang huỷ...' : 'Xác nhận huỷ'}
             </Button>
           </DialogFooter>
         </DialogContent>

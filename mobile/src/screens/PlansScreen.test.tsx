@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { screen, waitFor } from '@testing-library/react-native';
 import PlansScreen from './PlansScreen';
+import { renderWithQuery } from '../testing/renderWithQuery';
 
 const plans = [
   {
@@ -39,30 +40,33 @@ describe('PlansScreen', () => {
   it('hiện trạng thái đang tải trước khi có dữ liệu', async () => {
     // fetch không bao giờ resolve → màn hình đứng ở trạng thái loading
     global.fetch = jest.fn().mockReturnValue(new Promise(() => {})) as unknown as typeof fetch;
-    await render(<PlansScreen />);
+    await renderWithQuery(<PlansScreen />);
+
     expect(screen.getByLabelText('Đang tải bảng giá')).toBeTruthy();
   });
 
-  it('hiện tên và giá của từng gói', async () => {
+  it('hiện tên, giá và quyền lợi của từng gói', async () => {
     mockFetch({ success: true, message: 'ok', data: { plans } });
-    await render(<PlansScreen />);
+    await renderWithQuery(<PlansScreen />);
 
     await waitFor(() => expect(screen.getByText('Miễn phí')).toBeTruthy());
     expect(screen.getByText('Chuyên nghiệp')).toBeTruthy();
     expect(screen.getByText(/799\.000/)).toBeTruthy();
+    expect(screen.getByText('• 20 sân')).toBeTruthy();
   });
 
   it('hiện "Không giới hạn" cho hạn mức -1', async () => {
     mockFetch({ success: true, message: 'ok', data: { plans } });
-    await render(<PlansScreen />);
+    await renderWithQuery(<PlansScreen />);
 
     await waitFor(() => expect(screen.getByText(/Không giới hạn lượt đặt/)).toBeTruthy());
   });
 
-  it('hiện message của backend khi gọi API thất bại', async () => {
+  it('gọi API thất bại thì hiện message của backend kèm nút thử lại', async () => {
     mockFetch({ success: false, message: 'Máy chủ đang bảo trì' }, false, 503);
-    await render(<PlansScreen />);
+    await renderWithQuery(<PlansScreen />);
 
     await waitFor(() => expect(screen.getByText('Máy chủ đang bảo trì')).toBeTruthy());
+    expect(screen.getByText('Thử lại')).toBeTruthy();
   });
 });
