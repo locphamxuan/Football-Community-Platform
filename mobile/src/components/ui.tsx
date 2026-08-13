@@ -38,13 +38,23 @@ interface ButtonProps {
   variant?: 'primary' | 'outline' | 'danger';
   disabled?: boolean;
   loading?: boolean;
+  /** Dùng khi cả danh sách có nhiều nút cùng chữ: nói rõ nút này thuộc mục nào. */
+  accessibilityLabel?: string;
 }
 
-export function Button({ title, onPress, variant = 'primary', disabled, loading }: ButtonProps) {
+export function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  disabled,
+  loading,
+  accessibilityLabel,
+}: ButtonProps) {
   const isDisabled = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       onPress={onPress}
       disabled={isDisabled}
