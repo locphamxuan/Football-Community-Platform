@@ -117,7 +117,12 @@ const refreshToken = async (token, deviceInfo, ipAddress) => {
 const logout = async (userId, accessToken) => {
   try {
     const payload = verifyAccessToken(accessToken);
-    await cache.set(CacheKeys.blacklistedToken(payload.jti), '1', 15 * 60);
+    // Giữ vé thu hồi đúng bằng tuổi còn lại của chính token này. TTL cứng sẽ sai ngay
+    // khi JWT_ACCESS_EXPIRES_IN được đổi, và token đã đăng xuất sống lại từ lúc vé hết
+    // hạn cho tới lúc token hết hạn. `verifyAccessToken` đã loại token quá hạn, nên
+    // sàn 1 giây chỉ để chặn `setex 0` khi đồng hồ lệch đúng vào giây cuối.
+    const secondsLeft = Math.max(1, payload.exp - Math.floor(Date.now() / 1000));
+    await cache.set(CacheKeys.blacklistedToken(payload.jti), '1', secondsLeft);
   } catch { /* token đã invalid, bỏ qua */ }
 
   await User.findByIdAndUpdate(userId, { refreshTokens: [] });

@@ -11,9 +11,10 @@ jest.mock('../../src/utils/email', () => ({
 const User = require('../../src/models/User');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../../src/utils/email');
 const authService = require('../../src/services/auth.service');
+const env = require('../../src/config/env');
 const { hashPassword, hashToken } = require('../../src/utils/bcrypt');
 const { generateRefreshToken, generateAccessToken } = require('../../src/utils/jwt');
-const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');
+const { cache, CacheKeys, resetCache, ttlOf } = require('../helpers/fakeRedis');
 
 const USER_ID = '000000000000000000000001';
 const PASSWORD = 'Probe1234';
@@ -203,6 +204,24 @@ describe('logout', () => {
 
     expect(await cache.exists(CacheKeys.blacklistedToken(jti))).toBe(true);
     expect(User.findByIdAndUpdate).toHaveBeenCalledWith(USER_ID, { refreshTokens: [] });
+  });
+
+  // TTL từng bị đóng cứng 15 phút: đặt JWT_ACCESS_EXPIRES_IN dài hơn là token đã đăng
+  // xuất dùng lại được từ phút thứ 15 cho tới lúc nó thật sự hết hạn.
+  it('vé thu hồi sống đúng bằng tuổi của token, không phải một hằng số', async () => {
+    const original = env.JWT_ACCESS_EXPIRES_IN;
+    env.JWT_ACCESS_EXPIRES_IN = '1h';
+    try {
+      const { token, jti } = generateAccessToken(USER_ID, registration.email, ['user']);
+
+      await authService.logout(USER_ID, token);
+
+      const ttl = ttlOf(CacheKeys.blacklistedToken(jti));
+      expect(ttl).toBeGreaterThan(3595);
+      expect(ttl).toBeLessThanOrEqual(3600);
+    } finally {
+      env.JWT_ACCESS_EXPIRES_IN = original;
+    }
   });
 
   it('token đã hỏng vẫn xoá được phiên, không ném lỗi', async () => {
