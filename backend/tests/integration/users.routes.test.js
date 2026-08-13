@@ -12,6 +12,7 @@ describe('toàn bộ /api/v1/users cần đăng nhập', () => {
     ['patch', '/api/v1/users/me'],
     ['patch', '/api/v1/users/me/password'],
     ['patch', '/api/v1/users/me/avatar'],
+    ['patch', '/api/v1/users/me/notifications'],
     ['get', '/api/v1/users/000000000000000000000002'],
     ['post', '/api/v1/users/me/push-tokens'],
     ['delete', '/api/v1/users/me/push-tokens'],
@@ -60,6 +61,52 @@ describe('PATCH /api/v1/users/me', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('VALIDATION_ERROR');
     expect(userService.updateProfile).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /api/v1/users/me/notifications', () => {
+  it('tắt một loại thông báo', async () => {
+    userService.updateNotificationPrefs.mockResolvedValue({ _id: USER_ID });
+
+    const res = await request(app)
+      .patch('/api/v1/users/me/notifications')
+      .set(asUser())
+      .send({ push: false, mutedTypes: ['invoice_issued'] });
+
+    expect(res.status).toBe(200);
+    expect(userService.updateNotificationPrefs).toHaveBeenCalledWith(
+      USER_ID,
+      { push: false, mutedTypes: ['invoice_issued'] }
+    );
+  });
+
+  it.each([
+    ['loại thông báo không có thật', { mutedTypes: ['world_cup_final'] }],
+    ['công tắc đẩy không phải boolean', { push: 'yes' }],
+  ])('trả 400 khi %s', async (_label, body) => {
+    const res = await request(app)
+      .patch('/api/v1/users/me/notifications')
+      .set(asUser())
+      .send(body);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(userService.updateNotificationPrefs).not.toHaveBeenCalled();
+  });
+
+  it('không nhận tuỳ chọn thông báo qua PATCH /me — nơi đó ghi đè cả cụm', async () => {
+    userService.updateProfile.mockResolvedValue({});
+
+    const res = await request(app)
+      .patch('/api/v1/users/me')
+      .set(asUser())
+      .send({ notifications: { push: false } });
+
+    expect(res.status).toBe(200);
+    expect(userService.updateProfile).toHaveBeenCalledWith(
+      USER_ID,
+      expect.not.objectContaining({ notifications: expect.anything() })
+    );
   });
 });
 

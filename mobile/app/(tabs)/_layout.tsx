@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/lib/auth';
+import { canManage } from '../../src/lib/roles';
 import { notificationService } from '../../src/services/notification.service';
 import { colors, fontSize, radius } from '../../src/lib/theme';
 
@@ -62,6 +63,16 @@ export default function TabsLayout() {
         options={{
           title: 'Thông báo',
           tabBarLabel: () => <TabLabel label="Thông báo" badge={data?.unreadCount} />,
+        }}
+      />
+      <Tabs.Screen
+        name="manage"
+        options={{
+          title: 'Quản lý',
+          tabBarLabel: () => <TabLabel label="Quản lý" />,
+          // Người chơi thuần không có gì để quản lý; `href: null` gỡ hẳn tab khỏi thanh
+          // thay vì để một tab dẫn tới màn hình từ chối truy cập.
+          href: canManage(user?.roles) ? undefined : null,
         }}
       />
       <Tabs.Screen

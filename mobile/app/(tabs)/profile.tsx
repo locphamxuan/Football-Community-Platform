@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Button, Card, DetailRow, Screen, TextField } from '../../src/components/ui';
@@ -24,12 +24,6 @@ function ProfileBody() {
       setEditing(false);
     },
     onError: (err) => setError(messageOf(err)),
-  });
-
-  const togglePush = useMutation({
-    mutationFn: (enabled: boolean) => userService.updateProfile({ notifications: { push: enabled } }),
-    onSuccess: refreshUser,
-    onError: (err) => Alert.alert('Không lưu được', messageOf(err)),
   });
 
   if (!user) return null;
@@ -91,18 +85,14 @@ function ProfileBody() {
 
       <Card>
         <Text style={styles.sectionTitle}>Thông báo</Text>
-        <View style={styles.switchRow}>
-          <View style={styles.switchLabel}>
-            <Text style={styles.switchTitle}>Thông báo đẩy</Text>
-            <Text style={styles.switchHint}>
-              Tắt thì vẫn nhận thông báo trong app, chỉ không hiện trên màn hình khoá.
-            </Text>
-          </View>
-          <Switch
-            accessibilityLabel="Thông báo đẩy"
-            value={user.notifications?.push ?? true}
-            onValueChange={(value) => togglePush.mutate(value)}
-            disabled={togglePush.isPending}
+        <Text style={styles.hint}>
+          Chọn việc gì đáng để làm phiền bạn, theo từng loại thông báo.
+        </Text>
+        <View style={styles.action}>
+          <Button
+            title="Cài đặt thông báo"
+            variant="outline"
+            onPress={() => router.push('/notification-settings')}
           />
         </View>
       </Card>
@@ -117,7 +107,7 @@ function ProfileBody() {
           />
         </View>
         <Text style={styles.hint}>
-          Quản lý sân, quản lý đội và quản trị nền tảng hiện chỉ có trên web.
+          Chủ sân và quản lý đội có thêm tab &quot;Quản lý&quot;. Quản trị nền tảng vẫn chỉ có trên web.
         </Text>
       </Card>
 
@@ -159,9 +149,5 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', marginBottom: spacing.sm },
   action: { marginTop: spacing.md },
   error: { color: colors.danger, marginBottom: spacing.md },
-  switchRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
-  switchLabel: { flex: 1 },
-  switchTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
-  switchHint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xs },
   hint: { color: colors.textSubtle, fontSize: fontSize.xs, marginTop: spacing.sm },
 });

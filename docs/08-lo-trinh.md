@@ -56,19 +56,22 @@ trên web hỏi lại mỗi 60 giây. Quy tắc và lý do:
 bật `notifications.push`, token chết bị dọn khi Expo báo `DeviceNotRegistered`. App mobile tự
 đăng ký thiết bị lúc đăng nhập và gỡ lúc đăng xuất.
 
+**✅ Đã xong — tắt theo từng loại.** `User.notifications.mutedTypes` (danh sách chọn-không-nhận),
+endpoint riêng `PATCH /users/me/notifications`, trang cài đặt trên web (`/notifications/settings`)
+và màn hình tương ứng trên mobile. Tắt một loại là tắt cả hộp thư lẫn thông báo đẩy — lý do:
+[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app). Cờ `notifications.email` đã bị xoá
+vì không luồng nào đọc tới.
+
 **Còn lại.**
 
 - **Kiểm trên thiết bị thật.** Expo Go trên Android từ SDK 53 không lấy được push token —
   cần một development build, và cần `eas.projectId` trong cấu hình app.
-- **Tắt được từng loại thông báo.** Hồ sơ hiện chỉ có cờ `notifications.email` và
-  `notifications.push` cho tất cả; cần tách theo `type`.
 - **Nhắc hoá đơn sắp tới hạn.** Đây là loại duy nhất trong danh sách ban đầu **không** gắn với
   một hành động của ai cả, nên không có chỗ nào để `notify()` bám vào. Nó cần một job nền —
   mà dự án đã cố tình không có cron (xem [gia hạn "lười"](04-nghiep-vu.md#gia-hạn-lười)).
   Làm nó là mở lại quyết định đó, nên tách riêng chứ không nhét kèm.
 
-**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện, và
-người dùng tắt được từng loại.
+**Xong khi.** Nhận được thông báo đẩy trên thiết bị thật cho ít nhất ba sự kiện.
 
 ### 2.2 Mobile bắt kịp web
 
@@ -79,8 +82,13 @@ quên mật khẩu, tìm sân và chi tiết sân, đặt sân với kiểm tra 
 đánh giá, đội bóng (tạo, tham gia, rời), lời mời thi đấu và nhập tỉ số, hộp thư thông báo, hồ sơ.
 Kiến trúc và lý do: [02 — Kiến trúc](02-kien-truc.md#mobile-một-màn-hình-đi-qua-đâu).
 
-**Còn lại.** Màn hình dành cho chủ sân, quản lý đội và admin — mobile hiện chỉ phục vụ người chơi;
-ba vai trò kia vẫn làm việc trên web, nơi có bảng biểu và báo cáo rộng.
+**✅ Đã xong — khu quản lý cho chủ sân và quản lý đội.** Tab "Quản lý" chỉ hiện với tài khoản có
+vai trò quản lý (`href: null` gỡ hẳn tab, thay vì dẫn tới một màn hình từ chối). Bên trong: số liệu
+sân của chủ sân, duyệt lịch đặt (xác nhận / hoàn thành / khách không đến / huỷ kèm lý do), bật tắt
+nhận đặt từng sân, và lối vào phần đội bóng của quản lý đội.
+
+**Còn lại.** Hai việc cố ý để trên web vì cần màn hình rộng: **tạo và sửa sân** (biểu mẫu có ảnh,
+bảng giá, sân con) và **toàn bộ khu admin** (bảng đối soát, duyệt sân, quản lý người dùng).
 
 ### 2.3 Chat trong lời mời thi đấu
 

@@ -87,12 +87,14 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
 ```
 app/                    expo-router — file nào cũng là một route
   _layout.tsx           SafeArea → React Query → AuthProvider → Stack
-  (tabs)/               5 tab: tìm sân, lịch đặt, đội bóng, thông báo, hồ sơ
+  (tabs)/               6 tab: tìm sân, lịch đặt, đội bóng, thông báo, quản lý, hồ sơ
   (auth)/               đăng nhập, đăng ký, quên mật khẩu
+  owner/                lịch đặt và danh sách sân của chủ sân
 src/services/           một facade cho mỗi nhóm endpoint, trả type của @fcp/shared
 src/lib/authFetch.ts    gọi API kèm access token, tự làm mới khi 401
 src/lib/session.ts      nơi duy nhất giữ token (Keychain/Keystore + bản sao trong RAM)
 src/lib/push.ts         xin quyền và lấy Expo push token
+src/lib/roles.ts        vai trò nào được vào khu quản lý — tab và cổng màn hình đọc chung
 src/components/         Screen, Button, TextField, Badge, Loading, EmptyState, ErrorState
 ```
 
@@ -105,6 +107,11 @@ nhập trước khi cho xem gì cả là cách nhanh nhất để mất người
 
 **Token nằm trong Keychain/Keystore, không phải AsyncStorage** — AsyncStorage là file thường,
 đọc được trên máy đã root hoặc qua bản sao lưu.
+
+**Quyền vào khu quản lý chỉ khai báo một lần** (`src/lib/roles.ts`). Thanh tab dùng nó để ẩn
+hẳn tab "Quản lý", `RequireRole` dùng nó để chặn cửa màn hình. Hai nơi chép rời nhau thì sớm
+muộn cũng lệch, và triệu chứng là một cái tab bấm vào chỉ để nhận thông báo từ chối. Đây là
+lớp giải thích cho người dùng, **không phải** lớp bảo vệ — backend vẫn kiểm quyền từng endpoint.
 
 ## Những quyết định đáng nhớ
 
@@ -127,6 +134,11 @@ nhập trước khi cho xem gì cả là cách nhanh nhất để mất người
   và huỷ sạch phiên. Cờ gom nhóm phải được dọn trong `.finally` chứ **không** trong thân hàm
   `async`: nhánh "chưa có refresh token" chạy hết mà không hề `await`, nên phép gán cờ xảy ra
   *sau* lúc dọn và ghi đè lại — cờ kẹt vĩnh viễn và từ đó không lần nào làm mới được nữa.
+- **Mongoose không làm phẳng object lồng nhau trong lệnh cập nhật.**
+  `findByIdAndUpdate(id, { notifications: { push: false } })` **ghi đè cả cụm** `notifications`
+  chứ không chỉ đổi `push`; các trường anh em biến mất lặng lẽ và Mongoose trả lại giá trị
+  mặc định lúc đọc, nên nhìn qua tưởng vẫn đúng. Trường nào có anh em thì phải cập nhật bằng
+  đường dẫn có dấu chấm (`'notifications.push'`) — xem `user.service.js > updateNotificationPrefs`.
 - **`connectRedis()` phải chịu được client đã kết nối sẵn.** `rate-limit-redis` nạp script Lua
   ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
   `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném

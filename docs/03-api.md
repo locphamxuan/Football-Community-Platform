@@ -49,9 +49,10 @@ Toàn bộ nhóm này cần đăng nhập.
 | Method | Đường dẫn | Quyền | Body / Ghi chú |
 |---|---|---|---|
 | GET | `/me` | 🔒 | Hồ sơ đầy đủ của chính mình |
-| PATCH | `/me` | 🔒 | `fullName?, phone?, dateOfBirth?, gender?, location?, playerProfile?, notifications?` |
+| PATCH | `/me` | 🔒 | `fullName?, phone?, dateOfBirth?, gender?, location?, playerProfile?` |
 | PATCH | `/me/password` | 🔒 | `currentPassword, newPassword, confirmPassword` |
 | PATCH | `/me/avatar` | 🔒 | `multipart`, field `image`. Thiếu file trả 400 |
+| PATCH | `/me/notifications` | 🔒 | `push?` (bool), `mutedTypes?` (mảng `NotificationType`). Trả về `user` |
 | POST | `/me/push-tokens` | 🔒 | `token` (dạng `ExponentPushToken[...]`). Đăng ký thiết bị nhận thông báo đẩy; trả `devices` |
 | DELETE | `/me/push-tokens` | 🔒 | `token`. Gỡ đúng thiết bị này, các thiết bị khác giữ nguyên |
 | GET | `/:id` | 🔒 | Hồ sơ công khai của người khác |
@@ -59,6 +60,12 @@ Toàn bộ nhóm này cần đăng nhập.
 Token đẩy được lưu thành **mảng** trên `User` (một người có thể vừa dùng điện thoại vừa dùng
 máy tính bảng) và mang `select: false` — Expo không xác thực người gửi, ai cầm được token là
 đẩy được thông báo về máy đó, nên không endpoint nào được trả nó ra.
+
+Tuỳ chọn thông báo **không** đi qua `PATCH /me` mà có endpoint riêng. Lệnh cập nhật của Mongoose
+không làm phẳng object lồng nhau: gửi `{ notifications: { push: false } }` là ghi đè nguyên cụm
+`notifications`, cuốn theo cả `mutedTypes`. `PATCH /me/notifications` ghi bằng đường dẫn có dấu
+chấm nên gửi thiếu trường nào thì trường đó giữ nguyên. `mutedTypes` gửi lên là **toàn bộ**
+danh sách đang tắt, không phải phần thêm bớt — mảng rỗng nghĩa là nhận hết.
 
 ## Sân — `/fields`
 
