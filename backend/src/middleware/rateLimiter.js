@@ -2,11 +2,35 @@ const rateLimit = require('express-rate-limit');
 const { RedisStore } = require('rate-limit-redis');
 const env = require('../config/env');
 const { getRedisClient } = require('../config/redis');
+const { verifyAccessToken } = require('../utils/jwt');
 const { sendError } = require('../utils/ApiResponse');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 
 const READ_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+/**
+ * Đếm theo tài khoản khi đã đăng nhập, theo IP khi chưa.
+ *
+ * Đếm thuần theo IP chặn nhầm người dùng thật ở Việt Nam: 4G đi qua CGNAT và cả một văn
+ * phòng chung một IP công cộng, nên vài người dùng bình thường là đủ làm cạn hạn mức của
+ * cả nhóm.
+ *
+ * Chữ ký **phải** được xác minh chứ không chỉ giải mã: nếu tin `sub` trong một token bịa,
+ * kẻ tấn công chỉ cần đổi token mỗi request là có hạn mức vô hạn.
+ *
+ * Limiter chạy trước `authenticate` (gắn ở mức `/api`) nên không đọc được `req.user` —
+ * đây là lý do phải tự đọc header thay vì dùng lại kết quả xác thực.
+ */
+const requesterKey = (req) => {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      return `user:${verifyAccessToken(header.slice(7)).sub}`;
+    } catch { /* token hỏng hoặc hết hạn: đếm như khách vãng lai */ }
+  }
+  return req.ip;
+};
 
 const makeHandler = (message) => (_req, res) =>
   sendError(res, message, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
@@ -32,6 +56,7 @@ const createLimiter = ({ prefix, windowMs, max, message, skip }) => rateLimit({
   // Redis chết thì cho request đi tiếp, không biến sự cố cache thành lỗi 500
   passOnStoreError: true,
   store: createStore(prefix),
+  keyGenerator: requesterKey,
   handler: makeHandler(message),
   skip,
 });
@@ -56,7 +81,11 @@ const writeLimiter = createLimiter({
   skip: (req) => READ_METHODS.includes(req.method),
 });
 
-/** Đăng nhập, đăng ký, quên mật khẩu — ngưỡng thấp để chặn dò mật khẩu. */
+/**
+ * Đăng nhập, đăng ký, quên mật khẩu — ngưỡng thấp để chặn dò mật khẩu. Các request này
+ * chưa có token nên trên thực tế vẫn đếm theo IP, đúng như mong muốn: kẻ dò mật khẩu
+ * không có tài khoản nào để bị đếm theo.
+ */
 const authLimiter = createLimiter({
   prefix: 'auth',
   windowMs: 15 * 60 * 1000,

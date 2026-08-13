@@ -108,6 +108,55 @@ describe('uploadLimiter', () => {
   });
 });
 
+describe('khoá đếm', () => {
+  const { generateAccessToken } = require('../../src/utils/jwt');
+
+  const hitAs = (app, token, times, method = 'post') => {
+    const run = async () => {
+      let last;
+      for (let i = 0; i < times; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        last = await request(app)[method]('/probe').set('Authorization', `Bearer ${token}`);
+      }
+      return last;
+    };
+    return run();
+  };
+
+  // Cả một văn phòng hay cả một trạm 4G dùng chung IP công cộng; đếm theo IP là để
+  // vài người dùng bình thường làm cạn hạn mức của tất cả những người còn lại.
+  it('hai tài khoản trên cùng một IP không tiêu hạn mức của nhau', async () => {
+    const app = appWith('writeLimiter');
+    const { token: a } = generateAccessToken('000000000000000000000001', 'a@probe.vn', ['user']);
+    const { token: b } = generateAccessToken('000000000000000000000002', 'b@probe.vn', ['user']);
+
+    await hitAs(app, a, 2);
+    const res = await hitAs(app, b, 2);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('cùng một tài khoản vẫn bị chặn khi vượt hạn mức', async () => {
+    const app = appWith('writeLimiter');
+    const { token } = generateAccessToken('000000000000000000000001', 'a@probe.vn', ['user']);
+
+    const res = await hitAs(app, token, 3);
+
+    expect(res.status).toBe(429);
+  });
+
+  // Tin `sub` trong một token bịa là mở cửa cho hạn mức vô hạn: đổi token mỗi request.
+  it('token giả không mở được khoá đếm mới, vẫn đếm theo IP', async () => {
+    const app = appWith('writeLimiter');
+    const forged = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJrZS1naWEifQ.chu-ky-bia';
+
+    await hitAs(app, forged, 2);
+    const res = await hitAs(app, 'mot-token-bia-khac', 1);
+
+    expect(res.status).toBe(429);
+  });
+});
+
 describe('mỗi limiter đếm riêng', () => {
   it('cạn hạn mức auth không kéo theo limiter upload', async () => {
     // Cùng một lần nạp module: nếu hai limiter dùng chung bộ đếm thì lỗi lộ ra đây
