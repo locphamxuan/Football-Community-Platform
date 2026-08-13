@@ -9,16 +9,17 @@ import useAuthStore from '@/stores/authStore';
 import useMounted from '@/hooks/useMounted';
 import type { Role } from '@/types';
 
-interface RoleGuardProps {
-  /** Chỉ cần một trong các role này là vào được. */
-  allow: Role[];
-  deniedTitle: string;
-  deniedDescription: string;
-  children: React.ReactNode;
-}
+/**
+ * `allow` và hai dòng chữ từ chối luôn đi cùng nhau: khu nào chặn theo role thì phải nói
+ * được vì sao, còn khu chỉ cần đăng nhập thì không có gì để giải thích.
+ */
+type RoleGuardProps = { children: React.ReactNode } & (
+  | { allow: Role[]; deniedTitle: string; deniedDescription: string }
+  | { allow?: never; deniedTitle?: never; deniedDescription?: never }
+);
 
 /**
- * Chặn truy cập khu quản lý theo role.
+ * Chặn truy cập theo role, hoặc chỉ đòi đăng nhập khi bỏ trống `allow`.
  * Backend vẫn kiểm tra quyền trên từng endpoint — guard này chỉ để UX rõ ràng,
  * không phải lớp bảo mật.
  */
@@ -47,7 +48,7 @@ export default function RoleGuard({ allow, deniedTitle, deniedDescription, child
     );
   }
 
-  if (!allow.some((role) => user.roles.includes(role))) {
+  if (allow && !allow.some((role) => user.roles.includes(role))) {
     return (
       <BlockCard title={deniedTitle} desc={deniedDescription}>
         <Button variant="outline" nativeButton={false} render={<Link href="/" />}>

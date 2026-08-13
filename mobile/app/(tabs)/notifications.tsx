@@ -8,6 +8,7 @@ import ChipRow from '../../src/components/ChipRow';
 import RequireAuth from '../../src/components/RequireAuth';
 import { notificationService } from '../../src/services/notification.service';
 import { messageOf } from '../../src/lib/errors';
+import { routeForLink } from '../../src/lib/notificationLinks';
 import { NOTIFICATION_TYPE_LABELS, formatRelativeTime } from '../../src/lib/format';
 import { colors, fontSize, radius, spacing } from '../../src/lib/theme';
 
@@ -15,16 +16,6 @@ const FILTERS = [
   { value: 'all', label: 'Tất cả' },
   { value: 'unread', label: 'Chưa đọc' },
 ];
-
-/**
- * Backend gửi kèm `link` là đường dẫn của web. Bản đồ này dịch sang route tương ứng
- * trên mobile; link nào chưa có màn hình tương ứng thì chỉ đánh dấu đã đọc, không nhảy đâu cả.
- */
-const ROUTE_FOR_LINK: Record<string, string> = {
-  '/bookings': '/(tabs)/bookings',
-  '/owner/bookings': '/(tabs)/bookings',
-  '/match-requests': '/match-requests',
-};
 
 function NotificationRow({
   notification,
@@ -86,7 +77,7 @@ function NotificationList() {
   // hộp thư đầy thông báo chưa đọc mà người dùng đã xem rồi.
   const open = (notification: Notification) => {
     if (notification.readAt === null) markRead.mutate(notification._id);
-    const target = ROUTE_FOR_LINK[notification.link];
+    const target = routeForLink(notification.link);
     if (target) router.push(target as never);
   };
 

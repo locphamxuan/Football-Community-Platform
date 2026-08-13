@@ -67,15 +67,16 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Web: `/notifications/settings` (vào từ nút bánh răng ở hộp thư). Mobile: màn hình "Cài đặt thông báo" mở từ hồ sơ.
 - Cờ `notifications.email` bị xoá — không luồng nào đọc tới nó.
 
-**Khu quản lý trên mobile** (nhánh `feature/mobile-owner-screens`)
+**Khu quản lý trên mobile** (nhánh `feature/mobile-owner-screens`, `feature/mobile-owner-reviews-billing`)
 - Tab "Quản lý" chỉ hiện với chủ sân / quản lý đội / admin; người chơi thuần không thấy tab (`href: null`).
-- Chủ sân: số liệu sân, duyệt lịch đặt (xác nhận, hoàn thành, khách không đến, huỷ kèm lý do), bật tắt nhận đặt từng sân.
+- Chủ sân: số liệu sân, duyệt lịch đặt (xác nhận, hoàn thành, khách không đến, huỷ kèm lý do), bật tắt nhận đặt từng sân, hộp thư đánh giá + phản hồi, gói thuê bao + khai báo chuyển khoản.
+- Quản lý đội: lịch sân của đội, cạnh đội của tôi và lời mời thi đấu.
 - Quyền vào khu quản lý khai báo một lần ở `mobile/src/lib/roles.ts`, tab và `RequireRole` dùng chung.
 
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
-- Mobile còn thiếu **tạo/sửa sân** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
+- Mobile còn thiếu **tạo/sửa sân**, **đổi gói thuê bao** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
 - Chưa mở PR cho bảy nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
@@ -102,9 +103,11 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **`connectRedis()` không được gọi `connect()` vô điều kiện.** `rate-limit-redis` nạp script Lua ngay lúc `require('./app')` và lệnh đó đã tự mở kết nối; gọi lại ném "Redis is already connecting/connected" và server chết lúc khởi động. Đây từng là lỗi thật, chỉ lộ ra khi chạy `node src/server.js` chứ test không bắt được.
 - **Token đẩy là `select: false`.** Expo không xác thực người gửi: ai cầm được token là đẩy được thông báo về máy đó. Mọi truy vấn cần nó phải `.select('expoPushTokens')` tường minh.
 - **Cờ gom nhóm refresh token phải dọn trong `.finally`.** Dọn trong thân hàm `async` thì nhánh "chưa có refresh token" (chạy hết mà không `await`) bị chính phép gán ghi đè, cờ kẹt lại và app không bao giờ làm mới token nữa. Test bắt được lỗi này chỉ khi các ca chạy chung một file.
-- **Sau `fireEvent` trong test RNTL phải `waitFor`.** Không thì test *kế tiếp* trong cùng file mới hỏng, kèm cảnh báo "overlapping act()" rất khó lần ra.
+- **Sau `fireEvent` trong test RNTL phải `waitFor`.** Không thì test *kế tiếp* trong cùng file mới hỏng, kèm cảnh báo "overlapping act()" rất khó lần ra. Cùng lý do đó, `get*` ngay sau `fireEvent` đọc trúng cây cũ: form vừa mở ra tìm không thấy, và nút submit vẫn còn `disabled` nên bấm vào không có gì xảy ra và test chỉ báo "Number of calls: 0". Phải `await screen.findBy*`, rồi `waitFor` cho tới khi nút hết khoá mới bấm.
 - **Mongoose ghi đè cả cụm khi cập nhật object lồng nhau.** `findByIdAndUpdate(id, { notifications: { push: false } })` xoá luôn các trường anh em trong `notifications`; đọc lại thấy giá trị mặc định nên nhìn qua tưởng vẫn đúng. Phải ghi bằng đường dẫn có dấu chấm.
 - **Test RNTL dùng react-query phải cho `notifyManager` chạy đồng bộ** (`setScheduler((cb) => cb())`) và đặt `mutations.gcTime: 0`. Mặc định react-query hẹn giờ `setTimeout(0)` để gom thông báo và giữ cache 5 phút: cái đầu bắn cảnh báo act() vào **test kế tiếp** (chạy riêng thì sạch), cái sau khiến jest phải giết worker vì còn hẹn giờ treo.
+- **TTL của vé thu hồi token phải lấy từ `exp` của token.** Hằng số 15 phút trùng với mặc định `JWT_ACCESS_EXPIRES_IN` nên trông vẫn đúng; đổi biến môi trường thành `1h` là token đã đăng xuất dùng lại được từ phút thứ 15. Test cũ không bắt được vì nó cũng chạy với mặc định 15 phút — test mới phải tự đổi biến môi trường.
+- **Mobile dịch `link` của thông báo bằng một bảng tra** (`notificationLinks.ts`). Thêm màn hình cho vai trò mới mà quên cập nhật bảng thì không có lỗi nào nổ ra, người dùng chỉ lặng lẽ bị đưa tới nhầm chỗ — `/owner/bookings` từng trỏ về tab lịch đặt của người chơi.
 - **Chữ trên nút trùng nhãn bộ lọc thì `getByText` ném "Found multiple elements".** Màn lịch đặt có chip lọc "Hoàn thành" lẫn nút "Hoàn thành". Cách sửa đúng không phải đổi chữ mà là đặt `accessibilityLabel` riêng cho từng đơn ("Hoàn thành lịch của Nguyễn Văn A") — trong một danh sách, trình đọc màn hình cũng chỉ nghe thấy một dãy nút giống hệt nhau.
 - **jsdom không có `PointerEvent`**, mà Base UI dựng nó trong handler click của Switch. Thiếu polyfill trong `vitest.setup.ts` thì `onCheckedChange` im lặng không chạy và lỗi nổ ngoài stack của test.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").

@@ -44,6 +44,9 @@ export default function RootLayout() {
             <Stack.Screen name="notification-settings" options={{ title: 'Cài đặt thông báo' }} />
             <Stack.Screen name="owner/bookings" options={{ title: 'Lịch đặt sân' }} />
             <Stack.Screen name="owner/fields" options={{ title: 'Sân của tôi' }} />
+            <Stack.Screen name="owner/reviews" options={{ title: 'Đánh giá' }} />
+            <Stack.Screen name="owner/billing" options={{ title: 'Gói thuê bao' }} />
+            <Stack.Screen name="team/bookings" options={{ title: 'Lịch sân của đội' }} />
           </Stack>
           <StatusBar style="dark" />
         </AuthProvider>

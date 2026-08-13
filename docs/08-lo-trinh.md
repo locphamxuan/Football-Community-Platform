@@ -83,12 +83,16 @@ quên mật khẩu, tìm sân và chi tiết sân, đặt sân với kiểm tra 
 Kiến trúc và lý do: [02 — Kiến trúc](02-kien-truc.md#mobile-một-màn-hình-đi-qua-đâu).
 
 **✅ Đã xong — khu quản lý cho chủ sân và quản lý đội.** Tab "Quản lý" chỉ hiện với tài khoản có
-vai trò quản lý (`href: null` gỡ hẳn tab, thay vì dẫn tới một màn hình từ chối). Bên trong: số liệu
-sân của chủ sân, duyệt lịch đặt (xác nhận / hoàn thành / khách không đến / huỷ kèm lý do), bật tắt
-nhận đặt từng sân, và lối vào phần đội bóng của quản lý đội.
+vai trò quản lý (`href: null` gỡ hẳn tab, thay vì dẫn tới một màn hình từ chối). Bên trong:
 
-**Còn lại.** Hai việc cố ý để trên web vì cần màn hình rộng: **tạo và sửa sân** (biểu mẫu có ảnh,
-bảng giá, sân con) và **toàn bộ khu admin** (bảng đối soát, duyệt sân, quản lý người dùng).
+- **Chủ sân:** số liệu sân, duyệt lịch đặt (xác nhận / hoàn thành / khách không đến / huỷ kèm lý
+  do), bật tắt nhận đặt từng sân, hộp thư đánh giá kèm số chờ trả lời và ô phản hồi, gói thuê bao
+  với mức đã dùng, công tắc tự gia hạn và khai báo mã chuyển khoản cho hoá đơn.
+- **Quản lý đội:** đội của tôi, lời mời thi đấu và lịch sân của đội.
+
+**Còn lại.** Ba việc cố ý để trên web vì cần màn hình rộng: **tạo và sửa sân** (biểu mẫu có ảnh,
+bảng giá, sân con), **đổi gói thuê bao** (phải đối chiếu hạn mức từng gói với số sân đang có) và
+**toàn bộ khu admin** (bảng đối soát, duyệt sân, quản lý người dùng).
 
 ### 2.3 Chat trong lời mời thi đấu
 

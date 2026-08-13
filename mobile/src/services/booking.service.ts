@@ -1,4 +1,4 @@
-import type { Booking } from '@fcp/shared';
+import type { Booking, TeamBooking } from '@fcp/shared';
 import { authFetch } from '../lib/authFetch';
 import { toQueryString } from './field.service';
 
@@ -21,6 +21,10 @@ export const bookingService = {
     authFetch<{ bookings: Booking[] }>(`/bookings/my-bookings${toQueryString(params)}`),
 
   getById: (id: string) => authFetch<{ booking: Booking }>(`/bookings/${id}`),
+
+  /** Lịch sân của mọi đội mà người dùng đang làm quản lý — backend tự lọc theo quyền. */
+  teamBookings: (params: { status?: string; limit?: number } = {}) =>
+    authFetch<{ bookings: TeamBooking[] }>(`/bookings/team/bookings${toQueryString(params)}`),
 
   /** `reason` là bắt buộc ở backend — huỷ không nêu lý do bị trả 400. */
   cancel: (id: string, reason: string) =>

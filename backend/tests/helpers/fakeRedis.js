@@ -12,16 +12,22 @@
 const { CacheKeys, CacheTTL } = jest.requireActual('../../src/config/redis');
 
 const store = new Map();
+/** TTL từng key, để test kiểm được hạn sống chứ không chỉ kiểm giá trị. Không tự hết hạn. */
+const ttls = new Map();
 
 const cache = {
   get: async (key) => (store.has(key) ? store.get(key) : null),
 
-  set: async (key, value) => {
+  set: async (key, value, ttlSeconds) => {
     store.set(key, String(value));
+    if (ttlSeconds) ttls.set(key, ttlSeconds);
     return 'OK';
   },
 
-  del: async (...keys) => keys.filter((key) => store.delete(key)).length,
+  del: async (...keys) => {
+    keys.forEach((key) => ttls.delete(key));
+    return keys.filter((key) => store.delete(key)).length;
+  },
 
   getJSON: async (key) => {
     const raw = await cache.get(key);
@@ -34,13 +40,20 @@ const cache = {
 };
 
 /** Xoá sạch giữa các test để một test không thấy dữ liệu của test trước. */
-const resetCache = () => store.clear();
+const resetCache = () => {
+  store.clear();
+  ttls.clear();
+};
+
+/** TTL (giây) đã đặt cho key, hoặc `undefined` nếu key được ghi không kèm hạn. */
+const ttlOf = (key) => ttls.get(key);
 
 module.exports = {
   cache,
   CacheKeys,
   CacheTTL,
   resetCache,
+  ttlOf,
   getRedisStatus: () => 'ready',
   getRedisClient: () => { throw new Error('Test không được mở kết nối Redis thật'); },
   connectRedis: async () => {},
