@@ -17,6 +17,13 @@ function OwnerSection() {
   });
   const stats = data?.stats;
 
+  // Chỉ cần con số chưa trả lời để gắn lên nút, nên xin đúng một bản ghi.
+  const { data: reviews } = useQuery({
+    queryKey: ['owner-reviews', 'unanswered-count'],
+    queryFn: () => ownerService.reviews({ unanswered: true, limit: 1 }),
+  });
+  const unanswered = reviews?.unanswered ?? 0;
+
   return (
     <Card>
       <Text style={styles.sectionTitle}>Quản lý sân</Text>
@@ -44,7 +51,14 @@ function OwnerSection() {
         <Button title="Sân của tôi" variant="outline" onPress={() => router.push('/owner/fields')} />
       </View>
       <View style={styles.action}>
-        <Button title="Gói thuê bao" variant="outline" onPress={() => router.push('/plans')} />
+        <Button
+          title={unanswered > 0 ? `Đánh giá (${unanswered} chờ trả lời)` : 'Đánh giá'}
+          variant="outline"
+          onPress={() => router.push('/owner/reviews')}
+        />
+      </View>
+      <View style={styles.action}>
+        <Button title="Gói thuê bao" variant="outline" onPress={() => router.push('/owner/billing')} />
       </View>
     </Card>
   );
@@ -66,6 +80,13 @@ function ManagerSection() {
           title="Lời mời thi đấu"
           variant="outline"
           onPress={() => router.push('/match-requests')}
+        />
+      </View>
+      <View style={styles.action}>
+        <Button
+          title="Lịch sân của đội"
+          variant="outline"
+          onPress={() => router.push('/team/bookings')}
         />
       </View>
     </Card>

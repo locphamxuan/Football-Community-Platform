@@ -9,6 +9,7 @@
 const ROUTE_FOR_LINK: Record<string, string> = {
   '/bookings': '/(tabs)/bookings',
   '/owner/bookings': '/owner/bookings',
+  '/owner/billing': '/owner/billing',
   '/match-requests': '/match-requests',
 };
 
