@@ -107,7 +107,7 @@ function ProfileBody() {
           />
         </View>
         <Text style={styles.hint}>
-          Quản lý sân, quản lý đội và quản trị nền tảng hiện chỉ có trên web.
+          Chủ sân và quản lý đội có thêm tab &quot;Quản lý&quot;. Quản trị nền tảng vẫn chỉ có trên web.
         </Text>
       </Card>
 
