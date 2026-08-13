@@ -91,7 +91,8 @@ app/                    expo-router — file nào cũng là một route
   _layout.tsx           SafeArea → React Query → AuthProvider → Stack
   (tabs)/               6 tab: tìm sân, lịch đặt, đội bóng, thông báo, quản lý, hồ sơ
   (auth)/               đăng nhập, đăng ký, quên mật khẩu
-  owner/                lịch đặt và danh sách sân của chủ sân
+  owner/                chủ sân: lịch đặt, sân, đánh giá, gói thuê bao
+  team/                 quản lý đội: lịch sân của đội
 src/services/           một facade cho mỗi nhóm endpoint, trả type của @fcp/shared
 src/lib/authFetch.ts    gọi API kèm access token, tự làm mới khi 401
 src/lib/session.ts      nơi duy nhất giữ token (Keychain/Keystore + bản sao trong RAM)
