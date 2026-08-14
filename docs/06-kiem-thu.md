@@ -4,9 +4,9 @@
 
 | Phía | Công cụ | Lệnh | Số test |
 |---|---|---|---|
-| `backend/` | Jest + supertest | `npm test` | 557 |
-| `frontend/` | Vitest + Testing Library | `npm test` | 48 |
-| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 52 |
+| `backend/` | Jest + supertest | `npm test` | 640 |
+| `frontend/` | Vitest + Testing Library | `npm test` | 59 |
+| `mobile/` | Jest + jest-expo + Testing Library RN | `npm test` | 107 |
 
 ## Backend
 
@@ -38,6 +38,12 @@ jest.mock('../../src/models/Booking', () => ({
 
 Truy vấn nào có chuỗi (`.select()`, `.populate()`, `.sort()`, `.lean()`) thì mock trả về object
 chứa đúng phương thức tiếp theo.
+
+**Test WebSocket** (`integration/socket.test.js`) dựng server socket.io thật và nối client thật
+vào, cũng chỉ mock tầng service. Phần đáng kiểm ở đó không phải nghiệp vụ mà là những thứ chỉ
+sai khi có kết nối thật: token bị từ chối lúc bắt tay, payload hỏng, và tin nhắn có tới đúng
+người hay không. Server ở đây dựng thẳng từ `socket/auth.js` + `socket/handlers.js` chứ không
+gọi `socket/index.js` — file đó gắn Redis adapter, mà test thì không có Redis thật.
 
 ### Token trong test là token thật
 

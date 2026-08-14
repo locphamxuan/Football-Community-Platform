@@ -152,8 +152,9 @@ hoá đơn nào chưa thanh toán. Hoá đơn đã `paid` thì không huỷ đư
 
 ## Thông báo in-app
 
-Bảy sự kiện **nhạy cảm thời gian** được bắn cho bên còn lại: có lịch đặt mới, lịch được xác nhận,
-lịch bị huỷ, có lời mời thi đấu, lời mời được trả lời, đối thủ đã nhập tỉ số, hoá đơn mới.
+Tám sự kiện **nhạy cảm thời gian** được bắn cho bên còn lại: có lịch đặt mới, lịch được xác nhận,
+lịch bị huỷ, có lời mời thi đấu, lời mời được trả lời, đối thủ đã nhập tỉ số, hoá đơn mới, và
+tin nhắn tới khi người nhận đang offline.
 Danh sách đầy đủ kèm người nhận: [03 — Tham chiếu API](03-api.md#thông-báo--notifications).
 
 Ba quy tắc quyết định cách tầng này hành xử:
@@ -177,6 +178,47 @@ cũng không đẩy tới điện thoại. Một nút tắt chỉ có tác dụn
 chuông vẫn đỏ) bị người dùng đọc thành "nút này hỏng". Sự kiện gốc vẫn tra được ở trang lịch đặt,
 lời mời thi đấu hoặc hoá đơn — hộp thư là lớp tiện lợi, không phải bản ghi duy nhất.
 
+## Tin nhắn
+
+Chủ sân, quản lý đội và người chơi nhắn trực tiếp trong nền tảng, thay vì nhảy sang Zalo và
+để lại toàn bộ bối cảnh (đổi giờ, đổi sân, thoả thuận trọng tài) ở ngoài hệ thống.
+
+**Ai được mở hội thoại với ai là câu hỏi về quan hệ, không phải về vai trò.** Không có
+`authorize(...)` nào ở route chat: chủ sân trong hội thoại này là người chơi trong hội thoại
+khác. Ràng buộc thật nằm ở ngữ cảnh — muốn gắn hội thoại vào một lịch đặt thì hai người phải
+đúng là khách và chủ sân của **chính lịch đặt đó**
+([bảng đầy đủ](03-api.md#tin-nhắn--chat)). Không kiểm ở đây thì bất kỳ ai cũng treo hội thoại
+của mình lên một lịch đặt của người khác và biến nó thành thứ trông như trao đổi chính thức.
+
+**Nhắn thẳng (`direct`) thì mở cho mọi tài khoản đang hoạt động.** Người chơi phải hỏi được
+chủ sân trước khi đặt, quản lý đội phải rủ được người lạ vào đội — nền tảng này không có khái
+niệm kết bạn để mà dựa vào. Thứ chặn spam là **trần 30 tin/phút mỗi tài khoản**
+(`CHAT_RATE_MAX`), không phải một danh sách bạn bè. Tài khoản bị khoá hoặc ngừng hoạt động thì
+không mở được hội thoại mới tới.
+
+**Một cặp người + một ngữ cảnh = đúng một hội thoại.** Khoá `key` (cặp id đã sắp xếp + ngữ
+cảnh) có chỉ số unique, nên bấm "nhắn tin" lần thứ hai quay về đúng luồng cũ, kể cả khi hai
+người bấm cùng lúc. Ngữ cảnh nằm trong khoá nên bàn về trận này không lẫn vào trận khác.
+
+**Trạng thái đọc là một mốc thời gian mỗi người, không phải cờ trên từng tin nhắn.** Ghi cờ
+cho từng tin nghĩa là mỗi lần mở hội thoại phải cập nhật hàng trăm bản ghi để nói đúng một
+điều mà `participants.lastReadAt` đã nói đủ. Số chưa đọc thì đếm sẵn trong
+`participants.unreadCount` — nó hiện trên mọi màn hình nên bị hỏi liên tục, mà chỉ đổi ở đúng
+hai chỗ: lúc gửi và lúc đánh dấu đã đọc.
+
+**Lưu trước, đẩy sau.** MongoDB là nguồn sự thật, WebSocket chỉ là đường tắt. Đẩy trước rồi
+lưu lỗi nghĩa là hai người nhìn thấy một tin nhắn mà lịch sử hội thoại không có — kiểu sai tệ
+nhất trong một khung chat, vì không ai biết mình đang sai.
+
+**Chỉ đẩy thông báo khi người nhận thật sự offline.** Người đang mở ứng dụng đã thấy tin nhắn
+hiện ra rồi; thêm một thông báo nữa là kêu hai lần cho cùng một việc. `emitter.isOnline()` đếm
+kết nối trên toàn cụm chứ không chỉ instance hiện tại.
+
+- Cài đặt: `backend/src/services/chat.service.js`, `backend/src/socket/`
+- Test: `backend/tests/unit/chat.service.test.js`,
+  `backend/tests/integration/chat.routes.test.js`,
+  `backend/tests/integration/socket.test.js`
+
 Danh sách chọn-không-nhận chứ không phải chọn-có-nhận: mặc định rỗng nên một loại thông báo
 thêm về sau tự bật cho mọi người, không cần migration và không khiến cả nền tảng im lặng cho tới
 khi từng người vào bật tay. Cờ `notifications.push` vẫn là công tắc tổng cho riêng kênh đẩy —
@@ -194,8 +236,10 @@ Hai chi tiết vận hành:
 - **Thông báo tự hết hạn sau 90 ngày** bằng TTL index trên `createdAt`. Hộp thư không được
   phình vô hạn, và thông báo quá hạn ba tháng thì không còn ai đọc.
 
-Web hỏi lại mỗi 60 giây (polling), **chưa** dùng WebSocket: một kết nối thường trực cho mỗi
-tab là cái giá quá đắt so với việc biết sớm hơn vài chục giây.
+Chuông thông báo trên web vẫn hỏi lại mỗi 60 giây (polling) chứ **chưa** đi qua WebSocket, dù
+nền tảng đã có sẵn kết nối realtime cho [tin nhắn](#tin-nhắn). Với một sự kiện vài phút mới có
+một lần, biết sớm hơn vài chục giây không đổi được gì; nối chuông vào WebSocket chỉ đáng làm
+khi web mở sẵn kết nối cho khung chat, và lúc đó là một việc riêng chứ không nhét kèm.
 
 - Cài đặt: `backend/src/services/notification.service.js`, các lời gọi `notify()` nằm ngay tại
   service của sự kiện (booking / matchRequest / billing); tuỳ chọn ghi ở
