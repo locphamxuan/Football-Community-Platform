@@ -265,7 +265,8 @@ export type NotificationType =
   | 'match_request_received'
   | 'match_request_answered'
   | 'match_result_submitted'
-  | 'invoice_issued';
+  | 'invoice_issued'
+  | 'chat_message';
 
 export interface Notification {
   _id: string;
@@ -278,6 +279,67 @@ export interface Notification {
   readAt: string | null;
   createdAt: string;
 }
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+/** Lý do hai người bắt đầu nói chuyện. Giữ khớp với `backend/src/constants/chat.js`. */
+export type ConversationContextType = 'direct' | 'booking' | 'match_request' | 'field';
+
+/** Hồ sơ rút gọn của người tham gia — vừa đủ vẽ một dòng trong hộp thư. */
+export type ChatParticipantProfile = Pick<User, 'username' | 'fullName' | 'avatar' | 'roles'> & { _id: string };
+
+export interface ConversationParticipant {
+  user: ChatParticipantProfile;
+  /** null = chưa mở hội thoại lần nào. */
+  lastReadAt: string | null;
+  unreadCount: number;
+}
+
+export interface Conversation {
+  _id: string;
+  participants: ConversationParticipant[];
+  context: { type: ConversationContextType; ref?: string };
+  lastMessage: { body: string; sender: string; sentAt: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  _id: string;
+  conversation: string;
+  sender: ChatParticipantProfile;
+  body: string;
+  createdAt: string;
+}
+
+/**
+ * Tên sự kiện WebSocket. Giữ khớp với `backend/src/socket/events.js` — sai một chữ thì
+ * không có lỗi nào nổ ra, chỉ là tin nhắn lặng lẽ không tới nơi.
+ */
+export type ChatClientEvent = 'message:send' | 'conversation:read' | 'conversation:typing';
+export type ChatServerEvent = 'message:new' | 'conversation:read' | 'conversation:typing' | 'chat:error';
+
+export interface NewMessageEvent {
+  conversationId: string;
+  message: ChatMessage;
+}
+
+export interface ConversationReadEvent {
+  conversationId: string;
+  /** Người vừa đọc — luôn là người kia, không phải chính mình. */
+  userId: string;
+  readAt: string;
+}
+
+export interface TypingEvent {
+  conversationId: string;
+  userId: string;
+  isTyping: boolean;
+}
+
+/** Trả lời của server cho một sự kiện client gửi lên (callback `ack` của socket.io). */
+export type ChatAck<T> =
+  | { success: true; data: T }
+  | { success: false; message: string; code?: string };
 
 // ── Billing (chủ sân thuê nền tảng) ──────────────────────────────────────────
 export type PlanCode = 'free' | 'basic' | 'pro';
