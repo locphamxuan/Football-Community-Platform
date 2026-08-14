@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-13
+> Cập nhật lần cuối: 2026-08-14
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -73,9 +73,17 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Quản lý đội: lịch sân của đội, cạnh đội của tôi và lời mời thi đấu.
 - Quyền vào khu quản lý khai báo một lần ở `mobile/src/lib/roles.ts`, tab và `RequireRole` dùng chung.
 
+**Chat thời gian thực — phía backend** (nhánh `feature/be-chat-websocket`)
+- Hội thoại 1-1 giữa hai tài khoản bất kỳ, kèm ngữ cảnh tuỳ chọn (`booking`, `match_request`, `field`) quyết định ai được mở hội thoại với ai. Một cặp người + một ngữ cảnh = đúng một hội thoại (chỉ số unique trên `key`).
+- Sáu endpoint dưới `/api/v1/chat` và WebSocket socket.io gắn vào **cùng cổng 5001**; cả hai đường gọi chung `chat.service`.
+- Số chưa đọc đếm sẵn theo từng người, "đã xem" bằng một mốc thời gian, "đang nhập" không lưu, trần 30 tin/phút mỗi tài khoản (`CHAT_RATE_MAX`).
+- Thông báo đẩy `chat_message` chỉ bắn khi người nhận không có thiết bị nào đang kết nối.
+- Redis adapter cho socket.io để nhiều instance thấy nhau; `shared/types.ts` đã có type hội thoại, tin nhắn và tên sự kiện.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
+- **Chat mới có phía backend.** Web và mobile chưa có hộp thư, khung hội thoại, nút "nhắn tin" ở trang sân / lịch đặt / lời mời thi đấu, và chưa nối client socket.io vào vòng đời đăng nhập (phải kết nối lại bằng token mới sau mỗi lần refresh — kết nối cũ vẫn sống nhưng token trong tay client đã đổi). Đó là việc tiếp theo của tính năng này.
 - Mobile còn thiếu **tạo/sửa sân**, **đổi gói thuê bao** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
 - Chưa mở PR cho bảy nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens` (nhánh sau xây trên nhánh trước).
 
@@ -83,8 +91,8 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 
 Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
 
-1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
-2. Chat trong lời mời thi đấu, để hai đội chốt trận không phải nhảy sang Zalo.
+1. Giao diện chat cho web và mobile — backend đã sẵn sàng, chỉ còn phía client.
+2. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
 3. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 
 ## Quyết định và bẫy cần nhớ
@@ -113,4 +121,11 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **Mobile dịch `link` của thông báo bằng một bảng tra** (`notificationLinks.ts`). Thêm màn hình cho vai trò mới mà quên cập nhật bảng thì không có lỗi nào nổ ra, người dùng chỉ lặng lẽ bị đưa tới nhầm chỗ — `/owner/bookings` từng trỏ về tab lịch đặt của người chơi.
 - **Chữ trên nút trùng nhãn bộ lọc thì `getByText` ném "Found multiple elements".** Màn lịch đặt có chip lọc "Hoàn thành" lẫn nút "Hoàn thành". Cách sửa đúng không phải đổi chữ mà là đặt `accessibilityLabel` riêng cho từng đơn ("Hoàn thành lịch của Nguyễn Văn A") — trong một danh sách, trình đọc màn hình cũng chỉ nghe thấy một dãy nút giống hệt nhau.
 - **jsdom không có `PointerEvent`**, mà Base UI dựng nó trong handler click của Switch. Thiếu polyfill trong `vitest.setup.ts` thì `onCheckedChange` im lặng không chạy và lỗi nổ ngoài stack của test.
+- **Service không được `require` thẳng tầng socket.** Tầng socket đã require service để xử lý sự kiện; chiều ngược lại tạo vòng require và một trong hai module nhận về object rỗng. Mọi lần đẩy realtime đi qua `socket/emitter.js` — module này không require gì của socket, chỉ giữ tham chiếu `io` và im lặng khi chưa có (test, hoặc tiến trình chỉ chạy REST).
+- **`createSocketServer` phải chạy sau `connectRedis()`.** Redis adapter nhân bản client Redis; nhân bản một client chưa từng kết nối thì bản sao cũng không có kết nối. Và thiếu hẳn adapter thì hai người ngồi trên hai instance khác nhau không nhận được tin của nhau — local một instance không bao giờ tái hiện được.
+- **Trần tần suất của chat nằm trong service, không phải middleware.** Tin nhắn tới bằng cả REST lẫn WebSocket, mà `express-rate-limit` chỉ nhìn thấy đường REST. Thêm luật nào cho tin nhắn thì đặt trong `chat.service`, đừng đặt ở route — nếu không WebSocket thành cửa sau đi vòng qua nó.
+- **Token WebSocket đi trong `handshake.auth`, không phải header.** Trình duyệt không cho đặt header tuỳ ý trên kết nối WebSocket, nên header chỉ tới được server ở giai đoạn polling rồi biến mất đúng lúc client nâng cấp — triệu chứng là "chạy được lúc đầu rồi tự rớt".
+- **Lỗi trong handler socket phải tự bắt.** Sự kiện WebSocket không có response như HTTP: lỗi ném ra rơi thẳng vào `unhandledRejection` và `server.js` giết cả tiến trình, trong khi client chỉ thấy tin nhắn của mình biến mất không dấu vết.
+- **`server.close()` không chờ được WebSocket.** Kết nối WebSocket không bao giờ tự kết thúc, nên phải `io.close()` trước, nếu không mỗi lần tắt server là chờ đủ 10 giây rồi bị ép thoát.
+- **`$match` trong aggregate không tự ép chuỗi thành ObjectId** như query thường. Quên `new mongoose.Types.ObjectId(...)` thì không khớp gì cả và số chưa đọc lặng lẽ đứng ở 0 — không có lỗi nào để nhắc.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").
