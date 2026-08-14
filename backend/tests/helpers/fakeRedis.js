@@ -37,6 +37,13 @@ const cache = {
   setJSON: (key, value, ttlSeconds) => cache.set(key, JSON.stringify(value), ttlSeconds),
 
   exists: async (key) => store.has(key),
+
+  incr: async (key, ttlSeconds) => {
+    const count = Number(store.get(key) || 0) + 1;
+    store.set(key, String(count));
+    if (count === 1 && ttlSeconds) ttls.set(key, ttlSeconds);
+    return count;
+  },
 };
 
 /** Xoá sạch giữa các test để một test không thấy dữ liệu của test trước. */

@@ -174,7 +174,7 @@ mọi truy vấn đều bị chặn cứng bằng `recipient = người gọi`, 
 | PATCH | `/read-all` | 🔒 | Đánh dấu toàn bộ đã đọc, trả `modified` |
 | PATCH | `/:id/read` | 🔒 | Idempotent. Thông báo của người khác trả 404 chứ không phải 403 — không xác nhận là nó tồn tại |
 
-`type` nhận đúng bảy giá trị dưới đây; giá trị lạ trả 400 chứ không âm thầm trả danh sách rỗng:
+`type` nhận đúng tám giá trị dưới đây; giá trị lạ trả 400 chứ không âm thầm trả danh sách rỗng:
 
 | `type` | Bắn khi | Người nhận |
 |---|---|---|
@@ -185,8 +185,65 @@ mọi truy vấn đều bị chặn cứng bằng `recipient = người gọi`, 
 | `match_request_answered` | Lời mời được nhận hoặc từ chối | Người gửi lời mời |
 | `match_result_submitted` | Một bên nhập tỉ số | Quản lý đội còn lại |
 | `invoice_issued` | Phát hành hoá đơn thuê bao | Chủ sân |
+| `chat_message` | Có tin nhắn mới **và** người nhận không có thiết bị nào đang kết nối | Người nhận tin nhắn |
 
 Quy tắc và lý do: [04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app).
+
+## Tin nhắn — `/chat`
+
+Toàn bộ nhóm này cần đăng nhập và **không phân theo vai trò**: chủ sân, quản lý đội và người
+chơi đều nhắn tin. Ai được nói chuyện với ai là câu hỏi về quan hệ (có phải hai bên của lịch
+đặt này không), trả lời trong `chat.service` chứ không phải bằng `authorize(...)` ở route.
+
+| Method | Đường dẫn | Quyền | Body / Ghi chú |
+|---|---|---|---|
+| GET | `/conversations` | 🔒 | Query: `page, limit, contextType`. Trả `conversations`, `unreadCount` và `meta.pagination` trong một lần gọi |
+| POST | `/conversations` | 🔒 | `recipientId`, `contextType?`, `contextRef?`. Mở hội thoại hoặc trả lại cái đã có — gọi lại không tạo luồng thứ hai |
+| GET | `/unread-count` | 🔒 | Tổng chưa đọc của mọi hội thoại, cho chấm đỏ |
+| GET | `/conversations/:id/messages` | 🔒 | Query: `page, limit`. Mới nhất trước |
+| POST | `/conversations/:id/messages` | 🔒 | `body` (1–2000 ký tự, cắt khoảng trắng trước khi đo) |
+| POST | `/conversations/:id/read` | 🔒 | Đặt mốc đã đọc, xoá số chưa đọc, báo "đã xem" cho người kia |
+
+`contextType` nhận bốn giá trị, và mỗi giá trị có một luật riêng về **ai được mở hội thoại**:
+
+| `contextType` | `contextRef` trỏ tới | Hai bên hợp lệ |
+|---|---|---|
+| `direct` | — | Mọi tài khoản đang hoạt động |
+| `booking` | `Booking` | Người đặt ↔ chủ sân của đúng lịch đặt đó |
+| `match_request` | `MatchRequest` | Quản lý hai đội trong lời mời |
+| `field` | `Field` | Bất kỳ ai ↔ chủ của đúng sân đó |
+
+Không phải hai bên hợp lệ thì trả **403**, và người ngoài một hội thoại đọc hay gửi cũng trả
+403. Ngữ cảnh khác `direct` mà thiếu `contextRef` trả **400**. Vượt trần tần suất (mặc định
+30 tin/phút cho mỗi tài khoản) trả **429** — trần này áp cho cả WebSocket, xem dưới.
+
+### WebSocket
+
+Gắn vào cùng cổng với REST. Token đi trong `handshake.auth.token`, **không** phải header:
+
+```js
+io('http://localhost:5001', { auth: { token: accessToken } });
+```
+
+Bắt tay thất bại (thiếu token, token hỏng, token đã logout) thì kết nối bị từ chối ngay.
+
+| Chiều | Sự kiện | Payload |
+|---|---|---|
+| ↑ client | `message:send` | `{ conversationId, body }` |
+| ↑ client | `conversation:read` | `{ conversationId }` |
+| ↑ client | `conversation:typing` | `{ conversationId, isTyping? }` (mặc định `true`) |
+| ↓ server | `message:new` | `{ conversationId, message }` — gửi cho **cả hai** bên, kể cả người gửi (thiết bị khác của họ) |
+| ↓ server | `conversation:read` | `{ conversationId, userId, readAt }` — chỉ gửi cho người còn lại |
+| ↓ server | `conversation:typing` | `{ conversationId, userId, isTyping }` |
+| ↓ server | `chat:error` | `{ message, code }` |
+
+Mỗi sự kiện client gửi lên đều trả lời qua callback `ack`:
+`{ success: true, data }` hoặc `{ success: false, message, code }`. `chat:error` là bản sao
+cho client không dùng ack — lỗi ở đây **không** đóng kết nối.
+
+Người gửi được lấy từ token, không bao giờ từ payload: client tự khai `senderId` thì trường
+đó bị bỏ qua hoàn toàn. Payload đi qua đúng schema Zod mà route REST dùng, nên WebSocket không
+phải là cửa sau đi vòng qua ràng buộc nào.
 
 ## Quản trị — `/admin`
 

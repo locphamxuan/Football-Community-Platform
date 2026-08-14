@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarCheck, CalendarPlus, CalendarX, Receipt, Swords, Trophy } from 'lucide-react';
+import { CalendarCheck, CalendarPlus, CalendarX, MessageSquare, Receipt, Swords, Trophy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABELS } from '@/lib/constants';
@@ -16,6 +16,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   match_request_answered: Swords,
   match_result_submitted: Trophy,
   invoice_issued: Receipt,
+  chat_message: MessageSquare,
 };
 
 interface Props {

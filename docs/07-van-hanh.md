@@ -34,6 +34,7 @@ Biến tuỳ chọn đáng chú ý:
 | `JWT_REFRESH_EXPIRES_IN` | `7d` | |
 | `REDIS_URL` | `redis://localhost:6379` | |
 | `RATE_LIMIT_*` | xem [05](05-redis-rate-limit.md) | |
+| `CHAT_RATE_MAX` | 30 | Tin nhắn tối đa mỗi tài khoản trong 60 giây. Đếm trong `chat.service` chứ không phải middleware, vì tin nhắn qua WebSocket không đi qua express |
 
 ## Chạy local
 
@@ -68,6 +69,20 @@ curl http://localhost:5001/health
 
 `redis` khác `ready` nghĩa là cache và rate limit đang chạy ở chế độ suy giảm — xem
 [05 — Redis và rate limit](05-redis-rate-limit.md).
+
+## WebSocket
+
+Chat dùng socket.io gắn vào **cùng cổng 5001** với REST — không có cổng riêng nào phải mở.
+Log lúc khởi động in `💬 WebSocket: ws://localhost:5001` sau dòng API.
+
+Hai điều dễ dính khi đưa lên server thật:
+
+- **Proxy phải cho phép nâng cấp lên WebSocket.** Nginx cần `proxy_set_header Upgrade` và
+  `Connection "upgrade"` cho đường `/socket.io/`; thiếu thì client vẫn "chạy" bằng long-polling,
+  chậm hơn nhưng không có lỗi nào để nhắc.
+- **Redis là bắt buộc khi chạy nhiều instance.** Adapter đồng bộ qua Redis; thiếu nó thì hai
+  người ngồi trên hai instance khác nhau không nhận được tin của nhau, và local một instance
+  thì không bao giờ tái hiện được lỗi này.
 
 ## Verify trước khi commit
 

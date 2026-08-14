@@ -84,6 +84,54 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
   `JWT_ACCESS_EXPIRES_IN` được đặt dài hơn, và token đã đăng xuất sống lại trong khoảng chênh.
 - Mỗi tài khoản giữ tối đa **5 phiên** gần nhất.
 
+## Realtime: một tin nhắn đi qua đâu
+
+WebSocket (socket.io) gắn vào **đúng HTTP server đang phục vụ REST**, không mở cổng riêng —
+một cổng, một chứng chỉ TLS, một dòng cấu hình proxy.
+
+```
+kết nối
+  → authenticateSocket           xác thực JWT lấy từ handshake.auth.token
+  → socket.join('user:<id>')     mỗi người một phòng, mọi thiết bị của họ vào chung
+  → registerHandlers             message:send, conversation:read, conversation:typing
+      → chat.service             cùng service mà route REST gọi
+          → model                lưu trước
+          → emitter.emitToUsers  rồi mới đẩy
+```
+
+```
+backend/src/socket/
+  index.js      dựng io, gắn redis adapter, nối auth + handlers
+  auth.js       chặn cửa lúc bắt tay
+  handlers.js   sự kiện → service; mọi lỗi trả về qua ack, không giết tiến trình
+  emitter.js    cửa duy nhất để service đẩy realtime
+  events.js     tên sự kiện, khớp với shared/types.ts
+```
+
+Bốn quyết định đáng nhớ ở tầng này:
+
+- **Phòng theo người, không theo hội thoại.** Người đang ở màn hình khác vẫn phải thấy chấm đỏ
+  khi có tin mới, mà phòng theo hội thoại chỉ tới được người đang mở đúng hội thoại ấy. Phòng
+  theo người cũng bỏ luôn một bước phải kiểm quyền lúc `join`.
+- **`emitter.js` tồn tại để cắt vòng require.** Tầng socket require service để xử lý sự kiện;
+  service require `emitter` chứ không require ngược lại tầng socket, nếu không một trong hai
+  module nhận về object rỗng. Chưa có `io` (test, hoặc tiến trình chỉ chạy REST) thì `emitter`
+  im lặng không làm gì.
+- **Redis adapter là bắt buộc chứ không phải tối ưu.** Bộ nhớ trong của socket.io chỉ biết
+  kết nối của chính tiến trình nó; chạy hai instance sau load balancer mà thiếu adapter thì hai
+  người ngồi trên hai instance khác nhau không nhận được tin của nhau — và lỗi chỉ lộ ra ở
+  production. `createSocketServer` phải chạy **sau** `connectRedis()`: adapter nhân bản client
+  Redis, mà nhân bản một client chưa từng kết nối thì bản sao cũng không có kết nối.
+- **Xác thực một lần lúc bắt tay.** Kết nối sống lâu hơn access token, nên một phiên đã mở vẫn
+  chạy tiếp tới khi client ngắt. Client tự kết nối lại bằng token mới sau mỗi lần refresh; ai
+  bị logout thì lần bắt tay sau bị chặn. Token đi trong `handshake.auth` chứ không phải header
+  `Authorization` — trình duyệt không cho đặt header tuỳ ý trên kết nối WebSocket, nên header
+  chỉ tới được server ở giai đoạn polling rồi biến mất đúng lúc client nâng cấp lên WebSocket.
+
+**Mọi việc realtime làm được đều có bản REST song song**, và cả hai gọi chung một hàm service.
+WebSocket là đường tắt, không phải đường duy nhất: lịch sử hội thoại phải tải được lúc mở màn
+hình, và client mất kết nối vẫn phải gửi được tin.
+
 ## Mobile: một màn hình đi qua đâu
 
 ```
@@ -147,6 +195,10 @@ lớp giải thích cho người dùng, **không phải** lớp bảo vệ — b
   chứ không chỉ đổi `push`; các trường anh em biến mất lặng lẽ và Mongoose trả lại giá trị
   mặc định lúc đọc, nên nhìn qua tưởng vẫn đúng. Trường nào có anh em thì phải cập nhật bằng
   đường dẫn có dấu chấm (`'notifications.push'`) — xem `user.service.js > updateNotificationPrefs`.
+- **Trần tần suất của chat nằm ở service, không phải middleware.** Tin nhắn tới bằng hai đường —
+  `POST /chat/.../messages` và sự kiện WebSocket — mà chỉ đường đầu đi qua express, nên
+  `express-rate-limit` không nhìn thấy đường thứ hai. Bộ đếm dùng `cache.incr` và nằm trong
+  `chat.service`, để cả hai đường chung một hạn mức.
 - **`connectRedis()` phải chịu được client đã kết nối sẵn.** `rate-limit-redis` nạp script Lua
   ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
   `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném

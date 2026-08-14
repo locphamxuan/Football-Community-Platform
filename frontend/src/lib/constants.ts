@@ -159,4 +159,5 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   match_request_answered: 'Phản hồi lời mời',
   match_result_submitted: 'Kết quả trận đấu',
   invoice_issued: 'Hoá đơn mới',
+  chat_message: 'Tin nhắn mới',
 };

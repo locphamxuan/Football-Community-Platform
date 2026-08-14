@@ -50,6 +50,11 @@ const env = {
   // Đếm lượt trên Redis để nhiều instance dùng chung hạn mức. Tắt trong test:
   // test không có Redis và cũng cần bộ đếm reset theo từng file.
   RATE_LIMIT_USE_REDIS: flag('RATE_LIMIT_USE_REDIS', nodeEnv === 'test' ? 'false' : 'true'),
+
+  // ── Chat ────────────────────────────────────────────────────────────────────
+  // Số tin nhắn tối đa một tài khoản gửi được trong 60 giây. Trần này nằm trong service
+  // chứ không phải middleware, vì tin nhắn qua WebSocket không đi qua tầng HTTP nào cả.
+  CHAT_RATE_MAX: number('CHAT_RATE_MAX', '30'),
 };
 
 module.exports = env;

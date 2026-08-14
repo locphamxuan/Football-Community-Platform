@@ -94,13 +94,26 @@ vai trò quản lý (`href: null` gỡ hẳn tab, thay vì dẫn tới một mà
 bảng giá, sân con), **đổi gói thuê bao** (phải đối chiếu hạn mức từng gói với số sân đang có) và
 **toàn bộ khu admin** (bảng đối soát, duyệt sân, quản lý người dùng).
 
-### 2.3 Chat trong lời mời thi đấu
+### 2.3 Chat giữa chủ sân, quản lý đội và người chơi
 
-**Vì sao.** Hai đội chốt trận vẫn phải nhảy sang Zalo, nên nền tảng mất luôn phần bối cảnh
-(đổi giờ, đổi sân, thoả thuận trọng tài).
+**Vì sao.** Hai đội chốt trận — và khách hỏi chủ sân — vẫn phải nhảy sang Zalo, nên nền tảng
+mất luôn phần bối cảnh (đổi giờ, đổi sân, thoả thuận trọng tài).
 
-**Phạm vi.** Tin nhắn gắn với một `MatchRequest`, chỉ thành viên hai đội đọc được. Bắt đầu bằng
-polling — chỉ chuyển sang WebSocket khi có số liệu chứng minh là cần.
+**✅ Đã xong — toàn bộ phía backend.** Hội thoại 1-1 giữa hai tài khoản bất kỳ, kèm ngữ cảnh
+tuỳ chọn (`booking`, `match_request`, `field`) quyết định ai được mở hội thoại với ai. REST
+(`/api/v1/chat`) và WebSocket (socket.io, cùng cổng 5001) gọi chung một tầng service; số chưa
+đọc, "đã xem", "đang nhập", trần 30 tin/phút mỗi tài khoản, và thông báo đẩy chỉ khi người nhận
+không có thiết bị nào đang kết nối. Quy tắc và lý do:
+[04 — Tin nhắn](04-nghiep-vu.md#tin-nhắn); giao thức: [03 — Tin nhắn](03-api.md#tin-nhắn--chat).
+
+**Còn lại.** Giao diện web và mobile: hộp thư, khung hội thoại, nút "nhắn tin" ở trang sân /
+lịch đặt / lời mời thi đấu, và client socket.io gắn vào vòng đời đăng nhập (kết nối lại bằng
+token mới sau mỗi lần refresh).
+
+**Chưa làm, có chủ đích.** Gửi ảnh trong tin nhắn, chat nhóm cho cả đội, xoá / thu hồi tin
+nhắn, chặn người dùng. Mỗi cái là một quyết định riêng chứ không phải phần còn thiếu của cái
+đã làm — đặc biệt là chặn người dùng: hiện nay thứ giữ spam là trần tần suất, và một danh sách
+chặn chỉ đáng thêm khi có spam thật để nhìn.
 
 ---
 

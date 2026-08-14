@@ -98,6 +98,22 @@ const cache = {
     const result = await safe('exists', () => getRedisClient().exists(key), 0);
     return result === 1;
   },
+
+  /**
+   * Tăng bộ đếm và đặt hạn sống ngay lần đầu — bộ đếm tần suất cho những chỗ
+   * `express-rate-limit` không với tới: một tin nhắn qua WebSocket không phải là một
+   * request HTTP nên không có middleware nào chạy trước nó.
+   *
+   * Trả về 0 khi Redis lỗi, tức là request được cho đi tiếp: mất Redis đã đủ tệ, biến
+   * nó thành "cả nền tảng không nhắn tin được nữa" thì tệ hơn.
+   */
+  incr: (key, ttlSeconds) => safe('incr', async () => {
+    const redis = getRedisClient();
+    const count = await redis.incr(key);
+    // Chỉ đặt hạn ở lần đầu, nếu không mỗi lượt lại đẩy cửa sổ ra xa và bộ đếm không bao giờ reset.
+    if (count === 1 && ttlSeconds) await redis.expire(key, ttlSeconds);
+    return count;
+  }, 0),
 };
 
 const CacheKeys = {
@@ -105,6 +121,7 @@ const CacheKeys = {
   fieldAvailability: (fieldId, date) => `field:availability:${fieldId}:${date}`,
   blacklistedToken: (jti) => `blacklist:token:${jti}`,
   unreadNotifications: (userId) => `notif:unread:${userId}`,
+  chatRate: (userId) => `chat:rate:${userId}`,
 };
 
 const CacheTTL = {

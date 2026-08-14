@@ -8,6 +8,7 @@ const matchRequestRoutes = require('./matchRequest.routes');
 const reviewRoutes       = require('./review.routes');
 const billingRoutes      = require('./billing.routes');
 const notificationRoutes = require('./notification.routes');
+const chatRoutes         = require('./chat.routes');
 const adminRoutes        = require('./admin.routes');
 
 const router = Router();
@@ -21,6 +22,7 @@ router.use('/match-requests', matchRequestRoutes);
 router.use('/reviews',        reviewRoutes);
 router.use('/billing',        billingRoutes);
 router.use('/notifications',  notificationRoutes);
+router.use('/chat',           chatRoutes);
 router.use('/admin',          adminRoutes);
 
 module.exports = router;
