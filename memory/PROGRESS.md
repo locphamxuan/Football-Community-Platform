@@ -71,7 +71,7 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Tab "Quản lý" chỉ hiện với chủ sân / quản lý đội / admin; người chơi thuần không thấy tab (`href: null`).
 - Chủ sân: số liệu sân, duyệt lịch đặt (xác nhận, hoàn thành, khách không đến, huỷ kèm lý do), bật tắt nhận đặt từng sân, hộp thư đánh giá + phản hồi, gói thuê bao + khai báo chuyển khoản.
 - Quản lý đội: lịch sân của đội, cạnh đội của tôi và lời mời thi đấu.
-- Quyền vào khu quản lý khai báo một lần ở `mobile/src/lib/roles.ts`, tab và `RequireRole` dùng chung.
+- Quyền vào khu quản lý khai báo một lần ở `mobile/src/domain/roles.ts`, tab và `RequireRole` dùng chung.
 
 **Chat thời gian thực — phía backend** (nhánh `feature/be-chat-websocket`)
 - Hội thoại 1-1 giữa hai tài khoản bất kỳ, kèm ngữ cảnh tuỳ chọn (`booking`, `match_request`, `field`) quyết định ai được mở hội thoại với ai. Một cặp người + một ngữ cảnh = đúng một hội thoại (chỉ số unique trên `key`).
@@ -114,7 +114,7 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - Cổng: backend 5001, frontend 3001. Container `fcp-backend` tự khởi động cùng Docker và chiếm cổng 5001 — `docker stop fcp-backend` trước khi chạy backend từ source.
 - **Redis chết thì `cache.exists` trả `false`**, nên access token đã logout vẫn dùng được cho tới khi hết hạn (≤ 15 phút). Đổi lại, một sự cố Redis không còn đăng xuất toàn bộ người dùng. Lý do đầy đủ ở [`docs/05-redis-rate-limit.md`](../docs/05-redis-rate-limit.md).
 - **Gia hạn thuê bao chạy kiểu "lười"** ngay lúc đọc, không có cron. `node-cron` đã bị gỡ khỏi dependency vì không dùng tới.
-- **Định dạng tiền và ngày chỉ có một chỗ mỗi phía**: `frontend/src/lib/format.ts` và `mobile/src/lib/format.ts`. Bốn trang web từng tự khai lại `formatPrice` — bản chép thiếu `maximumFractionDigits: 0`, chưa lệch hiển thị vì VND vốn không có phần lẻ, nên không ai phát hiện. Đừng khai lại trong file trang.
+- **Định dạng tiền và ngày chỉ có một chỗ mỗi phía**: `frontend/src/lib/format.ts` và `mobile/src/domain/format.ts`. Bốn trang web từng tự khai lại `formatPrice` — bản chép thiếu `maximumFractionDigits: 0`, chưa lệch hiển thị vì VND vốn không có phần lẻ, nên không ai phát hiện. Đừng khai lại trong file trang.
 - **Cổng phân quyền trên web chỉ có `RoleGuard`** (`components/dashboard/`). Bỏ trống `allow` là chỉ đòi đăng nhập. Từng có thêm `OwnerGuard` bọc ngoài chỉ để truyền sẵn ba prop, khiến ba khu quản lý dùng hai kiểu khác nhau; nó đã bị xoá.
 - **Chỉ có một hàm tính giá** (`calcPrice` trong `booking.service.js`). Hàm thứ hai `calculatePrice` trong `field.service.js` tính sai (lấy giá của giờ bắt đầu cho cả buổi) và đã bị xoá — đừng tạo lại.
 - **Thông báo không được làm hỏng hành động gốc.** `notify()` chạy sau khi việc chính đã xong và nuốt mọi lỗi. Đừng đặt nó vào giữa luồng nghiệp vụ, và đừng bỏ `actorId` — thiếu nó là người dùng tự nhận thông báo về chính việc mình vừa làm.
@@ -139,6 +139,7 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").
 - **`auth` của socket.io client phải là hàm, không phải object.** Access token sống 15 phút và được làm mới ngầm; chốt cứng token lúc mở kết nối thì mọi lần kết nối lại sau đó đều mang một token đã chết. Trên điện thoại, mất mạng rồi nối lại là chuyện thường, nên lỗi này biểu hiện thành "chat tự chết sau một lúc".
 - **Đăng xuất phải đóng socket chat.** Kết nối được xác thực một lần lúc bắt tay: giữ nó lại là để người đăng nhập tiếp theo trên cùng thiết bị nhận tin nhắn của người vừa đăng xuất.
-- **Màn hình mobile nằm ở `src/screens/`, `<Screen>` do route trong `app/` bọc.** Màn hình tự bọc thêm một lớp nữa thì test dựng thẳng component sẽ khác hẳn app thật.
+- **Màn hình mobile nằm ở `src/screens/`, `app/` chỉ chứa route.** Route làm đúng ba việc: đọc tham số URL, bọc `<Screen>`, gọi màn hình. Màn hình nhận `fieldId`/`teamId` qua prop chứ không tự gọi `useLocalSearchParams`. Từng có hai kiểu song song và cái giá không phải thẩm mỹ: 14 màn hình viết thẳng vào `app/` đều không có test nào, vì test chúng phải giả lập cả `expo-router`.
+- **`mobile/src/lib/` = có chạm ra ngoài (mạng, bộ nhớ máy, socket, push); `mobile/src/domain/` = hàm thuần.** Đường chia là "test nó có cần mock gì không". `src/theme.ts` đứng riêng vì nó không thuộc nhóm nào.
 - **Hai `fireEvent` trong cùng một ca test là "overlapping act()".** Nó không làm hỏng chính ca đó mà làm hỏng **mọi ca sau nó** trong cùng file, với thông báo "Unable to find an element" hoàn toàn không liên quan. Tách thành hai ca, hoặc `await` một truy vấn ở giữa. Cũng vì vậy, `onPress` của `Alert` gọi thẳng phải bọc `act(async () => ...)` — nó khởi động một mutation ngoài mọi act scope.
 - **Mobile `/chat/<id>` trùng đúng đường dẫn của web**, nên `notificationLinks` dùng lại nguyên link thay vì tra bảng. Bảng tra chỉ khớp đường dẫn nguyên vẹn, mà thông báo chat mang theo mã hội thoại.
