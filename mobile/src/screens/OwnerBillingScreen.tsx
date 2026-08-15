@@ -9,8 +9,8 @@ import {
 import RequireRole from '../components/RequireRole';
 import { ownerService } from '../services/owner.service';
 import { messageOf } from '../lib/errors';
-import { formatDate, formatPrice, formatQuota } from '../lib/format';
-import { colors, fontSize, spacing, type StatusTone } from '../lib/theme';
+import { formatDate, formatPrice, formatQuota } from '../domain/format';
+import { colors, fontSize, spacing, type StatusTone } from '../theme';
 
 const INVOICE_LABELS: Record<InvoiceStatus, string> = {
   pending: 'Chờ thanh toán',

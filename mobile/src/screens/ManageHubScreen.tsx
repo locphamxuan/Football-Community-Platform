@@ -4,11 +4,11 @@ import { router } from 'expo-router';
 import { Button, Card, DetailRow, Loading } from '../components/ui';
 import RequireRole from '../components/RequireRole';
 import { useAuth } from '../lib/auth';
-import { MANAGEMENT_ROLES } from '../lib/roles';
+import { MANAGEMENT_ROLES } from '../domain/roles';
 import { ownerService } from '../services/owner.service';
 import { messageOf } from '../lib/errors';
-import { formatPrice } from '../lib/format';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { formatPrice } from '../domain/format';
+import { colors, fontSize, spacing } from '../theme';
 
 function OwnerSection() {
   const { data, isLoading, error } = useQuery({

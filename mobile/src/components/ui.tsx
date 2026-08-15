@@ -8,7 +8,7 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
-import { colors, fontSize, radius, spacing, statusTone, type StatusTone } from '../lib/theme';
+import { colors, fontSize, radius, spacing, statusTone, type StatusTone } from '../theme';
 
 /**
  * Những mảnh giao diện lặp lại ở mọi màn. Gom vào một chỗ để nút bấm và ô nhập

@@ -5,7 +5,7 @@ import { Badge, Card, EmptyState, ErrorState, Loading } from '../components/ui';
 import RequireRole from '../components/RequireRole';
 import { ownerService } from '../services/owner.service';
 import { messageOf } from '../lib/errors';
-import { colors, fontSize, spacing, type StatusTone } from '../lib/theme';
+import { colors, fontSize, spacing, type StatusTone } from '../theme';
 
 const STATUS_LABELS: Record<Field['status'], string> = {
   active: 'Đang nhận đặt',

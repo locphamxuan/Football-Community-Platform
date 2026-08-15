@@ -134,8 +134,8 @@ hình, và client mất kết nối vẫn phải gửi được tin.
 
 ### Phía client
 
-Web (`frontend/src/lib/chat*.ts`) và mobile (`mobile/src/lib/chat.ts`, `chatSocket.ts`) giữ
-cùng một hình dạng, và cùng ba quyết định:
+Web (`frontend/src/lib/chat.ts`, `socket.ts`) và mobile (`mobile/src/domain/chat.ts`,
+`mobile/src/lib/chatSocket.ts`) giữ cùng một hình dạng, và cùng ba quyết định:
 
 - **Một socket cho cả app**, mở lười lúc màn hình chat đầu tiên cần tới. `auth` truyền vào
   socket.io là một **hàm**, không phải object: access token chỉ sống 15 phút và được làm mới
@@ -155,23 +155,35 @@ chung được vì `shared/types.ts` chỉ chứa type, không mang được gi�
 ## Mobile: một màn hình đi qua đâu
 
 ```
-app/                    expo-router — file nào cũng là một route
+app/                    expo-router — file nào cũng là một route, và CHỈ là một route
   _layout.tsx           SafeArea → React Query → AuthProvider → Stack
-  (tabs)/               6 tab: tìm sân, lịch đặt, đội bóng, thông báo, quản lý, hồ sơ
+  (tabs)/               7 tab: tìm sân, lịch đặt, đội bóng, tin nhắn, thông báo, quản lý, hồ sơ
   (auth)/               đăng nhập, đăng ký, quên mật khẩu
+  chat/                 khung hội thoại, tạo mới, thông tin nhóm
   owner/                chủ sân: lịch đặt, sân, đánh giá, gói thuê bao
   team/                 quản lý đội: lịch sân của đội
+src/screens/            mọi màn hình, kèm test nằm cạnh
+src/components/         Button, TextField, Badge, Avatar, Loading, EmptyState, ErrorState, Screen
 src/services/           một facade cho mỗi nhóm endpoint, trả type của @fcp/shared
-src/lib/authFetch.ts    gọi API kèm access token, tự làm mới khi 401
-src/lib/session.ts      nơi duy nhất giữ token (Keychain/Keystore + bản sao trong RAM)
-src/lib/push.ts         xin quyền và lấy Expo push token
-src/lib/roles.ts        vai trò nào được vào khu quản lý — tab và cổng màn hình đọc chung
-src/lib/notificationLinks.ts  đổi `link` (đường dẫn web) của thông báo sang route mobile
-src/components/         Screen, Button, TextField, Badge, Loading, EmptyState, ErrorState
+src/lib/                thứ chạm ra ngoài: authFetch, session, auth, push, api, chatSocket, errors
+src/domain/             hàm thuần, không I/O: roles, slots, chat, format, notificationLinks
+src/theme.ts            màu, khoảng cách, cỡ chữ — một nguồn duy nhất
 ```
 
 Điều hướng theo file (`expo-router`) chứ không khai báo tay như React Navigation: cấu trúc
 thư mục chính là sơ đồ màn hình, và deep link từ thông báo đẩy chỉ là một đường dẫn.
+
+**File trong `app/` chỉ làm ba việc: đọc tham số URL, bọc `<Screen>`, gọi màn hình.** Mọi màn
+hình sống ở `src/screens/`. Từng có hai kiểu song song — một nửa số route là vỏ mỏng 10 dòng,
+nửa kia viết thẳng 250 dòng vào `app/` — và cái giá không phải là thẩm mỹ: màn hình nằm trong
+`app/` thì test phải giả lập cả `expo-router` để dựng nó, nên chúng lặng lẽ không có test nào.
+Cùng lý do đó, màn hình nhận `fieldId`/`teamId` qua **prop** chứ không tự gọi
+`useLocalSearchParams` — route mới là chỗ biết đến URL.
+
+**`lib/` và `domain/` chia theo một đường duy nhất: có chạm ra ngoài hay không.** `domain/` là
+hàm thuần — test chúng không cần mock gì cả, và đó chính là nơi các quy tắc dễ sai nhất nằm
+(khung giờ trống, tên hội thoại, vai trò). `lib/` là mạng, bộ nhớ máy, socket, thông báo đẩy.
+Trộn hai thứ vào một thư mục 22 file thì không ai còn biết file nào an toàn để gọi từ đâu.
 
 **Không chặn người chưa đăng nhập ở cửa vào.** Tìm sân, xem chi tiết sân và đọc đánh giá là
 công khai; màn nào cần phiên thì bọc `RequireAuth` và mời đăng nhập ngay tại chỗ. Bắt đăng
@@ -180,11 +192,11 @@ nhập trước khi cho xem gì cả là cách nhanh nhất để mất người
 **Token nằm trong Keychain/Keystore, không phải AsyncStorage** — AsyncStorage là file thường,
 đọc được trên máy đã root hoặc qua bản sao lưu.
 
-**Thông báo mang `link` của web, mobile phải dịch** (`src/lib/notificationLinks.ts`). Thêm một
+**Thông báo mang `link` của web, mobile phải dịch** (`src/domain/notificationLinks.ts`). Thêm một
 màn hình mới cho vai trò nào thì phải quay lại bảng này — link chưa được dịch lại vẫn "chạy",
 chỉ là đưa người dùng tới nhầm màn hình, nên không có lỗi nào nổ ra để nhắc.
 
-**Quyền vào khu quản lý chỉ khai báo một lần** (`src/lib/roles.ts`). Thanh tab dùng nó để ẩn
+**Quyền vào khu quản lý chỉ khai báo một lần** (`src/domain/roles.ts`). Thanh tab dùng nó để ẩn
 hẳn tab "Quản lý", `RequireRole` dùng nó để chặn cửa màn hình. Hai nơi chép rời nhau thì sớm
 muộn cũng lệch, và triệu chứng là một cái tab bấm vào chỉ để nhận thông báo từ chối. Đây là
 lớp giải thích cho người dùng, **không phải** lớp bảo vệ — backend vẫn kiểm quyền từng endpoint.

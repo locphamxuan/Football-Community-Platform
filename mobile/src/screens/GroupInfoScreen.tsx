@@ -8,10 +8,10 @@ import RequireAuth from '../components/RequireAuth';
 import UserSearch from '../components/UserSearch';
 import { chatService } from '../services/chat.service';
 import { chatKeys } from '../lib/chatSocket';
-import { isGroupAdmin } from '../lib/chat';
+import { isGroupAdmin } from '../domain/chat';
 import { useAuth } from '../lib/auth';
 import { messageOf } from '../lib/errors';
-import { colors, fontSize, radius, spacing } from '../lib/theme';
+import { colors, fontSize, radius, spacing } from '../theme';
 
 /**
  * Thông tin nhóm: thành viên, đổi tên, thêm, gỡ, rời nhóm.

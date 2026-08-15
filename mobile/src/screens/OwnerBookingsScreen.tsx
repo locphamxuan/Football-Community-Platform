@@ -16,8 +16,8 @@ import RequireRole from '../components/RequireRole';
 import { bookingService } from '../services/booking.service';
 import { ownerService } from '../services/owner.service';
 import { messageOf } from '../lib/errors';
-import { BOOKING_STATUS_LABELS, formatPrice, formatSlot } from '../lib/format';
-import { colors, fontSize, spacing, type StatusTone } from '../lib/theme';
+import { BOOKING_STATUS_LABELS, formatPrice, formatSlot } from '../domain/format';
+import { colors, fontSize, spacing, type StatusTone } from '../theme';
 
 const STATUS_TONES: Record<string, StatusTone> = {
   pending: 'pending',

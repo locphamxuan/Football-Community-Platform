@@ -6,12 +6,12 @@ import { Avatar, Button, EmptyState, ErrorState, Loading } from '../components/u
 import RequireAuth from '../components/RequireAuth';
 import { chatService } from '../services/chat.service';
 import { chatKeys, useChatRealtime } from '../lib/chatSocket';
-import { conversationTitle, previewOf, unreadOf } from '../lib/chat';
+import { conversationTitle, previewOf, unreadOf } from '../domain/chat';
 import { useAuth } from '../lib/auth';
-import { canChat } from '../lib/roles';
+import { canChat } from '../domain/roles';
 import { messageOf } from '../lib/errors';
-import { formatRelativeTime } from '../lib/format';
-import { colors, fontSize, radius, spacing } from '../lib/theme';
+import { formatRelativeTime } from '../domain/format';
+import { colors, fontSize, radius, spacing } from '../theme';
 
 const PAGE_SIZE = 50;
 

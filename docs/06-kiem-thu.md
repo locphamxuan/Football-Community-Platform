@@ -96,10 +96,17 @@ lỗi báo rất khó hiểu ("render function has not been called").
 
 **Sau `fireEvent`, chờ bằng `waitFor` trước khi kết thúc test.** Bỏ qua bước đó thì React
 cảnh báo "overlapping act() calls" và test *kế tiếp* trong cùng file mới là test hỏng — rất
-mất công lần ra.
+mất công lần ra. Cùng lý do đó, **hai `fireEvent` trong một ca cũng đủ gây ra nó**: tách
+thành hai ca, hoặc `await` một truy vấn ở giữa. Và `onPress` của `Alert` — thứ không dựng gì
+trong cây React để chạm vào, nên phải gọi thẳng — phải bọc `act(async () => ...)`.
 
 `src/lib/session.ts` giữ token trong biến module, nên test của nó gọi `jest.resetModules()`
 rồi `require` lại ở từng ca; nếu không, phiên của ca trước rò sang ca sau.
+
+**Màn hình nằm ở `src/screens/`, không nằm trong `app/`** — dựng thẳng component trong test,
+không phải giả lập cả bộ định tuyến. Màn hình nhận tham số URL qua prop (`fieldId`, `teamId`)
+nên test không cần `useLocalSearchParams` giả. Đây không phải quy ước cho đẹp: hồi màn hình
+còn viết thẳng vào `app/`, chúng lặng lẽ không có test nào.
 
 ## Nên test gì
 
