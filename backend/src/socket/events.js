@@ -19,6 +19,11 @@ const ServerEvent = {
   /** Người kia vừa đọc tới đâu — để hiện "đã xem". */
   READ: 'conversation:read',
   TYPING: 'conversation:typing',
+  /**
+   * Nhóm vừa đổi: mới lập, thêm hoặc gỡ thành viên, đổi tên. Gửi kèm cả hội thoại để
+   * client không phải tải lại cả hộp thư chỉ vì một dòng trong đó đổi.
+   */
+  CONVERSATION_UPDATED: 'conversation:updated',
   /** Lỗi của một sự kiện cụ thể; không đóng kết nối. */
   ERROR: 'chat:error',
 };
