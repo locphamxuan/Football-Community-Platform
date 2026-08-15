@@ -9,7 +9,7 @@ import UserSearch from '../components/UserSearch';
 import { chatService } from '../services/chat.service';
 import { chatKeys } from '../lib/chatSocket';
 import { messageOf } from '../lib/errors';
-import { spacing } from '../lib/theme';
+import { spacing } from '../theme';
 
 /**
  * Bắt đầu một cuộc trò chuyện: nhắn thẳng cho một người, hoặc lập một nhóm.

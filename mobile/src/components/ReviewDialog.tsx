@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, TextField } from './ui';
 import { reviewService } from '../services/user.service';
 import { messageOf } from '../lib/errors';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { colors, fontSize, spacing } from '../theme';
 
 const STARS = [1, 2, 3, 4, 5];
 

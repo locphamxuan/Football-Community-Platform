@@ -6,8 +6,8 @@ import RequireAuth from '../components/RequireAuth';
 import { useAuth } from '../lib/auth';
 import { userService } from '../services/user.service';
 import { messageOf } from '../lib/errors';
-import { NOTIFICATION_TYPE_LABELS } from '../lib/format';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { NOTIFICATION_TYPE_LABELS } from '../domain/format';
+import { colors, fontSize, spacing } from '../theme';
 
 /**
  * Sự kiện nào sinh ra loại thông báo đó. Nhãn ngắn dùng trong hộp thư ("Lịch đặt mới")

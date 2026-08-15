@@ -4,8 +4,8 @@ import type { Plan } from '@fcp/shared';
 import { Card, ErrorState, Loading } from '../components/ui';
 import { apiFetch } from '../lib/api';
 import { messageOf } from '../lib/errors';
-import { formatPrice, formatQuota } from '../lib/format';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { formatPrice, formatQuota } from '../domain/format';
+import { colors, fontSize, spacing } from '../theme';
 
 /**
  * Bảng giá thuê bao. Dùng endpoint công khai `/billing/plans` nên xem được cả khi chưa

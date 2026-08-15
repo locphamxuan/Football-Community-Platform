@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ChatParticipantProfile } from '@fcp/shared';
 import { Avatar, Loading, TextField } from './ui';
 import { chatService } from '../services/chat.service';
-import { colors, fontSize, radius, spacing } from '../lib/theme';
+import { colors, fontSize, radius, spacing } from '../theme';
 
 /** Backend đòi ít nhất 2 ký tự; hỏi sớm hơn chỉ nhận về 400. */
 const MIN_TERM_LENGTH = 2;

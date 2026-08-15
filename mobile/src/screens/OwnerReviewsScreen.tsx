@@ -7,8 +7,8 @@ import ChipRow from '../components/ChipRow';
 import RequireRole from '../components/RequireRole';
 import { ownerService } from '../services/owner.service';
 import { messageOf } from '../lib/errors';
-import { formatDate } from '../lib/format';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { formatDate } from '../domain/format';
+import { colors, fontSize, spacing } from '../theme';
 
 const PAGE_LIMIT = 50;
 

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button, Loading, Screen } from './ui';
 import { useAuth } from '../lib/auth';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { colors, fontSize, spacing } from '../theme';
 
 /**
  * Bọc phần màn hình cần phiên đăng nhập.

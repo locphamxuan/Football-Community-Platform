@@ -9,10 +9,10 @@ import { Avatar, ErrorState, Loading } from '../components/ui';
 import RequireAuth from '../components/RequireAuth';
 import { chatService } from '../services/chat.service';
 import { chatKeys, useChatRealtime } from '../lib/chatSocket';
-import { conversationTitle, isSeenByOthers, participantsExcept } from '../lib/chat';
+import { conversationTitle, isSeenByOthers, participantsExcept } from '../domain/chat';
 import { useAuth } from '../lib/auth';
 import { messageOf } from '../lib/errors';
-import { colors, fontSize, radius, spacing } from '../lib/theme';
+import { colors, fontSize, radius, spacing } from '../theme';
 
 const PAGE_SIZE = 50;
 /** Ngừng gõ chừng này thì báo "hết gõ", khỏi treo chữ "đang nhập…" bên máy người kia. */

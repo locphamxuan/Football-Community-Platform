@@ -2,11 +2,11 @@ import { Tabs } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/lib/auth';
-import { canChat, canManage } from '../../src/lib/roles';
+import { canChat, canManage } from '../../src/domain/roles';
 import { notificationService } from '../../src/services/notification.service';
 import { chatService } from '../../src/services/chat.service';
 import { chatKeys } from '../../src/lib/chatSocket';
-import { colors, fontSize, radius } from '../../src/lib/theme';
+import { colors, fontSize, radius } from '../../src/theme';
 
 /** Chuông hỏi lại mỗi phút, giống web — đủ nhanh mà không đánh thức máy liên tục. */
 const UNREAD_POLL_MS = 60_000;

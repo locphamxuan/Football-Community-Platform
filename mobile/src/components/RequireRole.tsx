@@ -5,7 +5,7 @@ import type { Role } from '@fcp/shared';
 import RequireAuth from './RequireAuth';
 import { Button, Screen } from './ui';
 import { useAuth } from '../lib/auth';
-import { colors, fontSize, spacing } from '../lib/theme';
+import { colors, fontSize, spacing } from '../theme';
 
 /**
  * Bọc màn hình chỉ dành cho một số vai trò.

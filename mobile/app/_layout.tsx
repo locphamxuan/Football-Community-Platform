@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../src/lib/auth';
 import { configureNotificationHandler } from '../src/lib/push';
-import { colors } from '../src/lib/theme';
+import { colors } from '../src/theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
