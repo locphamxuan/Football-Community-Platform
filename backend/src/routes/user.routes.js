@@ -6,6 +6,7 @@ const { uploadSingle } = require('../middleware/upload');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 const {
   updateProfileSchema, updateNotificationsSchema, changePasswordSchema, pushTokenSchema,
+  searchUsersSchema,
 } = require('../validations/user.validation');
 
 const router = Router();
@@ -24,6 +25,8 @@ router.delete('/me/push-tokens', validate(pushTokenSchema), controller.removePus
 
 // ── Public profile (authenticated) ───────────────────────────────────────────
 // Quản trị người dùng nằm ở /admin/users — giữ một đầu mối duy nhất cho thao tác admin
+// `/search` phải đứng trước `/:id`, nếu không express đọc "search" thành một id.
+router.get('/search',        validate(searchUsersSchema, 'query'), controller.searchUsers);
 router.get('/:id',           controller.getUserById);
 
 module.exports = router;

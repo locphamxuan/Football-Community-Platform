@@ -12,6 +12,11 @@ const getUserById = catchAsync(async (req, res) => {
   sendSuccess(res, { user });
 });
 
+const searchUsers = catchAsync(async (req, res) => {
+  const result = await userService.searchChatPartners(req.user.id, req.query);
+  sendSuccess(res, result);
+});
+
 const updateProfile = catchAsync(async (req, res) => {
   const user = await userService.updateProfile(req.user.id, req.body);
   sendSuccess(res, { user }, 'Profile updated successfully');
@@ -44,6 +49,6 @@ const removePushToken = catchAsync(async (req, res) => {
 });
 
 module.exports = {
-  getMe, getUserById, updateProfile, updateNotificationPrefs, changePassword, updateAvatar,
-  addPushToken, removePushToken,
+  getMe, getUserById, searchUsers, updateProfile, updateNotificationPrefs, changePassword,
+  updateAvatar, addPushToken, removePushToken,
 };

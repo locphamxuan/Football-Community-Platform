@@ -5,6 +5,10 @@ const { getPagination } = require('../utils/pagination');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
+const Role = require('../constants/roles');
+
+/** Người dùng gõ gì cũng phải là chữ cần tìm, không phải cú pháp regex. */
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getMe = async (userId) => {
   const user = await User.findById(userId);
@@ -119,7 +123,29 @@ const getUsers = async (query) => {
   return { users, total, page, limit };
 };
 
+/**
+ * Tìm người để bắt chuyện — dùng cho ô "nhắn tin cho ai" và ô mời vào nhóm.
+ *
+ * Không phải `getUsers` (đó là bảng quản trị: trả cả email, cả tài khoản bị khoá). Ở đây chỉ
+ * trả đúng những gì cần để vẽ một dòng gợi ý, và chỉ những người thật sự nhắn được:
+ * đang hoạt động, không phải chính mình, không phải quản trị viên nền tảng.
+ */
+const searchChatPartners = async (userId, { q, limit = 10 }) => {
+  const term = new RegExp(escapeRegex(q.trim()), 'i');
+
+  const users = await User.find({
+    _id: { $ne: userId },
+    status: 'active',
+    roles: { $ne: Role.ADMIN },
+    $or: [{ fullName: term }, { username: term }],
+  })
+    .select('username fullName avatar roles')
+    .limit(limit);
+
+  return { users };
+};
+
 module.exports = {
   getMe, getUserById, updateProfile, updateNotificationPrefs, changePassword, updateAvatar,
-  addPushToken, removePushToken, getUsers,
+  addPushToken, removePushToken, getUsers, searchChatPartners,
 };

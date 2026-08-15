@@ -190,6 +190,29 @@ describe('GET /api/v1/users/:id', () => {
   });
 });
 
+describe('GET /api/v1/users/search', () => {
+  it('trả danh sách người có thể nhắn tin', async () => {
+    userService.searchChatPartners.mockResolvedValue({ users: [{ username: 'nam' }] });
+
+    const res = await request(app).get('/api/v1/users/search').query({ q: 'nam' }).set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.users).toHaveLength(1);
+    expect(userService.searchChatPartners).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ q: 'nam' }));
+  });
+
+  it.each([
+    ['thiếu từ khoá', {}],
+    ['từ khoá quá ngắn', { q: 'n' }],
+    ['limit vượt trần', { q: 'nam', limit: 100 }],
+  ])('trả 400 khi %s', async (_label, query) => {
+    const res = await request(app).get('/api/v1/users/search').query(query).set(asUser());
+
+    expect(res.status).toBe(400);
+    expect(userService.searchChatPartners).not.toHaveBeenCalled();
+  });
+});
+
 describe('thiết bị nhận thông báo đẩy', () => {
   const TOKEN = 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]';
 
