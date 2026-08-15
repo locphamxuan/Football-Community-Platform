@@ -1,4 +1,4 @@
-jest.mock('../../src/models/User', () => ({ findByIdAndUpdate: jest.fn() }));
+jest.mock('../../src/models/User', () => ({ findByIdAndUpdate: jest.fn(), find: jest.fn() }));
 jest.mock('../../src/config/cloudinary', () => ({
   uploadImage: jest.fn(), deleteImage: jest.fn(),
 }));
@@ -11,6 +11,29 @@ const USER_ID = '000000000000000000000001';
 
 beforeEach(() => {
   User.findByIdAndUpdate.mockResolvedValue({ _id: USER_ID });
+  User.find.mockReturnValue({ select: () => ({ limit: () => Promise.resolve([]) }) });
+});
+
+describe('searchChatPartners', () => {
+  const filterOf = () => User.find.mock.calls[0][0];
+
+  it('bỏ chính mình, tài khoản bị khoá và quản trị viên ra khỏi kết quả', async () => {
+    await userService.searchChatPartners(USER_ID, { q: 'nam' });
+
+    expect(filterOf()).toMatchObject({
+      _id: { $ne: USER_ID },
+      status: 'active',
+      roles: { $ne: 'admin' },
+    });
+  });
+
+  it('ký tự đặc biệt là chữ cần tìm, không phải cú pháp regex', async () => {
+    await userService.searchChatPartners(USER_ID, { q: 'a.*' });
+
+    const [byName] = filterOf().$or;
+    expect('aXYZ').not.toMatch(byName.fullName);
+    expect('a.*b').toMatch(byName.fullName);
+  });
 });
 
 describe('updateNotificationPrefs', () => {

@@ -132,6 +132,26 @@ Bốn quyết định đáng nhớ ở tầng này:
 WebSocket là đường tắt, không phải đường duy nhất: lịch sử hội thoại phải tải được lúc mở màn
 hình, và client mất kết nối vẫn phải gửi được tin.
 
+### Phía client
+
+Web (`frontend/src/lib/chat*.ts`) và mobile (`mobile/src/lib/chat.ts`, `chatSocket.ts`) giữ
+cùng một hình dạng, và cùng ba quyết định:
+
+- **Một socket cho cả app**, mở lười lúc màn hình chat đầu tiên cần tới. `auth` truyền vào
+  socket.io là một **hàm**, không phải object: access token chỉ sống 15 phút và được làm mới
+  ngầm, nên chốt cứng token lúc mở kết nối nghĩa là mọi lần kết nối lại sau đó đều mang một
+  token đã chết — trên điện thoại, mất mạng rồi nối lại là chuyện thường chứ không phải ngoại lệ.
+- **Sự kiện đổ vào cache của react-query, không vào state màn hình.** Hai bản dữ liệu — một
+  trong state, một trong cache — luôn có ngày lệch nhau. Cũng vì thế `message:new` phải bỏ qua
+  tin đã có trong danh sách: người gửi nhận lại chính tin của mình (họ có thể mở cả web lẫn
+  điện thoại), thêm hai lần thì khung chat hiện tin đôi.
+- **Đăng xuất thì đóng socket.** Nó được xác thực một lần lúc bắt tay, nên giữ lại là để người
+  đăng nhập tiếp theo trên cùng thiết bị nhận tin nhắn của người vừa đăng xuất.
+
+Các câu hỏi mà mọi màn hình chat đều hỏi — hội thoại này tên gì, còn bao nhiêu tin chưa đọc,
+mình có phải quản trị nhóm không — nằm trong một file hàm thuần mỗi phía. Chúng không dùng
+chung được vì `shared/types.ts` chỉ chứa type, không mang được giá trị runtime sang cả hai bên.
+
 ## Mobile: một màn hình đi qua đâu
 
 ```

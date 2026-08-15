@@ -4,6 +4,7 @@ import type { User } from '@fcp/shared';
 import { authService, type LoginPayload } from '../services/auth.service';
 import { notificationService } from '../services/notification.service';
 import { setSessionExpiredHandler } from './authFetch';
+import { closeChatSocket } from './chatSocket';
 import { registerForPushNotifications } from './push';
 import { clearSession, restoreSession, saveSession } from './session';
 
@@ -88,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Đăng xuất phía server hỏng cũng không được giữ người dùng lại trong app.
     }
+    // Kết nối chat được xác thực một lần lúc bắt tay: giữ nó lại là để người đăng nhập
+    // tiếp theo trên máy này nhận tin nhắn của người vừa đăng xuất.
+    closeChatSocket();
     await clearSession();
     setUser(null);
   }, []);

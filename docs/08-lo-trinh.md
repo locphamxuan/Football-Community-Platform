@@ -99,21 +99,29 @@ bảng giá, sân con), **đổi gói thuê bao** (phải đối chiếu hạn m
 **Vì sao.** Hai đội chốt trận — và khách hỏi chủ sân — vẫn phải nhảy sang Zalo, nên nền tảng
 mất luôn phần bối cảnh (đổi giờ, đổi sân, thoả thuận trọng tài).
 
-**✅ Đã xong — toàn bộ phía backend.** Hội thoại 1-1 giữa hai tài khoản bất kỳ, kèm ngữ cảnh
-tuỳ chọn (`booking`, `match_request`, `field`) quyết định ai được mở hội thoại với ai. REST
-(`/api/v1/chat`) và WebSocket (socket.io, cùng cổng 5001) gọi chung một tầng service; số chưa
-đọc, "đã xem", "đang nhập", trần 30 tin/phút mỗi tài khoản, và thông báo đẩy chỉ khi người nhận
-không có thiết bị nào đang kết nối. Quy tắc và lý do:
-[04 — Tin nhắn](04-nghiep-vu.md#tin-nhắn); giao thức: [03 — Tin nhắn](03-api.md#tin-nhắn--chat).
+**✅ Đã xong — backend, web và mobile.** Hội thoại 1-1 giữa hai tài khoản bất kỳ, kèm ngữ cảnh
+tuỳ chọn (`booking`, `match_request`, `field`) quyết định ai được mở hội thoại với ai, **và
+nhóm nhiều người** (tối đa 50, quản trị nhóm thêm/gỡ/đổi tên, mọi thay đổi ghi thành tin nhắn
+hệ thống). REST (`/api/v1/chat`) và WebSocket (socket.io, cùng cổng 5001) gọi chung một tầng
+service; số chưa đọc, "đã xem", "đang nhập", trần 30 tin/phút mỗi tài khoản, và thông báo đẩy
+chỉ khi người nhận không có thiết bị nào đang kết nối. Quản trị viên nền tảng bị chặn ở cả hai
+đường. Quy tắc và lý do: [04 — Tin nhắn](04-nghiep-vu.md#tin-nhắn); giao thức:
+[03 — Tin nhắn](03-api.md#tin-nhắn--chat).
 
-**Còn lại.** Giao diện web và mobile: hộp thư, khung hội thoại, nút "nhắn tin" ở trang sân /
-lịch đặt / lời mời thi đấu, và client socket.io gắn vào vòng đời đăng nhập (kết nối lại bằng
-token mới sau mỗi lần refresh).
+Web có hộp thư `/chat`, khung hội thoại và lối vào trên thanh điều hướng kèm số chưa đọc.
+Mobile có tab "Tin nhắn" với đúng bộ màn hình ấy, cộng màn hình thông tin nhóm; thông báo
+`chat_message` mở thẳng đúng hội thoại. Tìm người để nhắn qua `GET /users/search`, đã lọc sẵn
+admin và tài khoản bị khoá.
 
-**Chưa làm, có chủ đích.** Gửi ảnh trong tin nhắn, chat nhóm cho cả đội, xoá / thu hồi tin
-nhắn, chặn người dùng. Mỗi cái là một quyết định riêng chứ không phải phần còn thiếu của cái
-đã làm — đặc biệt là chặn người dùng: hiện nay thứ giữ spam là trần tần suất, và một danh sách
-chặn chỉ đáng thêm khi có spam thật để nhìn.
+**Còn lại.** Nút "nhắn tin" đặt trong ngữ cảnh — ở trang sân, lịch đặt và lời mời thi đấu.
+Backend đã nhận `contextType`/`contextRef` từ đầu và có luật riêng cho từng loại, nhưng chưa
+màn hình nào gửi lên: hiện mọi hội thoại client mở đều là `direct`. Đây là phần khiến chat gắn
+vào việc đang làm thay vì là một hộp thư rời.
+
+**Chưa làm, có chủ đích.** Gửi ảnh trong tin nhắn, xoá / thu hồi tin nhắn, chặn người dùng.
+Mỗi cái là một quyết định riêng chứ không phải phần còn thiếu của cái đã làm — đặc biệt là chặn
+người dùng: hiện nay thứ giữ spam là trần tần suất, và một danh sách chặn chỉ đáng thêm khi có
+spam thật để nhìn.
 
 ---
 

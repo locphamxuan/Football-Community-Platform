@@ -127,6 +127,31 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
+/**
+ * Ảnh đại diện dạng chữ cái đầu.
+ *
+ * Không tải ảnh: danh sách chat cuộn qua hàng chục dòng, và một vòng gọi mạng cho mỗi
+ * dòng chỉ để lấy một hình tròn 40px là cái giá không đáng trên mạng di động.
+ */
+export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  const initials = (name || '?')
+    .trim()
+    .split(/\s+/)
+    .map((word) => word[0])
+    .slice(-2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <View
+      style={[styles.avatar, { borderRadius: size / 2, height: size, width: size }]}
+      accessibilityElementsHidden
+    >
+      <Text style={styles.avatarText}>{initials}</Text>
+    </View>
+  );
+}
+
 /** Dòng nhãn — giá trị, dùng trong mọi màn chi tiết. */
 export function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -185,6 +210,12 @@ const styles = StyleSheet.create({
   emptyHint: { color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' },
   errorText: { color: colors.danger, textAlign: 'center' },
   retry: { marginTop: spacing.lg },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: colors.primarySoft,
+    justifyContent: 'center',
+  },
+  avatarText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '700' },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

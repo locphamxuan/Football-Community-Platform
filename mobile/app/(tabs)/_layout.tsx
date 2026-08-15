@@ -2,8 +2,10 @@ import { Tabs } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/lib/auth';
-import { canManage } from '../../src/lib/roles';
+import { canChat, canManage } from '../../src/lib/roles';
 import { notificationService } from '../../src/services/notification.service';
+import { chatService } from '../../src/services/chat.service';
+import { chatKeys } from '../../src/lib/chatSocket';
 import { colors, fontSize, radius } from '../../src/lib/theme';
 
 /** Chuông hỏi lại mỗi phút, giống web — đủ nhanh mà không đánh thức máy liên tục. */
@@ -37,6 +39,16 @@ export default function TabsLayout() {
     refetchInterval: UNREAD_POLL_MS,
   });
 
+  // Cùng `queryKey` mà socket dùng để xoá cache: đang mở app thì con số nhảy theo tin nhắn
+  // tới, còn lúc ở tab khác — nơi không màn hình chat nào nghe socket — thì nhịp hỏi lại
+  // này giữ nó không lệch quá một phút.
+  const { data: chatUnread } = useQuery({
+    queryKey: chatKeys.unread,
+    queryFn: () => chatService.unreadCount(),
+    enabled: !!user && canChat(user.roles),
+    refetchInterval: UNREAD_POLL_MS,
+  });
+
   return (
     <Tabs
       screenOptions={{
@@ -57,6 +69,17 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="teams"
         options={{ title: 'Đội bóng', tabBarLabel: () => <TabLabel label="Đội bóng" /> }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Tin nhắn',
+          tabBarLabel: () => <TabLabel label="Tin nhắn" badge={chatUnread?.unreadCount} />,
+          // Quản trị viên đứng ngoài chat (xem `canChat`): backend từ chối họ ở cả REST lẫn
+          // WebSocket, nên để lại tab là để lại một lối đi tới màn hình báo lỗi. Khách chưa
+          // đăng nhập vẫn thấy tab — màn hình sẽ mời họ đăng nhập, đúng như các tab khác.
+          href: user && !canChat(user.roles) ? null : undefined,
+        }}
       />
       <Tabs.Screen
         name="notifications"

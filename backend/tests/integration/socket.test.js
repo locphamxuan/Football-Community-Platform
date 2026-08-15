@@ -90,6 +90,10 @@ describe('bắt tay', () => {
     await expect(connect(token)).rejects.toThrow();
   });
 
+  it('quản trị viên nền tảng bị từ chối ngay ở cửa, giống đường REST', async () => {
+    await expect(connect(tokenFor(Role.USER, Role.ADMIN))).rejects.toThrow();
+  });
+
   it('token đã logout bị chặn ngay ở cửa, không chỉ ở REST', async () => {
     const { token, jti } = generateAccessToken(USER_ID, 'probe@example.com', [Role.USER]);
     await cache.set(CacheKeys.blacklistedToken(jti), '1');

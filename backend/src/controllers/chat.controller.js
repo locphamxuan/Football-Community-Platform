@@ -19,6 +19,36 @@ const openConversation = catchAsync(async (req, res) => {
   sendSuccess(res, { conversation }, 'Conversation opened', HttpStatus.CREATED);
 });
 
+const createGroup = catchAsync(async (req, res) => {
+  const conversation = await chatService.createGroup(req.user.id, req.body);
+  sendSuccess(res, { conversation }, 'Group created', HttpStatus.CREATED);
+});
+
+const getConversation = catchAsync(async (req, res) => {
+  const conversation = await chatService.getConversation(req.user.id, req.params.id);
+  sendSuccess(res, { conversation });
+});
+
+const updateGroup = catchAsync(async (req, res) => {
+  const conversation = await chatService.updateGroup(req.user.id, req.params.id, req.body);
+  sendSuccess(res, { conversation }, 'Group updated');
+});
+
+const addMembers = catchAsync(async (req, res) => {
+  const conversation = await chatService.addMembers(req.user.id, req.params.id, req.body.memberIds);
+  sendSuccess(res, { conversation }, 'Members added');
+});
+
+const removeMember = catchAsync(async (req, res) => {
+  const conversation = await chatService.removeMember(req.user.id, req.params.id, req.params.memberId);
+  sendSuccess(res, { conversation }, 'Member removed');
+});
+
+const leaveGroup = catchAsync(async (req, res) => {
+  const result = await chatService.leaveGroup(req.user.id, req.params.id);
+  sendSuccess(res, result, 'You left the group');
+});
+
 const getUnreadCount = catchAsync(async (req, res) => {
   const unreadCount = await chatService.countUnread(req.user.id);
   sendSuccess(res, { unreadCount });
@@ -44,6 +74,7 @@ const markRead = catchAsync(async (req, res) => {
 });
 
 module.exports = {
-  getMyConversations, openConversation, getUnreadCount,
-  getMessages, sendMessage, markRead,
+  getMyConversations, openConversation, createGroup, getConversation, updateGroup,
+  addMembers, removeMember, leaveGroup,
+  getUnreadCount, getMessages, sendMessage, markRead,
 };

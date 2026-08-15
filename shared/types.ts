@@ -281,14 +281,29 @@ export interface Notification {
 }
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
-/** Lý do hai người bắt đầu nói chuyện. Giữ khớp với `backend/src/constants/chat.js`. */
+/**
+ * Lý do hai người bắt đầu nói chuyện. Giữ khớp với `backend/src/constants/chat.js`.
+ *
+ * Chỉ có nghĩa với hội thoại tay đôi; nhóm luôn mang `'direct'` vì nó không sinh ra từ
+ * một lịch đặt hay trận đấu nào.
+ */
 export type ConversationContextType = 'direct' | 'booking' | 'match_request' | 'field';
+
+/** Tay đôi hay nhóm nhiều người. */
+export type ConversationType = 'direct' | 'group';
+
+/** Vai trò trong nhóm: chỉ quản trị nhóm được thêm, gỡ thành viên và đổi tên. */
+export type ParticipantRole = 'admin' | 'member';
+
+/** Tin người gõ, hay dòng do server ghi khi nhóm đổi ("A đã thêm B vào nhóm"). */
+export type ChatMessageKind = 'text' | 'system';
 
 /** Hồ sơ rút gọn của người tham gia — vừa đủ vẽ một dòng trong hộp thư. */
 export type ChatParticipantProfile = Pick<User, 'username' | 'fullName' | 'avatar' | 'roles'> & { _id: string };
 
 export interface ConversationParticipant {
   user: ChatParticipantProfile;
+  role: ParticipantRole;
   /** null = chưa mở hội thoại lần nào. */
   lastReadAt: string | null;
   unreadCount: number;
@@ -296,7 +311,13 @@ export interface ConversationParticipant {
 
 export interface Conversation {
   _id: string;
+  type: ConversationType;
   participants: ConversationParticipant[];
+  /** Tên nhóm. Rỗng với hội thoại tay đôi — ở đó tên hiển thị là tên người kia. */
+  name: string;
+  avatar: string;
+  /** Người lập nhóm; vắng mặt ở hội thoại tay đôi. */
+  createdBy?: string;
   context: { type: ConversationContextType; ref?: string };
   lastMessage: { body: string; sender: string; sentAt: string } | null;
   createdAt: string;
@@ -307,6 +328,7 @@ export interface ChatMessage {
   _id: string;
   conversation: string;
   sender: ChatParticipantProfile;
+  kind: ChatMessageKind;
   body: string;
   createdAt: string;
 }
@@ -316,7 +338,12 @@ export interface ChatMessage {
  * không có lỗi nào nổ ra, chỉ là tin nhắn lặng lẽ không tới nơi.
  */
 export type ChatClientEvent = 'message:send' | 'conversation:read' | 'conversation:typing';
-export type ChatServerEvent = 'message:new' | 'conversation:read' | 'conversation:typing' | 'chat:error';
+export type ChatServerEvent =
+  | 'message:new'
+  | 'conversation:read'
+  | 'conversation:typing'
+  | 'conversation:updated'
+  | 'chat:error';
 
 export interface NewMessageEvent {
   conversationId: string;
@@ -334,6 +361,16 @@ export interface TypingEvent {
   conversationId: string;
   userId: string;
   isTyping: boolean;
+}
+
+/**
+ * Nhóm vừa lập, vừa đổi tên, hoặc vừa thêm/gỡ thành viên.
+ *
+ * Người vừa bị gỡ cũng nhận sự kiện này, và họ sẽ không thấy mình trong `participants` —
+ * đó chính là dấu hiệu để client bỏ nhóm khỏi hộp thư.
+ */
+export interface ConversationUpdatedEvent {
+  conversation: Conversation;
 }
 
 /** Trả lời của server cho một sự kiện client gửi lên (callback `ack` của socket.io). */

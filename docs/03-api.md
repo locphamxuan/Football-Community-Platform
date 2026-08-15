@@ -55,7 +55,13 @@ Toàn bộ nhóm này cần đăng nhập.
 | PATCH | `/me/notifications` | 🔒 | `push?` (bool), `mutedTypes?` (mảng `NotificationType`). Trả về `user` |
 | POST | `/me/push-tokens` | 🔒 | `token` (dạng `ExponentPushToken[...]`). Đăng ký thiết bị nhận thông báo đẩy; trả `devices` |
 | DELETE | `/me/push-tokens` | 🔒 | `token`. Gỡ đúng thiết bị này, các thiết bị khác giữ nguyên |
+| GET | `/search` | 🔒 | Query: `q` (≥ 2 ký tự), `limit?` (≤ 20). Tìm người để nhắn tin hoặc mời vào nhóm |
 | GET | `/:id` | 🔒 | Hồ sơ công khai của người khác |
+
+`/search` trả hồ sơ rút gọn (`_id, username, fullName, avatar, roles`) và **lọc sẵn** admin,
+tài khoản bị khoá và chính người đang tìm — đúng tập người mà `chat.service` sẽ chấp nhận, nên
+ô gợi ý không bao giờ đề xuất một người mà bấm vào sẽ nhận 403. Nó đứng **trước** `/:id` trong
+router, nếu không Express đọc "search" thành một id.
 
 Token đẩy được lưu thành **mảng** trên `User` (một người có thể vừa dùng điện thoại vừa dùng
 máy tính bảng) và mang `select: false` — Expo không xác thực người gửi, ai cầm được token là
@@ -193,16 +199,39 @@ Quy tắc và lý do: [04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-b�
 
 Toàn bộ nhóm này cần đăng nhập và **không phân theo vai trò**: chủ sân, quản lý đội và người
 chơi đều nhắn tin. Ai được nói chuyện với ai là câu hỏi về quan hệ (có phải hai bên của lịch
-đặt này không), trả lời trong `chat.service` chứ không phải bằng `authorize(...)` ở route.
+đặt này không, có trong nhóm này không), trả lời trong `chat.service` chứ không phải bằng
+`authorize(...)` ở route.
+
+Ngoại lệ duy nhất đi ngược chiều: **quản trị viên nền tảng bị chặn ở cửa** (`denyRoles(admin)`
+trên cả router lẫn lúc bắt tay WebSocket). Họ xử lý khiếu nại bằng công cụ quản trị; một kênh
+riêng với admin trong app là kênh không ai kiểm được.
 
 | Method | Đường dẫn | Quyền | Body / Ghi chú |
 |---|---|---|---|
-| GET | `/conversations` | 🔒 | Query: `page, limit, contextType`. Trả `conversations`, `unreadCount` và `meta.pagination` trong một lần gọi |
+| GET | `/conversations` | 🔒 | Query: `page, limit, contextType, type`. Trả `conversations`, `unreadCount` và `meta.pagination` trong một lần gọi |
 | POST | `/conversations` | 🔒 | `recipientId`, `contextType?`, `contextRef?`. Mở hội thoại hoặc trả lại cái đã có — gọi lại không tạo luồng thứ hai |
 | GET | `/unread-count` | 🔒 | Tổng chưa đọc của mọi hội thoại, cho chấm đỏ |
+| GET | `/conversations/:id` | 🔒 | Một hội thoại kèm danh sách thành viên và vai trò của họ |
 | GET | `/conversations/:id/messages` | 🔒 | Query: `page, limit`. Mới nhất trước |
 | POST | `/conversations/:id/messages` | 🔒 | `body` (1–2000 ký tự, cắt khoảng trắng trước khi đo) |
 | POST | `/conversations/:id/read` | 🔒 | Đặt mốc đã đọc, xoá số chưa đọc, báo "đã xem" cho người kia |
+
+### Nhóm
+
+| Method | Đường dẫn | Quyền | Body / Ghi chú |
+|---|---|---|---|
+| POST | `/groups` | 🔒 | `name` (1–100), `memberIds` (≥ 1). Người tạo là quản trị nhóm đầu tiên |
+| PATCH | `/conversations/:id` | 🔒 quản trị nhóm | `name` |
+| POST | `/conversations/:id/members` | 🔒 quản trị nhóm | `memberIds` |
+| DELETE | `/conversations/:id/members/:memberId` | 🔒 quản trị nhóm | Tự gỡ mình trả **400** — dùng `/leave` |
+| POST | `/conversations/:id/leave` | 🔒 thành viên | Trả `{ conversationId, deleted }`; `deleted: true` khi người cuối cùng rời đi |
+
+Trần **50 thành viên** mỗi nhóm (`GROUP_MAX_PARTICIPANTS`); vượt trả **400**. Không phải quản
+trị nhóm mà gọi bốn endpoint đầu trả **403**; gọi chúng trên hội thoại tay đôi trả **400**.
+Quy tắc và lý do: [04 — Tin nhắn](04-nghiep-vu.md#tin-nhắn).
+
+Mỗi thay đổi nhóm ghi thêm một tin nhắn `kind: 'system'` vào chính dòng thời gian ấy ("A đã
+thêm B vào nhóm"), nên client chỉ cần vẽ nó khác đi chứ không phải tải một nhật ký riêng.
 
 `contextType` nhận bốn giá trị, và mỗi giá trị có một luật riêng về **ai được mở hội thoại**:
 
@@ -232,10 +261,15 @@ Bắt tay thất bại (thiếu token, token hỏng, token đã logout) thì k�
 | ↑ client | `message:send` | `{ conversationId, body }` |
 | ↑ client | `conversation:read` | `{ conversationId }` |
 | ↑ client | `conversation:typing` | `{ conversationId, isTyping? }` (mặc định `true`) |
-| ↓ server | `message:new` | `{ conversationId, message }` — gửi cho **cả hai** bên, kể cả người gửi (thiết bị khác của họ) |
-| ↓ server | `conversation:read` | `{ conversationId, userId, readAt }` — chỉ gửi cho người còn lại |
+| ↓ server | `message:new` | `{ conversationId, message }` — gửi cho **mọi** thành viên, kể cả người gửi (thiết bị khác của họ) |
+| ↓ server | `conversation:read` | `{ conversationId, userId, readAt }` — chỉ gửi cho những người còn lại |
 | ↓ server | `conversation:typing` | `{ conversationId, userId, isTyping }` |
+| ↓ server | `conversation:updated` | `{ conversation }` — nhóm vừa lập, đổi tên, hoặc đổi thành viên |
 | ↓ server | `chat:error` | `{ message, code }` |
+
+`conversation:updated` cũng gửi tới **người vừa bị gỡ**: họ sẽ không thấy mình trong
+`participants`, và đó chính là dấu hiệu để client bỏ nhóm khỏi hộp thư thay vì để nó nằm lại
+tới lần tải trang sau.
 
 Mỗi sự kiện client gửi lên đều trả lời qua callback `ack`:
 `{ success: true, data }` hoặc `{ success: false, message, code }`. `chat:error` là bản sao

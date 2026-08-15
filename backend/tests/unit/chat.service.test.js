@@ -8,10 +8,12 @@ jest.mock('../../src/models/Conversation', () => ({
   // `buildKey` là luật chống trùng, không phải phụ thuộc ngoài — chép lại trong test là
   // tạo bản sao thứ hai của đúng cái luật đang cần kiểm.
   buildKey: jest.requireActual('../../src/models/Conversation').buildKey,
+  buildGroupKey: jest.requireActual('../../src/models/Conversation').buildGroupKey,
   findById: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
   updateOne: jest.fn(),
+  deleteOne: jest.fn(),
   find: jest.fn(),
   countDocuments: jest.fn(),
   aggregate: jest.fn(),
@@ -19,9 +21,10 @@ jest.mock('../../src/models/Conversation', () => ({
 jest.mock('../../src/models/Message', () => ({
   create: jest.fn(),
   find: jest.fn(),
+  deleteMany: jest.fn(),
   countDocuments: jest.fn(),
 }));
-jest.mock('../../src/models/User', () => ({ findById: jest.fn() }));
+jest.mock('../../src/models/User', () => ({ findById: jest.fn(), find: jest.fn() }));
 jest.mock('../../src/models/Field', () => ({ findById: jest.fn() }));
 jest.mock('../../src/models/Booking', () => ({ findById: jest.fn() }));
 jest.mock('../../src/models/MatchRequest', () => ({ findById: jest.fn() }));
@@ -36,7 +39,9 @@ const { notify } = require('../../src/services/notification.service');
 const { emitToUsers, isOnline } = require('../../src/socket/emitter');
 const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');
 const chatService = require('../../src/services/chat.service');
-const { ConversationContext } = require('../../src/constants/chat');
+const {
+  ConversationContext, ConversationType, ParticipantRole, MessageKind,
+} = require('../../src/constants/chat');
 const { NotificationType } = require('../../src/constants/notifications');
 const { ServerEvent } = require('../../src/socket/events');
 const env = require('../../src/config/env');
@@ -52,20 +57,42 @@ const MATCH_ID = '000000000000000000000040';
 /** Doc mongoose giả: `populate` trả về chính nó, đủ cho service đi tiếp. */
 const doc = (value) => ({ ...value, populate: jest.fn().mockResolvedValue(value) });
 
+/**
+ * Query mongoose giả: `await` được như một promise, mà vẫn `.populate()` được.
+ * Service dùng cả hai kiểu trên cùng `findById` — chỉ mock một kiểu thì nửa kia ném TypeError.
+ */
+const queryOf = (value) => Object.assign(Promise.resolve(value), {
+  populate: jest.fn().mockResolvedValue(value),
+});
+
 const conversationOf = (...userIds) => ({
   _id: CONVERSATION_ID,
+  type: ConversationType.DIRECT,
   participants: userIds.map((user) => ({ user, unreadCount: 0, lastReadAt: null })),
+});
+
+/** Nhóm: mỗi phần tử là cặp [id, vai trò trong nhóm]. */
+const groupOf = (...entries) => ({
+  _id: CONVERSATION_ID,
+  type: ConversationType.GROUP,
+  name: 'Đội Sao Vàng',
+  participants: entries.map(([user, role]) => ({ user, role, unreadCount: 0, lastReadAt: null })),
 });
 
 const mockRecipient = (user) => User.findById.mockReturnValue({ select: () => Promise.resolve(user) });
 
+const mockChattableUsers = (users) =>
+  User.find.mockReturnValue({ limit: () => Promise.resolve(users), select: () => Promise.resolve(users) });
+
 beforeEach(() => {
   resetCache();
-  mockRecipient({ _id: OWNER_ID, status: 'active' });
+  mockRecipient({ _id: OWNER_ID, status: 'active', roles: ['user'], fullName: 'Chủ sân' });
+  mockChattableUsers([{ _id: OWNER_ID, status: 'active', roles: ['user'], fullName: 'Chủ sân' }]);
   Conversation.findOne.mockResolvedValue(null);
   Conversation.create.mockImplementation(async (data) => doc({ _id: CONVERSATION_ID, ...data }));
-  Conversation.findById.mockResolvedValue(conversationOf(USER_ID, OWNER_ID));
+  Conversation.findById.mockReturnValue(queryOf(conversationOf(USER_ID, OWNER_ID)));
   Conversation.updateOne.mockResolvedValue({ modifiedCount: 1 });
+  Conversation.deleteOne.mockResolvedValue({ deletedCount: 1 });
   Conversation.aggregate.mockResolvedValue([]);
   Message.create.mockImplementation(async (data) => doc({
     _id: '000000000000000000000099',
@@ -73,6 +100,7 @@ beforeEach(() => {
     ...data,
     sender: { _id: data.sender, fullName: 'Người gửi' },
   }));
+  Message.deleteMany.mockResolvedValue({ deletedCount: 3 });
   isOnline.mockResolvedValue(false);
 });
 
@@ -254,15 +282,17 @@ describe('sendMessage', () => {
     );
   });
 
-  it('cộng số chưa đọc cho người nhận và cập nhật bản xem trước', async () => {
+  it('cộng số chưa đọc cho mọi người trừ người gửi, và cập nhật bản xem trước', async () => {
     await chatService.sendMessage(USER_ID, CONVERSATION_ID, 'Mai 18h nhé');
 
     expect(Conversation.updateOne).toHaveBeenCalledWith(
-      { _id: CONVERSATION_ID, 'participants.user': OWNER_ID },
+      { _id: CONVERSATION_ID },
       expect.objectContaining({
-        $inc: { 'participants.$.unreadCount': 1 },
+        $inc: { 'participants.$[other].unreadCount': 1 },
         $set: { lastMessage: expect.objectContaining({ body: 'Mai 18h nhé', sender: USER_ID }) },
-      })
+      }),
+      // Một lệnh ghi cho cả nhóm thay vì một lệnh cho mỗi thành viên.
+      expect.objectContaining({ arrayFilters: [{ 'other.user': { $ne: expect.anything() } }] })
     );
   });
 
@@ -364,6 +394,217 @@ describe('notifyTyping', () => {
     });
     expect(Conversation.updateOne).not.toHaveBeenCalled();
     expect(Message.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('createGroup', () => {
+  const MEMBER_IDS = [OWNER_ID, STRANGER_ID];
+
+  beforeEach(() => {
+    mockChattableUsers([
+      { _id: OWNER_ID, status: 'active', roles: ['field_owner'], fullName: 'Chủ sân' },
+      { _id: STRANGER_ID, status: 'active', roles: ['user'], fullName: 'Bạn bè' },
+    ]);
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER],
+      [STRANGER_ID, ParticipantRole.MEMBER]
+    )));
+  });
+
+  it('người lập nhóm là quản trị, những người được mời là thành viên', async () => {
+    await chatService.createGroup(USER_ID, { name: 'Đội Sao Vàng', memberIds: MEMBER_IDS });
+
+    expect(Conversation.create).toHaveBeenCalledWith(expect.objectContaining({
+      type: ConversationType.GROUP,
+      name: 'Đội Sao Vàng',
+      createdBy: USER_ID,
+      participants: [
+        { user: USER_ID, role: ParticipantRole.ADMIN },
+        { user: OWNER_ID, role: ParticipantRole.MEMBER },
+        { user: STRANGER_ID, role: ParticipantRole.MEMBER },
+      ],
+    }));
+  });
+
+  it('mở đầu bằng một tin hệ thống để nhóm không hiện ra trống trơn', async () => {
+    await chatService.createGroup(USER_ID, { name: 'Đội Sao Vàng', memberIds: MEMBER_IDS });
+
+    expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({
+      kind: MessageKind.SYSTEM,
+      sender: USER_ID,
+    }));
+  });
+
+  it('báo cho mọi thành viên để nhóm hiện ra ngay, không đợi tải lại', async () => {
+    await chatService.createGroup(USER_ID, { name: 'Đội Sao Vàng', memberIds: MEMBER_IDS });
+
+    expect(emitToUsers).toHaveBeenCalledWith(
+      [USER_ID, OWNER_ID, STRANGER_ID],
+      ServerEvent.CONVERSATION_UPDATED,
+      expect.objectContaining({ conversation: expect.anything() })
+    );
+  });
+
+  it('nhóm chỉ có mình mình thì không phải nhóm', async () => {
+    await expect(chatService.createGroup(USER_ID, { name: 'Một mình', memberIds: [USER_ID] }))
+      .rejects.toMatchObject({ statusCode: 400 });
+    expect(Conversation.create).not.toHaveBeenCalled();
+  });
+
+  it('không kéo được quản trị viên nền tảng vào nhóm', async () => {
+    mockChattableUsers([{ _id: OWNER_ID, status: 'active', roles: ['user', 'admin'] }]);
+
+    await expect(chatService.createGroup(USER_ID, { name: 'Nhóm', memberIds: [OWNER_ID] }))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(Conversation.create).not.toHaveBeenCalled();
+  });
+
+  it('không kéo được tài khoản đã bị khoá vào nhóm', async () => {
+    mockChattableUsers([{ _id: OWNER_ID, status: 'banned', roles: ['user'] }]);
+
+    await expect(chatService.createGroup(USER_ID, { name: 'Nhóm', memberIds: [OWNER_ID] }))
+      .rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe('addMembers', () => {
+  beforeEach(() => {
+    mockChattableUsers([{ _id: STRANGER_ID, status: 'active', roles: ['user'], fullName: 'Người mới' }]);
+  });
+
+  it('quản trị nhóm thêm được người mới', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await chatService.addMembers(USER_ID, CONVERSATION_ID, [STRANGER_ID]);
+
+    expect(Conversation.updateOne).toHaveBeenCalledWith(
+      { _id: CONVERSATION_ID },
+      { $push: { participants: { $each: [{ user: STRANGER_ID, role: ParticipantRole.MEMBER }] } } }
+    );
+  });
+
+  it('thành viên thường thì không — nhóm là của người lập ra nó', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [OWNER_ID, ParticipantRole.ADMIN],
+      [USER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await expect(chatService.addMembers(USER_ID, CONVERSATION_ID, [STRANGER_ID]))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(Conversation.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('người đã ở trong nhóm thì không thêm lần nữa', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await expect(chatService.addMembers(USER_ID, CONVERSATION_ID, [OWNER_ID]))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('hội thoại tay đôi không biến thành nhóm bằng cách thêm người', async () => {
+    await expect(chatService.addMembers(USER_ID, CONVERSATION_ID, [STRANGER_ID]))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+describe('removeMember', () => {
+  beforeEach(() => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER]
+    )));
+  });
+
+  it('quản trị nhóm gỡ được thành viên, và người bị gỡ cũng được báo', async () => {
+    await chatService.removeMember(USER_ID, CONVERSATION_ID, OWNER_ID);
+
+    expect(Conversation.updateOne).toHaveBeenCalledWith(
+      { _id: CONVERSATION_ID },
+      { $pull: { participants: { user: expect.anything() } } }
+    );
+    expect(emitToUsers).toHaveBeenCalledWith(
+      expect.arrayContaining([OWNER_ID]),
+      ServerEvent.CONVERSATION_UPDATED,
+      expect.anything()
+    );
+  });
+
+  it('tự gỡ mình là rời nhóm — đi cửa khác', async () => {
+    await expect(chatService.removeMember(USER_ID, CONVERSATION_ID, USER_ID))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('người không ở trong nhóm thì không có gì để gỡ', async () => {
+    await expect(chatService.removeMember(USER_ID, CONVERSATION_ID, STRANGER_ID))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('leaveGroup', () => {
+  it('quản trị cuối cùng rời đi thì người còn lại lên thay, nhóm không kẹt', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await chatService.leaveGroup(USER_ID, CONVERSATION_ID);
+
+    expect(Conversation.updateOne).toHaveBeenCalledWith(
+      { _id: CONVERSATION_ID, 'participants.user': OWNER_ID },
+      { $set: { 'participants.$.role': ParticipantRole.ADMIN } }
+    );
+  });
+
+  it('người cuối cùng rời đi thì nhóm và tin nhắn biến mất cùng nhau', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf([USER_ID, ParticipantRole.ADMIN])));
+
+    await expect(chatService.leaveGroup(USER_ID, CONVERSATION_ID))
+      .resolves.toMatchObject({ deleted: true });
+    expect(Conversation.deleteOne).toHaveBeenCalledWith({ _id: CONVERSATION_ID });
+    expect(Message.deleteMany).toHaveBeenCalledWith({ conversation: CONVERSATION_ID });
+  });
+
+  it('không rời được hội thoại tay đôi', async () => {
+    await expect(chatService.leaveGroup(USER_ID, CONVERSATION_ID))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+describe('sendMessage trong nhóm', () => {
+  beforeEach(() => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER],
+      [STRANGER_ID, ParticipantRole.MEMBER]
+    )));
+  });
+
+  it('đẩy tới mọi thành viên, kể cả chính người gửi trên thiết bị khác', async () => {
+    await chatService.sendMessage(USER_ID, CONVERSATION_ID, 'Mai 18h nhé');
+
+    expect(emitToUsers).toHaveBeenCalledWith(
+      [USER_ID, OWNER_ID, STRANGER_ID],
+      ServerEvent.NEW_MESSAGE,
+      expect.anything()
+    );
+  });
+
+  it('mỗi thành viên đang offline nhận một thông báo mang tên nhóm', async () => {
+    await chatService.sendMessage(USER_ID, CONVERSATION_ID, 'Mai 18h nhé');
+
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledWith(
+      OWNER_ID,
+      expect.objectContaining({ title: expect.stringContaining('Đội Sao Vàng') }),
+      USER_ID
+    );
   });
 });
 

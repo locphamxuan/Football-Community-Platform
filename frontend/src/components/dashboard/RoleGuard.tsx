@@ -10,20 +10,25 @@ import useMounted from '@/hooks/useMounted';
 import type { Role } from '@/types';
 
 /**
- * `allow` và hai dòng chữ từ chối luôn đi cùng nhau: khu nào chặn theo role thì phải nói
- * được vì sao, còn khu chỉ cần đăng nhập thì không có gì để giải thích.
+ * `allow`/`deny` và hai dòng chữ từ chối luôn đi cùng nhau: khu nào chặn theo role thì phải
+ * nói được vì sao, còn khu chỉ cần đăng nhập thì không có gì để giải thích.
+ *
+ * `deny` không phải là `allow` viết ngược: **mọi** tài khoản đều mang role `user`, kể cả
+ * quản trị viên, nên "ai cũng vào được, trừ admin" không diễn đạt được bằng `allow` mà
+ * không phải liệt kê hết các role còn lại — và bỏ sót mọi role thêm về sau.
  */
 type RoleGuardProps = { children: React.ReactNode } & (
-  | { allow: Role[]; deniedTitle: string; deniedDescription: string }
-  | { allow?: never; deniedTitle?: never; deniedDescription?: never }
+  | { allow: Role[]; deny?: never; deniedTitle: string; deniedDescription: string }
+  | { deny: Role[]; allow?: never; deniedTitle: string; deniedDescription: string }
+  | { allow?: never; deny?: never; deniedTitle?: never; deniedDescription?: never }
 );
 
 /**
- * Chặn truy cập theo role, hoặc chỉ đòi đăng nhập khi bỏ trống `allow`.
+ * Chặn truy cập theo role, hoặc chỉ đòi đăng nhập khi bỏ trống cả `allow` lẫn `deny`.
  * Backend vẫn kiểm tra quyền trên từng endpoint — guard này chỉ để UX rõ ràng,
  * không phải lớp bảo mật.
  */
-export default function RoleGuard({ allow, deniedTitle, deniedDescription, children }: RoleGuardProps) {
+export default function RoleGuard({ allow, deny, deniedTitle, deniedDescription, children }: RoleGuardProps) {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   // authStore dùng persist (localStorage) — chờ mount để tránh hydration mismatch
@@ -43,6 +48,16 @@ export default function RoleGuard({ allow, deniedTitle, deniedDescription, child
       <BlockCard title="Cần đăng nhập" desc="Đăng nhập để vào khu quản lý này.">
         <Button nativeButton={false} render={<Link href="/login" />}>
           Đăng nhập
+        </Button>
+      </BlockCard>
+    );
+  }
+
+  if (deny?.some((role) => user.roles.includes(role))) {
+    return (
+      <BlockCard title={deniedTitle!} desc={deniedDescription!}>
+        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
+          Về trang chủ
         </Button>
       </BlockCard>
     );

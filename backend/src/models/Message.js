@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
-const { MESSAGE_MAX_LENGTH } = require('../constants/chat');
+const { MESSAGE_MAX_LENGTH, MessageKind, MESSAGE_KINDS } = require('../constants/chat');
 
 const messageSchema = new mongoose.Schema(
   {
     conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },
+    /** Với tin hệ thống, đây là người gây ra thay đổi ("A đã thêm B vào nhóm"). */
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    kind: { type: String, enum: MESSAGE_KINDS, default: MessageKind.TEXT },
     body: { type: String, required: true, trim: true, maxlength: MESSAGE_MAX_LENGTH },
   },
   { timestamps: true }

@@ -5,11 +5,14 @@ const request = require('supertest');
 const app = require('../../src/app');
 const chatService = require('../../src/services/chat.service');
 const { AppError } = require('../../src/middleware/errorHandler');
-const { asUser, USER_ID } = require('../helpers/auth');
-const { ConversationContext, MESSAGE_MAX_LENGTH } = require('../../src/constants/chat');
+const { asUser, asAdmin, USER_ID } = require('../helpers/auth');
+const {
+  ConversationContext, MESSAGE_MAX_LENGTH, GROUP_NAME_MAX_LENGTH, GROUP_MAX_PARTICIPANTS,
+} = require('../../src/constants/chat');
 
 const CONVERSATION_ID = '000000000000000000000010';
 const RECIPIENT_ID = '000000000000000000000002';
+const MEMBER_ID = '000000000000000000000003';
 const BOOKING_ID = '000000000000000000000020';
 
 beforeEach(() => {
@@ -17,21 +20,46 @@ beforeEach(() => {
   chatService.countUnread.mockResolvedValue(0);
   chatService.getMessages.mockResolvedValue({ messages: [], total: 0, page: 1, limit: 10 });
   chatService.openConversation.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.getConversation.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.createGroup.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.updateGroup.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.addMembers.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.removeMember.mockResolvedValue({ _id: CONVERSATION_ID });
+  chatService.leaveGroup.mockResolvedValue({ conversationId: CONVERSATION_ID, deleted: false });
   chatService.sendMessage.mockResolvedValue({ message: { _id: '000000000000000000000099' } });
   chatService.markRead.mockResolvedValue({ conversationId: CONVERSATION_ID, readAt: new Date() });
 });
 
+const EVERY_ROUTE = [
+  ['get', '/api/v1/chat/conversations'],
+  ['post', '/api/v1/chat/conversations'],
+  ['get', '/api/v1/chat/unread-count'],
+  ['post', '/api/v1/chat/groups'],
+  ['get', `/api/v1/chat/conversations/${CONVERSATION_ID}`],
+  ['patch', `/api/v1/chat/conversations/${CONVERSATION_ID}`],
+  ['get', `/api/v1/chat/conversations/${CONVERSATION_ID}/messages`],
+  ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/messages`],
+  ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/read`],
+  ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/members`],
+  ['delete', `/api/v1/chat/conversations/${CONVERSATION_ID}/members/${MEMBER_ID}`],
+  ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/leave`],
+];
+
 describe('toàn bộ /api/v1/chat cần đăng nhập', () => {
-  it.each([
-    ['get', '/api/v1/chat/conversations'],
-    ['post', '/api/v1/chat/conversations'],
-    ['get', '/api/v1/chat/unread-count'],
-    ['get', `/api/v1/chat/conversations/${CONVERSATION_ID}/messages`],
-    ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/messages`],
-    ['post', `/api/v1/chat/conversations/${CONVERSATION_ID}/read`],
-  ])('%s %s trả 401 khi thiếu token', async (method, url) => {
+  it.each(EVERY_ROUTE)('%s %s trả 401 khi thiếu token', async (method, url) => {
     const res = await request(app)[method](url);
     expect(res.status).toBe(401);
+  });
+});
+
+/**
+ * Quản trị viên nền tảng đứng ngoài mọi cuộc trò chuyện: họ xử lý khiếu nại bằng công cụ
+ * quản trị, và một kênh riêng với họ trong app là kênh không ai kiểm được.
+ */
+describe('quản trị viên nền tảng không dùng chat', () => {
+  it.each(EVERY_ROUTE)('%s %s trả 403 với tài khoản admin', async (method, url) => {
+    const res = await request(app)[method](url).set(asAdmin());
+    expect(res.status).toBe(403);
   });
 });
 
@@ -103,6 +131,87 @@ describe('POST /api/v1/chat/conversations', () => {
   });
 });
 
+describe('nhóm chat', () => {
+  it('lập nhóm và trả 201', async () => {
+    const res = await request(app)
+      .post('/api/v1/chat/groups')
+      .send({ name: 'Đội Sao Vàng', memberIds: [RECIPIENT_ID, MEMBER_ID] })
+      .set(asUser());
+
+    expect(res.status).toBe(201);
+    expect(chatService.createGroup).toHaveBeenCalledWith(USER_ID, {
+      name: 'Đội Sao Vàng',
+      memberIds: [RECIPIENT_ID, MEMBER_ID],
+    });
+  });
+
+  it.each([
+    ['thiếu tên nhóm', { memberIds: [RECIPIENT_ID] }],
+    ['tên nhóm rỗng', { name: '   ', memberIds: [RECIPIENT_ID] }],
+    ['tên nhóm quá dài', { name: 'a'.repeat(GROUP_NAME_MAX_LENGTH + 1), memberIds: [RECIPIENT_ID] }],
+    ['không mời ai', { name: 'Nhóm', memberIds: [] }],
+    ['id thành viên sai định dạng', { name: 'Nhóm', memberIds: ['bạn-thân'] }],
+    ['mời quá đông', {
+      name: 'Nhóm',
+      memberIds: Array.from({ length: GROUP_MAX_PARTICIPANTS + 1 }, () => RECIPIENT_ID),
+    }],
+  ])('trả 400 khi %s', async (_label, body) => {
+    const res = await request(app).post('/api/v1/chat/groups').send(body).set(asUser());
+
+    expect(res.status).toBe(400);
+    expect(chatService.createGroup).not.toHaveBeenCalled();
+  });
+
+  it('đổi tên nhóm', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/chat/conversations/${CONVERSATION_ID}`)
+      .send({ name: 'Tên mới' })
+      .set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(chatService.updateGroup).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID, { name: 'Tên mới' });
+  });
+
+  it('thêm thành viên', async () => {
+    const res = await request(app)
+      .post(`/api/v1/chat/conversations/${CONVERSATION_ID}/members`)
+      .send({ memberIds: [MEMBER_ID] })
+      .set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(chatService.addMembers).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID, [MEMBER_ID]);
+  });
+
+  it('gỡ thành viên', async () => {
+    const res = await request(app)
+      .delete(`/api/v1/chat/conversations/${CONVERSATION_ID}/members/${MEMBER_ID}`)
+      .set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(chatService.removeMember).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID, MEMBER_ID);
+  });
+
+  it('rời nhóm', async () => {
+    const res = await request(app)
+      .post(`/api/v1/chat/conversations/${CONVERSATION_ID}/leave`)
+      .set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(chatService.leaveGroup).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID);
+  });
+
+  it('lỗi 403 của service (không phải quản trị nhóm) đi nguyên vẹn ra ngoài', async () => {
+    chatService.addMembers.mockRejectedValue(new AppError('Only a group admin can do this', 403, 'FORBIDDEN'));
+
+    const res = await request(app)
+      .post(`/api/v1/chat/conversations/${CONVERSATION_ID}/members`)
+      .send({ memberIds: [MEMBER_ID] })
+      .set(asUser());
+
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('POST /api/v1/chat/conversations/:id/messages', () => {
   it('gửi tin nhắn và trả 201', async () => {
     const res = await request(app)
@@ -162,6 +271,13 @@ describe('đọc tin nhắn', () => {
 
     expect(res.status).toBe(200);
     expect(chatService.markRead).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID);
+  });
+
+  it('mở thẳng một hội thoại bằng link, không cần hộp thư', async () => {
+    const res = await request(app).get(`/api/v1/chat/conversations/${CONVERSATION_ID}`).set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(chatService.getConversation).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID);
   });
 
   it('trả tổng chưa đọc cho chấm đỏ', async () => {

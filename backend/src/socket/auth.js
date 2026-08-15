@@ -1,5 +1,6 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const { cache, CacheKeys } = require('../config/redis');
+const Role = require('../constants/roles');
 
 /**
  * Chặn cửa cho WebSocket — cùng luật với `middleware/authenticate.js`, khác chỗ lấy token.
@@ -22,6 +23,13 @@ const authenticateSocket = async (socket, next) => {
 
     if (await cache.exists(CacheKeys.blacklistedToken(payload.jti))) {
       return next(new Error('Token has been revoked'));
+    }
+
+    // Kết nối này chỉ phục vụ chat, mà quản trị viên nền tảng không tham gia chat
+    // (cùng luật với `denyRoles` ở `chat.routes.js`). Từ chối ngay lúc bắt tay chứ không
+    // cho kết nối rồi im lặng bỏ qua mọi sự kiện — client phải biết là mình bị từ chối.
+    if (payload.roles?.includes(Role.ADMIN)) {
+      return next(new Error('Chat is not available for this account'));
     }
 
     socket.data.user = { id: payload.sub, email: payload.email, roles: payload.roles };

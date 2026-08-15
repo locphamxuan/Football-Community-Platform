@@ -6,6 +6,15 @@ const pushTokenSchema = z.object({
   token: z.string().regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, 'Invalid Expo push token'),
 });
 
+/**
+ * Ô tìm người để nhắn tin. Bắt buộc có từ khoá: `GET /users/search` không có `q` là một
+ * cách vòng vo để tải về danh bạ toàn nền tảng.
+ */
+const searchUsersSchema = z.object({
+  q: z.string().trim().min(2, 'Type at least 2 characters').max(100),
+  limit: z.coerce.number().int().min(1).max(20).optional(),
+});
+
 const updateProfileSchema = z.object({
   fullName: z.string().min(2).max(100).trim().optional(),
   phone: z.string().regex(/^(0|\+84)[0-9]{9}$/, 'Invalid Vietnamese phone number').optional(),
@@ -46,4 +55,5 @@ const changePasswordSchema = z.object({
 
 module.exports = {
   updateProfileSchema, updateNotificationsSchema, changePasswordSchema, pushTokenSchema,
+  searchUsersSchema,
 };
