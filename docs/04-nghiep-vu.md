@@ -214,6 +214,31 @@ nhất trong một khung chat, vì không ai biết mình đang sai.
 hiện ra rồi; thêm một thông báo nữa là kêu hai lần cho cùng một việc. `emitter.isOnline()` đếm
 kết nối trên toàn cụm chứ không chỉ instance hiện tại.
 
+**Quản trị viên nền tảng đứng ngoài chat.** Họ xử lý khiếu nại bằng công cụ quản trị, nơi mọi
+thao tác đều để lại dấu vết; một kênh riêng với admin trong app là kênh không ai kiểm được, và
+là chỗ để người dùng tin rằng mình vừa "được hứa" điều gì đó. Chặn nằm ở cửa — `denyRoles` trên
+router chat và một lần kiểm lúc bắt tay WebSocket — chứ không rải trong từng thao tác. Cả web
+lẫn mobile đều giấu lối vào chat với admin, vì để lại một cái nút chỉ dẫn tới màn hình từ chối.
+
+### Nhóm
+
+**Chỉ quản trị nhóm được thêm, gỡ thành viên và đổi tên.** Ai cũng thêm được thì một nhóm đội
+bóng biến thành chỗ người lạ kéo nhau vào, còn quản lý đội mất quyền kiểm soát chính cái nhóm
+mình lập ra. Người tạo nhóm là quản trị đầu tiên. Trần **50 thành viên**.
+
+**Tự gỡ mình không phải là "gỡ", mà là "rời nhóm".** Hai việc có hệ quả khác nhau nên có hai
+đường riêng: gỡ là hành động của quản trị lên người khác, còn rời là quyền của mọi thành viên —
+kể cả quản trị.
+
+**Quản trị cuối cùng rời đi thì người kỳ cựu nhất lên thay**, nếu không nhóm kẹt vĩnh viễn ở
+trạng thái không ai thêm được ai và không ai đổi được tên. **Người cuối cùng rời đi thì nhóm và
+toàn bộ tin nhắn biến mất** — giữ lại một nhóm rỗng là giữ một đống dữ liệu không ai mở được nữa.
+
+**Mọi thay đổi nhóm được ghi thành tin nhắn hệ thống** (`kind: 'system'`) trong chính dòng thời
+gian ấy, không phải một bảng nhật ký riêng: thứ tự thời gian của một nhóm chỉ đúng khi mọi sự
+kiện nằm chung một dòng. Client vẽ chúng khác tin nhắn thường — vẽ giống nhau thì người đọc
+tưởng có người vừa nói câu đó.
+
 - Cài đặt: `backend/src/services/chat.service.js`, `backend/src/socket/`
 - Test: `backend/tests/unit/chat.service.test.js`,
   `backend/tests/integration/chat.routes.test.js`,

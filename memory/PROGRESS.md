@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-14
+> Cập nhật lần cuối: 2026-08-15
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -80,18 +80,26 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Thông báo đẩy `chat_message` chỉ bắn khi người nhận không có thiết bị nào đang kết nối.
 - Redis adapter cho socket.io để nhiều instance thấy nhau; `shared/types.ts` đã có type hội thoại, tin nhắn và tên sự kiện.
 
+**Chat nhóm và giao diện chat cho web + mobile** (nhánh `feature/chat-group-web-mobile`)
+- Nhóm nhiều người (tối đa 50): người tạo là quản trị nhóm, chỉ quản trị được thêm / gỡ / đổi tên. Rời nhóm là quyền của mọi người; quản trị cuối rời thì người kỳ cựu nhất lên thay, người cuối cùng rời thì nhóm và tin nhắn bị xoá.
+- Mọi thay đổi nhóm ghi thành tin nhắn `kind: 'system'` ngay trong dòng thời gian hội thoại, không phải bảng nhật ký riêng.
+- `GET /users/search` để tìm người nhắn tin / mời vào nhóm, lọc sẵn admin và tài khoản bị khoá — ô gợi ý không bao giờ đề xuất một người mà bấm vào sẽ nhận 403.
+- **Quản trị viên nền tảng đứng ngoài chat**, chặn ở `denyRoles` trên router và một lần kiểm lúc bắt tay WebSocket; web và mobile đều giấu lối vào.
+- Web: hộp thư `/chat`, khung hội thoại, hộp thoại tạo mới/tạo nhóm, lối vào trên navbar kèm số chưa đọc.
+- Mobile: tab "Tin nhắn" (hộp thư, khung chat, tạo mới, thông tin nhóm); thông báo `chat_message` mở thẳng đúng hội thoại.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
-- **Chat mới có phía backend.** Web và mobile chưa có hộp thư, khung hội thoại, nút "nhắn tin" ở trang sân / lịch đặt / lời mời thi đấu, và chưa nối client socket.io vào vòng đời đăng nhập (phải kết nối lại bằng token mới sau mỗi lần refresh — kết nối cũ vẫn sống nhưng token trong tay client đã đổi). Đó là việc tiếp theo của tính năng này.
+- **Chat chưa gắn vào ngữ cảnh.** Backend nhận `contextType`/`contextRef` (`booking`, `match_request`, `field`) và có luật riêng cho từng loại từ đầu, nhưng chưa màn hình nào gửi lên — mọi hội thoại client mở đều là `direct`. Việc còn lại là nút "nhắn tin" ở trang sân, lịch đặt và lời mời thi đấu, trên cả web lẫn mobile.
 - Mobile còn thiếu **tạo/sửa sân**, **đổi gói thuê bao** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
-- Chưa mở PR cho bảy nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens` (nhánh sau xây trên nhánh trước).
+- Chưa mở PR cho tám nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens`, `feature/chat-group-web-mobile` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
 Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
 
-1. Giao diện chat cho web và mobile — backend đã sẵn sàng, chỉ còn phía client.
+1. Nút "nhắn tin" trong ngữ cảnh (sân / lịch đặt / lời mời thi đấu) — phần khiến chat gắn vào việc đang làm thay vì là một hộp thư rời.
 2. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
 3. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 
@@ -129,3 +137,8 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 - **`server.close()` không chờ được WebSocket.** Kết nối WebSocket không bao giờ tự kết thúc, nên phải `io.close()` trước, nếu không mỗi lần tắt server là chờ đủ 10 giây rồi bị ép thoát.
 - **`$match` trong aggregate không tự ép chuỗi thành ObjectId** như query thường. Quên `new mongoose.Types.ObjectId(...)` thì không khớp gì cả và số chưa đọc lặng lẽ đứng ở 0 — không có lỗi nào để nhắc.
 - **Jest backend đặt `maxWorkers: 2`.** Để jest tự chọn theo số nhân CPU thì worker bị giết vì hết RAM ("JavaScript heap out of memory").
+- **`auth` của socket.io client phải là hàm, không phải object.** Access token sống 15 phút và được làm mới ngầm; chốt cứng token lúc mở kết nối thì mọi lần kết nối lại sau đó đều mang một token đã chết. Trên điện thoại, mất mạng rồi nối lại là chuyện thường, nên lỗi này biểu hiện thành "chat tự chết sau một lúc".
+- **Đăng xuất phải đóng socket chat.** Kết nối được xác thực một lần lúc bắt tay: giữ nó lại là để người đăng nhập tiếp theo trên cùng thiết bị nhận tin nhắn của người vừa đăng xuất.
+- **Màn hình mobile nằm ở `src/screens/`, `<Screen>` do route trong `app/` bọc.** Màn hình tự bọc thêm một lớp nữa thì test dựng thẳng component sẽ khác hẳn app thật.
+- **Hai `fireEvent` trong cùng một ca test là "overlapping act()".** Nó không làm hỏng chính ca đó mà làm hỏng **mọi ca sau nó** trong cùng file, với thông báo "Unable to find an element" hoàn toàn không liên quan. Tách thành hai ca, hoặc `await` một truy vấn ở giữa. Cũng vì vậy, `onPress` của `Alert` gọi thẳng phải bọc `act(async () => ...)` — nó khởi động một mutation ngoài mọi act scope.
+- **Mobile `/chat/<id>` trùng đúng đường dẫn của web**, nên `notificationLinks` dùng lại nguyên link thay vì tra bảng. Bảng tra chỉ khớp đường dẫn nguyên vẹn, mà thông báo chat mang theo mã hội thoại.
