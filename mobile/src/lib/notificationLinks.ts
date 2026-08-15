@@ -11,6 +11,17 @@ const ROUTE_FOR_LINK: Record<string, string> = {
   '/owner/bookings': '/owner/bookings',
   '/owner/billing': '/owner/billing',
   '/match-requests': '/match-requests',
+  '/chat': '/(tabs)/chat',
 };
 
-export const routeForLink = (link: string): string | undefined => ROUTE_FOR_LINK[link];
+/**
+ * Thông báo tin nhắn mang theo mã cuộc trò chuyện (`/chat/<id>`) nên không tra bảng được.
+ * Mobile đặt khung chat ở đúng đường dẫn ấy, nên link web dùng lại nguyên vẹn — chỉ cần
+ * chắc phần đuôi là một mã, không phải một đoạn đường dẫn nào khác lọt vào.
+ */
+const CHAT_THREAD_LINK = /^\/chat\/[A-Za-z0-9_-]+$/;
+
+export const routeForLink = (link: string): string | undefined => {
+  if (CHAT_THREAD_LINK.test(link)) return link;
+  return ROUTE_FOR_LINK[link];
+};

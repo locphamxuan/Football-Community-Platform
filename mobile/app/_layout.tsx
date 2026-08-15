@@ -38,6 +38,11 @@ export default function RootLayout() {
             <Stack.Screen name="fields/[id]/index" options={{ title: 'Chi tiết sân' }} />
             <Stack.Screen name="fields/[id]/book" options={{ title: 'Đặt sân' }} />
             <Stack.Screen name="teams/[id]" options={{ title: 'Đội bóng' }} />
+            {/* Khung chat tự vẽ tên người/nhóm ở đầu màn hình; thêm một tiêu đề nữa của
+                stack là hiện tên hai lần. */}
+            <Stack.Screen name="chat/[id]" options={{ title: '' }} />
+            <Stack.Screen name="chat/new" options={{ title: 'Cuộc trò chuyện mới' }} />
+            <Stack.Screen name="chat/group/[id]" options={{ title: 'Thông tin nhóm' }} />
             <Stack.Screen name="teams/create" options={{ title: 'Tạo đội' }} />
             <Stack.Screen name="match-requests" options={{ title: 'Lời mời thi đấu' }} />
             <Stack.Screen name="plans" options={{ title: 'Gói thuê bao' }} />
