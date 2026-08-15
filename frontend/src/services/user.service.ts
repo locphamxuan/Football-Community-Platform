@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, NotificationType, User } from '@/types';
+import type { ApiResponse, ChatParticipantProfile, NotificationType, User } from '@/types';
 
 export interface UpdateProfilePayload {
   fullName?: string;
@@ -36,6 +36,13 @@ const userService = {
 
   changePassword: (data: ChangePasswordPayload) =>
     api.patch<ApiResponse<null>>('/users/me/password', data),
+
+  /**
+   * Tìm người để bắt chuyện hoặc mời vào nhóm. Backend đã loại sẵn chính mình, tài khoản
+   * bị khoá và quản trị viên nền tảng, nên kết quả trả về là danh sách nhắn được ngay.
+   */
+  search: (q: string) =>
+    api.get<ApiResponse<{ users: ChatParticipantProfile[] }>>('/users/search', { params: { q } }),
 };
 
 export default userService;

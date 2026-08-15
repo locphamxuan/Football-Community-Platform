@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import Logo from '@/components/layout/Logo';
+import MessagesLink from '@/components/layout/MessagesLink';
 import NotificationBell from '@/components/layout/NotificationBell';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import UserMenu from '@/components/layout/UserMenu';
@@ -33,6 +34,9 @@ const MOBILE_USER_LINKS = [
   { href: '/match-requests', label: 'Lời mời thi đấu' },
 ];
 
+/** Quản trị viên nền tảng không tham gia chat (xem `denyRoles` ở backend). */
+const canChat = (roles: string[]) => !roles.includes('admin');
+
 export default function Navbar() {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -43,6 +47,7 @@ export default function Navbar() {
 
   const roles = user?.roles ?? [];
   const mobileUserLinks = [
+    ...(canChat(roles) ? [{ href: '/chat', label: 'Tin nhắn' }] : []),
     ...MOBILE_USER_LINKS,
     ...(roles.includes('field_owner') || roles.includes('admin')
       ? [{ href: '/owner', label: 'Quản lý sân' }]
@@ -81,7 +86,8 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Chuông gọi API nên chỉ dựng khi đã đăng nhập và đã mount */}
+          {/* Chuông và hộp thư gọi API nên chỉ dựng khi đã đăng nhập và đã mount */}
+          {mounted && isAuthenticated && canChat(roles) && <MessagesLink />}
           {mounted && isAuthenticated && <NotificationBell />}
           <ThemeToggle />
 

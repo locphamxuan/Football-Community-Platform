@@ -151,6 +151,9 @@ export const SKILL_LEVEL_COLORS: Record<string, string> = {
   professional: 'bg-purple-100 text-purple-700',
 };
 
+/** Khớp với `MESSAGE_MAX_LENGTH` ở backend — ô soạn tin chặn trước khi server phải từ chối. */
+export const MESSAGE_MAX_LENGTH = 2000;
+
 export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   booking_created: 'Lịch đặt mới',
   booking_confirmed: 'Lịch đặt được xác nhận',
