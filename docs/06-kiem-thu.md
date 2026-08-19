@@ -79,8 +79,11 @@ Test nằm cạnh file nó kiểm (`format.test.ts` bên cạnh `format.ts`).
 
 - `src/lib/format.test.ts` — định dạng tiền, ngày, giờ theo tiếng Việt
 - `src/components/dashboard/*.test.tsx` — các trạng thái component thật sự render
-- `src/services/api.test.ts` — interceptor của axios: gắn token, tự làm mới khi 401, hàng đợi
-- `src/stores/authStore.test.ts` — token vào `sessionStorage`, không lọt vào `localStorage`
+- `src/services/api.test.ts` — interceptor của axios: tự làm mới khi 401, hàng đợi, chuyển
+  về trang đăng nhập khi refresh thất bại. Không có token nào để gắn bằng tay — cookie
+  `httpOnly` do trình duyệt tự đính kèm
+- `src/stores/authStore.test.ts` — chỉ `user`/`isAuthenticated` được ghi vào `localStorage`,
+  không có token nào trong đó (token sống trong cookie, ngoài tầm với của store)
 - `src/components/notifications/*.test.tsx`, `src/components/layout/NotificationBell.test.tsx` —
   thông báo đã đọc / chưa đọc, huy hiệu số chưa đọc
 

@@ -27,8 +27,8 @@ object/array phải gửi dưới dạng chuỗi JSON (xem `parseJsonFields`).
 | Method | Đường dẫn | Quyền | Body / Ghi chú |
 |---|---|---|---|
 | POST | `/register` | — | `email, password, username, fullName, phone?`. Mật khẩu ≥ 8 ký tự, có chữ hoa và số |
-| POST | `/login` | — | `email, password`. Trả `accessToken`; refresh token nằm trong cookie `httpOnly` |
-| POST | `/refresh-token` | — | Token lấy từ cookie, thiếu thì lấy từ body |
+| POST | `/login` | — | `email, password`. Cả access lẫn refresh token nằm trong cookie `httpOnly` |
+| POST | `/refresh-token` | — | Refresh token lấy từ cookie, thiếu thì lấy từ body |
 | GET | `/verify-email/:token` | — | |
 | POST | `/resend-verification` | — | `email` |
 | POST | `/forgot-password` | — | `email`. Luôn trả cùng một thông điệp, kể cả email không tồn tại |
@@ -38,9 +38,12 @@ object/array phải gửi dưới dạng chuỗi JSON (xem `parseJsonFields`).
 Các endpoint đăng ký / đăng nhập / quên mật khẩu bị giới hạn bởi `authLimiter`
 (mặc định 10 lần / 15 phút, xem [05](05-redis-rate-limit.md)).
 
-**Client gửi header `X-Client: mobile`** thì `/login` và `/refresh-token` trả thêm
-`refreshToken` ngay trong `data`, ngoài cookie. App di động không có cookie jar đáng tin cậy
-nhưng có Keychain/Keystore để cất token; web không gửi header này nên vẫn chỉ nhận cookie.
+**Client gửi header `X-Client: mobile`** thì `/login` và `/refresh-token` trả thêm cả
+`accessToken` lẫn `refreshToken` ngay trong `data`, ngoài cookie. App di động không có cookie
+jar đáng tin cậy nhưng có Keychain/Keystore để cất token; web không gửi header này nên
+**chỉ** nhận cookie — response body của web không chứa token nào, JS trên trang không đọc
+được (an toàn hơn trước XSS). Endpoint nào cần đăng nhập thì đọc token theo thứ tự: header
+`Authorization: Bearer` trước (mobile), rơi về cookie `accessToken` nếu không có (web).
 
 ## Người dùng — `/users`
 
@@ -248,10 +251,17 @@ Không phải hai bên hợp lệ thì trả **403**, và người ngoài một 
 
 ### WebSocket
 
-Gắn vào cùng cổng với REST. Token đi trong `handshake.auth.token`, **không** phải header:
+Gắn vào cùng cổng với REST. Mobile gửi token qua `handshake.auth.token` (không phải header):
 
 ```js
 io('http://localhost:5001', { auth: { token: accessToken } });
+```
+
+Web không gửi `auth` gì cả — access token nằm trong cookie `httpOnly`, trình duyệt tự đính
+kèm ở request bắt tay khi bật `withCredentials: true`:
+
+```js
+io('http://localhost:5001', { withCredentials: true });
 ```
 
 Bắt tay thất bại (thiếu token, token hỏng, token đã logout) thì kết nối bị từ chối ngay.

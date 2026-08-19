@@ -75,14 +75,28 @@ message là để hiển thị cho người dùng và có thể đổi bất c�
 
 ## Xác thực
 
-- **Access token** (JWT, mặc định 15 phút) mang `sub`, `email`, `roles`, `jti`. Gửi qua header `Authorization: Bearer`.
-- **Refresh token** (JWT, mặc định 7 ngày) chỉ mang `sub` và `jti`. Nằm trong cookie `httpOnly`, path `/api/v1/auth`.
+- **Access token** (JWT, mặc định 15 phút) mang `sub`, `email`, `roles`, `jti`.
+- **Refresh token** (JWT, mặc định 7 ngày) chỉ mang `sub` và `jti`.
+- **Web nhận cả hai token qua cookie `httpOnly`** — `accessToken` (path `/api/v1`) và
+  `refreshToken` (path `/api/v1/auth`) — chứ không phải trong response body. JS trên trang
+  không đọc/ghi được cookie `httpOnly`, nên bị XSS cũng không lấy được token nào ra khỏi
+  trình duyệt. `authenticate` và `authenticateSocket` đọc token theo thứ tự: header
+  `Authorization: Bearer` trước (mobile), rơi về cookie `accessToken` nếu không có (web).
+- **Mobile tự khai bằng header `X-Client: mobile`** để nhận cả hai token trong response body
+  và tự cất vào Keychain/Keystore — app không có cookie jar đáng tin cậy để dựa vào, nhưng có
+  chỗ cất tương đương. Cookie vẫn được set song song cho request đó (không dùng tới), không
+  phía nào bị hạ mức bảo vệ vì phía kia. Xem `wantsTokenInBody` trong `auth.controller.js`.
 - Refresh token được **băm trước khi lưu**; mỗi lần refresh thì xoay token. Dùng lại một
   token đã xoay = dấu hiệu bị đánh cắp → hệ thống xoá sạch mọi phiên của user đó.
 - Logout đưa `jti` của access token vào danh sách thu hồi trên Redis, **TTL lấy từ `exp` của
   chính token đó** chứ không phải một hằng số: TTL cứng 15 phút sẽ ngắn hơn token ngay khi
   `JWT_ACCESS_EXPIRES_IN` được đặt dài hơn, và token đã đăng xuất sống lại trong khoảng chênh.
 - Mỗi tài khoản giữ tối đa **5 phiên** gần nhất.
+- **CSRF**: cả hai cookie đặt `SameSite=Strict` — trình duyệt không gửi kèm chúng cho bất kỳ
+  request nào bắt nguồn từ một trang khác, kể cả `fetch` có `credentials: include`. Đây là
+  lớp phòng thủ CSRF duy nhất hiện có (chưa có CSRF token riêng); đủ cho một origin web duy
+  nhất gọi API của chính nó, nhưng cần xem lại nếu sau này có domain thứ hai cần gọi API
+  bằng cookie.
 
 ## Realtime: một tin nhắn đi qua đâu
 
@@ -124,9 +138,13 @@ Bốn quyết định đáng nhớ ở tầng này:
   Redis, mà nhân bản một client chưa từng kết nối thì bản sao cũng không có kết nối.
 - **Xác thực một lần lúc bắt tay.** Kết nối sống lâu hơn access token, nên một phiên đã mở vẫn
   chạy tiếp tới khi client ngắt. Client tự kết nối lại bằng token mới sau mỗi lần refresh; ai
-  bị logout thì lần bắt tay sau bị chặn. Token đi trong `handshake.auth` chứ không phải header
-  `Authorization` — trình duyệt không cho đặt header tuỳ ý trên kết nối WebSocket, nên header
-  chỉ tới được server ở giai đoạn polling rồi biến mất đúng lúc client nâng cấp lên WebSocket.
+  bị logout thì lần bắt tay sau bị chặn. Mobile gửi token qua `handshake.auth` — trình duyệt
+  không cho đặt header tuỳ ý trên kết nối WebSocket, nên header chỉ tới được server ở giai
+  đoạn polling rồi biến mất đúng lúc client nâng cấp lên WebSocket, còn `auth` thì socket.io
+  gửi lại nguyên vẹn ở mọi transport. Web không có token nào ở phía JS để đặt vào `auth` —
+  access token nằm trong cookie `httpOnly`, và cookie thì trình duyệt tự đính kèm ở request
+  bắt tay (`withCredentials`); `authenticateSocket` thử `handshake.auth.token` trước, không có
+  thì đọc cookie từ `handshake.headers.cookie`.
 
 **Mọi việc realtime làm được đều có bản REST song song**, và cả hai gọi chung một hàm service.
 WebSocket là đường tắt, không phải đường duy nhất: lịch sử hội thoại phải tải được lúc mở màn
@@ -137,10 +155,12 @@ hình, và client mất kết nối vẫn phải gửi được tin.
 Web (`frontend/src/lib/chat.ts`, `socket.ts`) và mobile (`mobile/src/domain/chat.ts`,
 `mobile/src/lib/chatSocket.ts`) giữ cùng một hình dạng, và cùng ba quyết định:
 
-- **Một socket cho cả app**, mở lười lúc màn hình chat đầu tiên cần tới. `auth` truyền vào
-  socket.io là một **hàm**, không phải object: access token chỉ sống 15 phút và được làm mới
-  ngầm, nên chốt cứng token lúc mở kết nối nghĩa là mọi lần kết nối lại sau đó đều mang một
-  token đã chết — trên điện thoại, mất mạng rồi nối lại là chuyện thường chứ không phải ngoại lệ.
+- **Một socket cho cả app**, mở lười lúc màn hình chat đầu tiên cần tới. Mobile truyền `auth`
+  vào socket.io là một **hàm**, không phải object: access token chỉ sống 15 phút và được làm
+  mới ngầm, nên chốt cứng token lúc mở kết nối nghĩa là mọi lần kết nối lại sau đó đều mang một
+  token đã chết — trên điện thoại, mất mạng rồi nối lại là chuyện thường chứ không phải ngoại
+  lệ. Web không truyền `auth` gì cả — token nằm trong cookie `httpOnly`, trình duyệt tự đính
+  kèm lại ở mỗi lần kết nối/kết nối lại.
 - **Sự kiện đổ vào cache của react-query, không vào state màn hình.** Hai bản dữ liệu — một
   trong state, một trong cache — luôn có ngày lệch nhau. Cũng vì thế `message:new` phải bỏ qua
   tin đã có trong danh sách: người gửi nhận lại chính tin của mình (họ có thể mở cả web lẫn
