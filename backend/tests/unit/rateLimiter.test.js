@@ -9,6 +9,7 @@ process.env.RATE_LIMIT_UPLOAD_MAX = '2';
 process.env.RATE_LIMIT_USE_REDIS = 'false';
 
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const request = require('supertest');
 
 /**
@@ -25,6 +26,7 @@ const freshLimiters = () => {
 /** App tối giản chỉ để bắn request qua đúng một limiter. */
 const appUsing = (limiter) => {
   const app = express();
+  app.use(cookieParser());
   app.use(limiter);
   app.all('/probe', (_req, res) => res.json({ ok: true }));
   return app;
@@ -154,6 +156,27 @@ describe('khoá đếm', () => {
     const res = await hitAs(app, 'mot-token-bia-khac', 1);
 
     expect(res.status).toBe(429);
+  });
+
+  // Web không còn gửi Authorization header — access token nằm trong cookie httpOnly.
+  it('web (không có header) vẫn đếm theo tài khoản qua cookie accessToken', async () => {
+    const app = appWith('writeLimiter');
+    const { token: a } = generateAccessToken('000000000000000000000001', 'a@probe.vn', ['user']);
+    const { token: b } = generateAccessToken('000000000000000000000002', 'b@probe.vn', ['user']);
+
+    const hitWithCookie = async (token, times) => {
+      let last;
+      for (let i = 0; i < times; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        last = await request(app).post('/probe').set('Cookie', [`accessToken=${token}`]);
+      }
+      return last;
+    };
+
+    await hitWithCookie(a, 2);
+    const res = await hitWithCookie(b, 2);
+
+    expect(res.status).toBe(200);
   });
 });
 

@@ -20,13 +20,15 @@ const READ_METHODS = ['GET', 'HEAD', 'OPTIONS'];
  * kẻ tấn công chỉ cần đổi token mỗi request là có hạn mức vô hạn.
  *
  * Limiter chạy trước `authenticate` (gắn ở mức `/api`) nên không đọc được `req.user` —
- * đây là lý do phải tự đọc header thay vì dùng lại kết quả xác thực.
+ * đây là lý do phải tự đọc token thay vì dùng lại kết quả xác thực. Mobile gửi Bearer header,
+ * web gửi cookie `accessToken` (`httpOnly`, `cookieParser` chạy trước limiter này) — thử cả hai.
  */
 const requesterKey = (req) => {
   const header = req.headers.authorization;
-  if (header?.startsWith('Bearer ')) {
+  const token = (header?.startsWith('Bearer ') ? header.slice(7) : null) || req.cookies?.accessToken;
+  if (token) {
     try {
-      return `user:${verifyAccessToken(header.slice(7)).sub}`;
+      return `user:${verifyAccessToken(token).sub}`;
     } catch { /* token hỏng hoặc hết hạn: đếm như khách vãng lai */ }
   }
   return req.ip;

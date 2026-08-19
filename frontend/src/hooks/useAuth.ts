@@ -13,8 +13,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (data: LoginPayload) => authService.login(data),
     onSuccess: (res) => {
-      const { accessToken, user } = res.data.data;
-      setAuth(user, accessToken);
+      const { user } = res.data.data;
+      setAuth(user);
       toast.success('Đăng nhập thành công!');
       router.push('/');
     },

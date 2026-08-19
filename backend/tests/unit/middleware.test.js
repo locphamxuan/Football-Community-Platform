@@ -58,6 +58,28 @@ describe('authenticate', () => {
     expect(req.user).toEqual({ id: USER_ID, email: 'probe@example.com', roles: [Role.USER] });
   });
 
+  it('không có header thì rơi về cookie accessToken (web)', async () => {
+    const { token } = generateAccessToken(USER_ID, 'probe@example.com', [Role.USER]);
+    const req = { headers: {}, cookies: { accessToken: token } };
+    const next = jest.fn();
+
+    await authenticate(req, fakeRes(), next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toEqual({ id: USER_ID, email: 'probe@example.com', roles: [Role.USER] });
+  });
+
+  it('có cả header lẫn cookie thì header thắng', async () => {
+    const header = generateAccessToken(USER_ID, 'probe@example.com', [Role.USER]).token;
+    const cookie = generateAccessToken('000000000000000000000002', 'khac@example.com', [Role.USER]).token;
+    const req = { headers: { authorization: `Bearer ${header}` }, cookies: { accessToken: cookie } };
+    const next = jest.fn();
+
+    await authenticate(req, fakeRes(), next);
+
+    expect(req.user.id).toBe(USER_ID);
+  });
+
   it('token đã logout (nằm trong blacklist) bị từ chối', async () => {
     const { token, jti } = generateAccessToken(USER_ID, 'probe@example.com', [Role.USER]);
     await cache.set(CacheKeys.blacklistedToken(jti), '1');

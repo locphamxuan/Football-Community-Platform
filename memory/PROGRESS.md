@@ -88,6 +88,19 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Web: hộp thư `/chat`, khung hội thoại, hộp thoại tạo mới/tạo nhóm, lối vào trên navbar kèm số chưa đọc.
 - Mobile: tab "Tin nhắn" (hộp thư, khung chat, tạo mới, thông tin nhóm); thông báo `chat_message` mở thẳng đúng hội thoại.
 
+**Access token chuyển sang cookie httpOnly cho web** (nhánh `security/access-token-httponly-cookie`)
+- Web không còn nhận `accessToken` trong response body — cả access lẫn refresh token đều là
+  cookie `httpOnly` do backend đặt lúc login/refresh. `authStore` không giữ token nữa, `api.ts`
+  không còn interceptor gắn `Authorization` bằng tay, `sessionStorage` bị xoá hoàn toàn khỏi
+  luồng auth. Trước đó access token nằm trong `sessionStorage` — JS đọc được, nên vẫn là bề mặt
+  lộ token nếu bị XSS dù đã tốt hơn `localStorage`.
+- `authenticate`, `authenticateSocket`, và khoá đếm rate limit đều đọc token theo thứ tự: header
+  `Authorization: Bearer` trước (mobile), rơi về cookie `accessToken` nếu không có (web).
+- Mobile không đổi gì — đã dùng SecureStore (Keychain/Keystore) từ trước, không phải
+  `localStorage`, và tiếp tục nhận token qua body nhờ header `X-Client: mobile`.
+- CSRF vẫn chỉ dựa vào `SameSite=Strict` (không thêm CSRF token riêng) — xem ghi chú trong
+  [`docs/02-kien-truc.md`](../docs/02-kien-truc.md#xác-thực).
+
 **CI/CD và giám sát dependency** (nhánh `chore/ci-security-scanning`)
 - CodeQL quét tĩnh JS/TS trên mỗi push/PR vào `main`/`dev` cộng một lượt hàng tuần.
 - Dependabot mở PR cập nhật dependency hàng tuần cho cả ba phía và cho GitHub Actions.

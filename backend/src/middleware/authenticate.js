@@ -5,12 +5,15 @@ const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 
 const authenticate = async (req, res, next) => {
+  // Mobile gửi Bearer header (không có cookie jar đáng tin cậy); web dựa vào cookie `httpOnly`
+  // set lúc login/refresh, JS trên trang không đọc/gắn được token đó vào header.
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = headerToken || req.cookies?.accessToken;
+  if (!token) {
     return sendError(res, 'Authentication required', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const payload = verifyAccessToken(token);
 
