@@ -45,6 +45,21 @@ const connect = (token) => new Promise((resolve, reject) => {
   client.on('connect_error', reject);
 });
 
+/**
+ * Web không còn đặt được `auth.token` — access token nằm trong cookie httpOnly, JS không đọc
+ * được. Trình duyệt tự đính kèm cookie ở request bắt tay; ở đây giả lập bằng `extraHeaders`.
+ */
+const connectWithCookie = (token) => new Promise((resolve, reject) => {
+  const client = createClient(`http://localhost:${port}`, {
+    extraHeaders: token ? { Cookie: `accessToken=${token}` } : undefined,
+    transports: ['websocket'],
+    reconnection: false,
+  });
+  clients.push(client);
+  client.on('connect', () => resolve(client));
+  client.on('connect_error', reject);
+});
+
 /** Chờ đúng một sự kiện, thất bại nhanh thay vì treo tới lúc jest hết giờ. */
 const waitFor = (client, event) => new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error(`Không nhận được sự kiện ${event}`)), 2000);
@@ -99,6 +114,14 @@ describe('bắt tay', () => {
     await cache.set(CacheKeys.blacklistedToken(jti), '1');
 
     await expect(connect(token)).rejects.toThrow();
+  });
+
+  it('web vào được bằng cookie accessToken, không cần auth.token', async () => {
+    await expect(connectWithCookie(tokenFor(Role.USER))).resolves.toBeDefined();
+  });
+
+  it('không có auth.token lẫn cookie thì bị từ chối', async () => {
+    await expect(connectWithCookie(undefined)).rejects.toThrow();
   });
 });
 

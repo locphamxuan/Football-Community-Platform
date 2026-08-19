@@ -55,7 +55,7 @@ describe('POST /api/v1/auth/register', () => {
 });
 
 describe('POST /api/v1/auth/login', () => {
-  it('trả access token và đặt refresh token vào cookie httpOnly', async () => {
+  it('web nhận cả access lẫn refresh token qua cookie httpOnly, không lộ trong body', async () => {
     authService.login.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -67,10 +67,12 @@ describe('POST /api/v1/auth/login', () => {
       .send({ email: 'probe@example.com', password: 'Probe1234' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.accessToken).toBe('access-token');
-    // Refresh token không được lộ trong body — chỉ nằm trong cookie httpOnly
+    // JS trên trang web không được đọc thấy token nào — cả hai chỉ sống trong cookie httpOnly
+    expect(res.body.data.accessToken).toBeUndefined();
     expect(res.body.data.refreshToken).toBeUndefined();
-    expect(res.headers['set-cookie'].join()).toMatch(/refreshToken=refresh-token;.*HttpOnly/i);
+    const cookies = res.headers['set-cookie'].join();
+    expect(cookies).toMatch(/accessToken=access-token;.*HttpOnly/i);
+    expect(cookies).toMatch(/refreshToken=refresh-token;.*HttpOnly/i);
   });
 
   it('thiếu mật khẩu thì trả 400', async () => {
@@ -79,7 +81,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(authService.login).not.toHaveBeenCalled();
   });
 
-  it('client mobile nhận được refresh token trong body để cất vào Keychain', async () => {
+  it('client mobile nhận cả access lẫn refresh token trong body để cất vào Keychain', async () => {
     authService.login.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -91,9 +93,12 @@ describe('POST /api/v1/auth/login', () => {
       .set('X-Client', 'mobile')
       .send({ email: 'probe@example.com', password: 'Probe1234' });
 
+    expect(res.body.data.accessToken).toBe('access-token');
     expect(res.body.data.refreshToken).toBe('refresh-token');
     // Cookie vẫn được đặt như cũ — không phía nào bị hạ mức bảo vệ vì phía kia
-    expect(res.headers['set-cookie'].join()).toMatch(/refreshToken=refresh-token;.*HttpOnly/i);
+    const cookies = res.headers['set-cookie'].join();
+    expect(cookies).toMatch(/accessToken=access-token;.*HttpOnly/i);
+    expect(cookies).toMatch(/refreshToken=refresh-token;.*HttpOnly/i);
   });
 
   it('giá trị X-Client lạ vẫn bị coi như web', async () => {
@@ -108,6 +113,7 @@ describe('POST /api/v1/auth/login', () => {
       .set('X-Client', 'curl')
       .send({ email: 'probe@example.com', password: 'Probe1234' });
 
+    expect(res.body.data.accessToken).toBeUndefined();
     expect(res.body.data.refreshToken).toBeUndefined();
   });
 });
@@ -119,7 +125,7 @@ describe('POST /api/v1/auth/refresh-token', () => {
     expect(res.body.code).toBe('REFRESH_TOKEN_INVALID');
   });
 
-  it('đọc token từ cookie', async () => {
+  it('đọc token từ cookie, đặt lại cả hai cookie mới, không lộ token nào trong body', async () => {
     authService.refreshToken.mockResolvedValue({ accessToken: 'new-access', refreshToken: 'new-refresh' });
 
     const res = await request(app)
@@ -128,6 +134,11 @@ describe('POST /api/v1/auth/refresh-token', () => {
 
     expect(res.status).toBe(200);
     expect(authService.refreshToken).toHaveBeenCalledWith('from-cookie', expect.any(String), expect.any(String));
+    const cookies = res.headers['set-cookie'].join();
+    expect(cookies).toMatch(/accessToken=new-access;.*HttpOnly/i);
+    expect(cookies).toMatch(/refreshToken=new-refresh;.*HttpOnly/i);
+    expect(res.body.data.accessToken).toBeUndefined();
+    expect(res.body.data.refreshToken).toBeUndefined();
   });
 
   it('đọc token từ body khi không có cookie', async () => {
@@ -138,7 +149,7 @@ describe('POST /api/v1/auth/refresh-token', () => {
     expect(authService.refreshToken).toHaveBeenCalledWith('from-body', expect.any(String), expect.any(String));
   });
 
-  it('client mobile nhận lại refresh token xoay vòng trong body', async () => {
+  it('client mobile nhận lại cả access lẫn refresh token xoay vòng trong body', async () => {
     authService.refreshToken.mockResolvedValue({ accessToken: 'new-access', refreshToken: 'new-refresh' });
 
     const res = await request(app)
@@ -146,16 +157,18 @@ describe('POST /api/v1/auth/refresh-token', () => {
       .set('X-Client', 'mobile')
       .send({ refreshToken: 'from-body' });
 
+    expect(res.body.data.accessToken).toBe('new-access');
     expect(res.body.data.refreshToken).toBe('new-refresh');
   });
 
-  it('web không thấy refresh token trong body', async () => {
+  it('web không thấy token nào trong body', async () => {
     authService.refreshToken.mockResolvedValue({ accessToken: 'new-access', refreshToken: 'new-refresh' });
 
     const res = await request(app)
       .post('/api/v1/auth/refresh-token')
       .send({ refreshToken: 'from-body' });
 
+    expect(res.body.data.accessToken).toBeUndefined();
     expect(res.body.data.refreshToken).toBeUndefined();
   });
 });
@@ -211,7 +224,7 @@ describe('POST /api/v1/auth/logout', () => {
     expect(res.status).toBe(401);
   });
 
-  it('thu hồi token và xoá cookie', async () => {
+  it('thu hồi token và xoá cả hai cookie', async () => {
     authService.logout.mockResolvedValue(undefined);
     const headers = asUser();
 
@@ -222,6 +235,21 @@ describe('POST /api/v1/auth/logout', () => {
       expect.any(String),
       headers.Authorization.replace('Bearer ', '')
     );
-    expect(res.headers['set-cookie'].join()).toMatch(/refreshToken=;/);
+    const cookies = res.headers['set-cookie'].join();
+    expect(cookies).toMatch(/accessToken=;/);
+    expect(cookies).toMatch(/refreshToken=;/);
+  });
+
+  it('web đã đăng nhập qua cookie vẫn đăng xuất được (không có header Authorization)', async () => {
+    authService.logout.mockResolvedValue(undefined);
+    const { tokenFor } = require('../helpers/auth');
+    const Role = require('../../src/constants/roles');
+
+    const res = await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Cookie', [`accessToken=${tokenFor(Role.USER)}`]);
+
+    expect(res.status).toBe(200);
+    expect(authService.logout).toHaveBeenCalled();
   });
 });
