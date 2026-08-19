@@ -15,7 +15,6 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  accessToken: string;
   user: User;
 }
 
@@ -28,8 +27,8 @@ const authService = {
 
   logout: () => api.post('/auth/logout'),
 
-  refreshToken: () =>
-    api.post<ApiResponse<{ accessToken: string }>>('/auth/refresh-token'),
+  // Không nhận token nào trong body — backend đặt lại cả hai cookie httpOnly.
+  refreshToken: () => api.post<ApiResponse<null>>('/auth/refresh-token'),
 
   verifyEmail: (token: string) =>
     api.get(`/auth/verify-email/${token}`),

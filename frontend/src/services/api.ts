@@ -1,27 +1,23 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { API_URL } from '@/lib/constants';
 
+/**
+ * Access lẫn refresh token đều nằm trong cookie `httpOnly` do backend đặt — trình duyệt tự
+ * đính kèm chúng (`withCredentials: true`), nên không có Authorization nào để gắn bằng tay
+ * và cũng không có token nào để JS đọc ra (kể cả bị XSS).
+ */
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // gửi cookie refreshToken
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
-});
-
-// ── Request interceptor: gắn accessToken ─────────────────────────────────────
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = sessionStorage.getItem('accessToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 // ── Response interceptor: silent refresh khi 401 ─────────────────────────────
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (v: string) => void; reject: (e: unknown) => void }> = [];
+let failedQueue: Array<{ resolve: () => void; reject: (e: unknown) => void }> = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token!)));
+const processQueue = (error: unknown) => {
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve()));
   failedQueue = [];
 };
 
@@ -36,27 +32,22 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !original._retry && !isRefreshCall) {
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          if (original.headers) original.headers.Authorization = `Bearer ${token}`;
-          return api(original);
-        });
+        }).then(() => api(original));
       }
 
       original._retry = true;
       isRefreshing = true;
 
       try {
-        const { data } = await api.post('/auth/refresh-token');
-        const newToken: string = data.data.accessToken;
-        sessionStorage.setItem('accessToken', newToken);
-        if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
-        processQueue(null, newToken);
+        // Không cần đọc data — backend đặt lại cookie accessToken/refreshToken mới,
+        // request gốc chạy lại sẽ tự mang theo cookie đó.
+        await api.post('/auth/refresh-token');
+        processQueue(null);
         return api(original);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        sessionStorage.removeItem('accessToken');
+        processQueue(refreshError);
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

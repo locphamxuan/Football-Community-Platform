@@ -14,17 +14,13 @@ let socket: Socket | null = null;
 /**
  * Socket đang mở, hoặc mở mới khi chưa có.
  *
- * `auth` là **hàm** chứ không phải object: server xác thực một lần lúc bắt tay, còn access
- * token chỉ sống 15 phút và được `api.ts` lặng lẽ làm mới. Chốt cứng token lúc mở kết nối
- * nghĩa là mỗi lần kết nối lại sau đó đều mang theo một token đã chết. Hàm này được gọi
- * trước *mỗi* lần thử kết nối, nên luôn lấy được token mới nhất.
+ * Không còn `auth.token` nào để gắn bằng tay: access token nằm trong cookie `httpOnly`,
+ * JS trên trang không đọc được. `withCredentials: true` khiến trình duyệt tự đính kèm cookie
+ * đó ở request bắt tay (kể cả sau khi tự kết nối lại), nên backend luôn thấy token mới nhất
+ * mà client không cần tự làm mới gì cả — xem `backend/src/socket/auth.js`.
  */
 export const getChatSocket = (): Socket => {
-  socket ??= io(SOCKET_URL, {
-    auth: (cb) => cb({ token: sessionStorage.getItem('accessToken') ?? '' }),
-    // Cookie refresh đi kèm ở giai đoạn polling, giống mọi request REST.
-    withCredentials: true,
-  });
+  socket ??= io(SOCKET_URL, { withCredentials: true });
   return socket;
 };
 

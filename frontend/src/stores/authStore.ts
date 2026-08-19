@@ -2,12 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@/types';
 
+/**
+ * Access token không đi qua store này nữa — nó nằm trong cookie `httpOnly` do backend đặt,
+ * JS trên trang không đọc/ghi được (kể cả bị XSS). `api.ts` gửi cookie tự động
+ * (`withCredentials: true`), không cần gắn Authorization bằng tay.
+ */
 interface AuthStore {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
-  setToken: (token: string) => void;
+  setAuth: (user: User) => void;
   clearAuth: () => void;
 }
 
@@ -15,27 +18,14 @@ const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
 
-      setAuth: (user, accessToken) => {
-        sessionStorage.setItem('accessToken', accessToken);
-        set({ user, accessToken, isAuthenticated: true });
-      },
+      setAuth: (user) => set({ user, isAuthenticated: true }),
 
-      setToken: (accessToken) => {
-        sessionStorage.setItem('accessToken', accessToken);
-        set({ accessToken });
-      },
-
-      clearAuth: () => {
-        sessionStorage.removeItem('accessToken');
-        set({ user: null, accessToken: null, isAuthenticated: false });
-      },
+      clearAuth: () => set({ user: null, isAuthenticated: false }),
     }),
     {
       name: 'fcp-auth',
-      // Chỉ persist user (không persist token — token dùng sessionStorage)
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
     }
   )
