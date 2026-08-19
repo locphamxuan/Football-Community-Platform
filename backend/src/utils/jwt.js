@@ -35,4 +35,4 @@ const parseExpiry = (str) => {
 
 const getTokenExpiry = (expiresIn) => new Date(Date.now() + parseExpiry(expiresIn));
 
-module.exports = { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken, getTokenExpiry };
+module.exports = { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken, getTokenExpiry, parseExpiry };

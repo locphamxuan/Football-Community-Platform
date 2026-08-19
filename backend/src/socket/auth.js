@@ -1,3 +1,4 @@
+const cookie = require('cookie');
 const { verifyAccessToken } = require('../utils/jwt');
 const { cache, CacheKeys } = require('../config/redis');
 const Role = require('../constants/roles');
@@ -5,17 +6,25 @@ const Role = require('../constants/roles');
 /**
  * Chặn cửa cho WebSocket — cùng luật với `middleware/authenticate.js`, khác chỗ lấy token.
  *
- * Token đi trong `handshake.auth` chứ không phải header `Authorization`: trình duyệt không
- * cho đặt header tuỳ ý trên một kết nối WebSocket, nên header chỉ tới được server ở giai đoạn
- * polling và sẽ biến mất đúng lúc client nâng cấp lên WebSocket. `auth` thì socket.io gửi
- * lại nguyên vẹn ở mọi transport, kể cả sau khi tự kết nối lại.
+ * Mobile gửi token qua `handshake.auth`: trình duyệt không cho đặt header tuỳ ý trên một kết
+ * nối WebSocket, nên header chỉ tới được server ở giai đoạn polling và biến mất đúng lúc
+ * client nâng cấp lên WebSocket, còn `auth` thì socket.io gửi lại nguyên vẹn ở mọi transport.
+ * Web không còn giữ token nào ở phía JS để đặt vào `auth` — access token nằm trong cookie
+ * `httpOnly`, và cookie thì trình duyệt tự đính kèm ở request bắt tay ban đầu (`withCredentials`),
+ * kể cả trên WebSocket. Nên: có `auth.token` (mobile) thì dùng nó, không thì đọc cookie.
  *
  * Xác thực **một lần lúc bắt tay**, không kiểm lại mỗi tin nhắn: kết nối sống lâu hơn access
  * token, nên đánh đổi ở đây là một phiên đã mở vẫn chạy tiếp tới khi client ngắt. Client tự
  * kết nối lại bằng token mới sau mỗi lần refresh; ai bị logout thì lần bắt tay sau bị chặn.
  */
+const getCookieToken = (socket) => {
+  const header = socket.handshake.headers?.cookie;
+  if (!header) return null;
+  return cookie.parse(header).accessToken || null;
+};
+
 const authenticateSocket = async (socket, next) => {
-  const token = socket.handshake.auth?.token;
+  const token = socket.handshake.auth?.token || getCookieToken(socket);
   if (!token) return next(new Error('Authentication required'));
 
   try {
