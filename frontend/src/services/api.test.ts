@@ -4,8 +4,9 @@ import api from './api';
 
 /**
  * Test đi qua interceptor thật bằng cách thay adapter — tầng cuối cùng của axios,
- * nơi request lẽ ra chạm mạng. Không mock axios, nên logic gắn token và tự làm
- * mới token được kiểm tra đúng như lúc chạy thật.
+ * nơi request lẽ ra chạm mạng. Không mock axios, nên logic tự làm mới token được
+ * kiểm tra đúng như lúc chạy thật. Access/refresh token đều là cookie httpOnly —
+ * không có gì để đọc/gắn bằng tay ở phía test, chỉ kiểm hành vi retry/redirect.
  */
 type Handler = (config: InternalAxiosRequestConfig) => Promise<AxiosResponse>;
 
@@ -32,41 +33,22 @@ const useAdapter = (handler: Handler) => {
 };
 
 beforeEach(() => {
-  sessionStorage.clear();
   vi.restoreAllMocks();
 });
 
-describe('gắn access token', () => {
-  it('thêm header Authorization khi đã đăng nhập', async () => {
-    sessionStorage.setItem('accessToken', 'token-hien-tai');
-    const seen = useAdapter((config) => Promise.resolve(ok(config)));
-
-    await api.get('/users/me');
-
-    expect(seen[0].headers.Authorization).toBe('Bearer token-hien-tai');
-  });
-
-  it('không gắn header khi chưa đăng nhập', async () => {
-    const seen = useAdapter((config) => Promise.resolve(ok(config)));
-
-    await api.get('/fields');
-
-    expect(seen[0].headers.Authorization).toBeUndefined();
-  });
-
-  it('gửi kèm cookie để refresh token đi theo', () => {
+describe('cookie', () => {
+  it('gửi kèm cookie để access/refresh token đi theo', () => {
     expect(api.defaults.withCredentials).toBe(true);
   });
 });
 
 describe('tự làm mới token khi gặp 401', () => {
-  it('gọi refresh-token, lưu token mới rồi chạy lại request cũ', async () => {
-    sessionStorage.setItem('accessToken', 'token-het-han');
+  it('gọi refresh-token rồi chạy lại request cũ', async () => {
     let firstCall = true;
 
     const seen = useAdapter((config) => {
       if (config.url?.includes('refresh-token')) {
-        return Promise.resolve(ok(config, { data: { accessToken: 'token-moi' } }));
+        return Promise.resolve(ok(config, { data: null }));
       }
       if (firstCall) {
         firstCall = false;
@@ -78,19 +60,15 @@ describe('tự làm mới token khi gặp 401', () => {
     const res = await api.get('/users/me');
 
     expect(res.data.data.user.id).toBe('1');
-    expect(sessionStorage.getItem('accessToken')).toBe('token-moi');
     expect(seen.map((c) => c.url)).toEqual(['/users/me', '/auth/refresh-token', '/users/me']);
-    // Request chạy lại phải mang token mới, không phải token đã hết hạn
-    expect(seen[2].headers.Authorization).toBe('Bearer token-moi');
   });
 
   it('chỉ thử làm mới một lần cho mỗi request — tránh vòng lặp vô tận', async () => {
-    sessionStorage.setItem('accessToken', 'token-het-han');
     vi.spyOn(window, 'location', 'get').mockReturnValue({ href: '' } as Location);
 
     const seen = useAdapter((config) => (
       config.url?.includes('refresh-token')
-        ? Promise.resolve(ok(config, { data: { accessToken: 'token-moi' } }))
+        ? Promise.resolve(ok(config, { data: null }))
         : unauthorized(config)
     ));
 
@@ -99,8 +77,7 @@ describe('tự làm mới token khi gặp 401', () => {
     expect(seen.filter((c) => c.url?.includes('refresh-token'))).toHaveLength(1);
   });
 
-  it('làm mới thất bại thì xoá token và đưa về trang đăng nhập', async () => {
-    sessionStorage.setItem('accessToken', 'token-het-han');
+  it('làm mới thất bại thì đưa về trang đăng nhập', async () => {
     const location = { href: '' } as Location;
     vi.spyOn(window, 'location', 'get').mockReturnValue(location);
 
@@ -108,7 +85,6 @@ describe('tự làm mới token khi gặp 401', () => {
 
     await expect(api.get('/users/me')).rejects.toBeDefined();
 
-    expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(location.href).toBe('/login');
   });
 });
