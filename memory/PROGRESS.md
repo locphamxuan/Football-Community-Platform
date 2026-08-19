@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-15
+> Cập nhật lần cuối: 2026-08-19
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -88,6 +88,14 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Web: hộp thư `/chat`, khung hội thoại, hộp thoại tạo mới/tạo nhóm, lối vào trên navbar kèm số chưa đọc.
 - Mobile: tab "Tin nhắn" (hộp thư, khung chat, tạo mới, thông tin nhóm); thông báo `chat_message` mở thẳng đúng hội thoại.
 
+**CI/CD và giám sát dependency** (nhánh `chore/ci-security-scanning`)
+- CodeQL quét tĩnh JS/TS trên mỗi push/PR vào `main`/`dev` cộng một lượt hàng tuần.
+- Dependabot mở PR cập nhật dependency hàng tuần cho cả ba phía và cho GitHub Actions.
+- CI có thêm `npm audit`: chặn build ở mức `critical`, chỉ ghi log (không chặn) ở mức `high` vì
+  nhiều lỗ hổng high hiện tại chỉ vá được bằng bản major (Next.js, Expo, nodemailer).
+- Đã áp các bản vá không phá API (`npm audit fix`, không `--force`) cho backend và frontend —
+  xem "Việc nên làm tiếp" cho phần còn lại cần nâng bản major.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -102,6 +110,15 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 1. Nút "nhắn tin" trong ngữ cảnh (sân / lịch đặt / lời mời thi đấu) — phần khiến chat gắn vào việc đang làm thay vì là một hộp thư rời.
 2. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
 3. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
+
+Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
+
+- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `nodemailer`
+  (backend), `next` (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
+  `react-native` (mobile). Mỗi bản nâng đều là breaking change, cần làm riêng và test kỹ, không
+  nên gộp vào một lần nâng cấp bảo mật.
+- **Audit log cho hành động admin chưa có** — biết ai duyệt/khoá/xoá gì và lúc nào. Cần trước khi
+  lên sản phẩm thật; đã cân nhắc trong phiên rà soát 2026-08-19 nhưng để lại làm riêng.
 
 ## Quyết định và bẫy cần nhớ
 
