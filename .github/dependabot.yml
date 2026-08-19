@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # Mỗi phía một lockfile riêng, nên mỗi phía một entry — PR không lẫn dependency của phía khác.
+  - package-ecosystem: 'npm'
+    directory: '/backend'
+    schedule:
+      interval: 'weekly'
+    groups:
+      minor-and-patch:
+        update-types: ['minor', 'patch']
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+    groups:
+      minor-and-patch:
+        update-types: ['minor', 'patch']
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: 'npm'
+    directory: '/mobile'
+    schedule:
+      interval: 'weekly'
+    groups:
+      minor-and-patch:
+        update-types: ['minor', 'patch']
+    open-pull-requests-limit: 10
+
+  # Actions bản pin theo tag cũng cần cập nhật — nơi hay bị bỏ quên nhất.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
