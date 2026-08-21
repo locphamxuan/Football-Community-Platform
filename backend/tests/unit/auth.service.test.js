@@ -293,6 +293,19 @@ describe('resendVerification', () => {
       .rejects.toMatchObject({ statusCode: 409 });
   });
 
+  it('email tồn tại và chưa xác thực thì gửi lại link mới', async () => {
+    User.findOne.mockReturnValue(selectReturns({ _id: USER_ID, emailVerified: false }));
+
+    const result = await authService.resendVerification(registration.email);
+
+    expect(result.message).toMatch(/if that email is registered/i);
+    expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+      USER_ID,
+      expect.objectContaining({ emailVerificationToken: expect.any(String), emailVerificationExpires: expect.any(Date) })
+    );
+    expect(sendVerificationEmail).toHaveBeenCalledWith(registration.email, expect.any(String));
+  });
+
   it('email lạ trả thông điệp trung tính', async () => {
     User.findOne.mockReturnValue(selectReturns(null));
 
