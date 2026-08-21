@@ -55,6 +55,12 @@ describe('xác minh token hỏng', () => {
 
     expect(() => verifyAccessToken(expired)).toThrow(/expired/i);
   });
+
+  it('token ký bằng alg "none" (không chữ ký) bị từ chối', () => {
+    const unsigned = jwt.sign({ sub: USER_ID, roles: ['admin'] }, '', { algorithm: 'none' });
+
+    expect(() => verifyAccessToken(unsigned)).toThrow();
+  });
 });
 
 describe('getTokenExpiry', () => {
