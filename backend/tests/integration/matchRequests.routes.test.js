@@ -35,6 +35,18 @@ describe('toàn bộ /api/v1/match-requests cần đăng nhập', () => {
   });
 });
 
+describe('GET /api/v1/match-requests/:id', () => {
+  it('trả chi tiết một lời mời thi đấu', async () => {
+    matchRequestService.getMatchRequestById.mockResolvedValue({ _id: REQUEST_ID, status: 'pending' });
+
+    const res = await request(app).get(`/api/v1/match-requests/${REQUEST_ID}`).set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.request._id).toBe(REQUEST_ID);
+    expect(matchRequestService.getMatchRequestById).toHaveBeenCalledWith(REQUEST_ID);
+  });
+});
+
 describe('POST /api/v1/match-requests', () => {
   it('gửi lời mời thi đấu', async () => {
     matchRequestService.createMatchRequest.mockResolvedValue({ _id: REQUEST_ID });

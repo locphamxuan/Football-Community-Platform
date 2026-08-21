@@ -188,6 +188,22 @@ describe('các endpoint email', () => {
     expect(res.status).toBe(400);
   });
 
+  it('POST /resend-verification gửi lại email xác thực', async () => {
+    authService.resendVerification.mockResolvedValue({ message: 'Verification email sent' });
+
+    const res = await request(app).post('/api/v1/auth/resend-verification').send({ email: 'probe@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(authService.resendVerification).toHaveBeenCalledWith('probe@example.com');
+  });
+
+  it('POST /forgot-password từ chối email sai định dạng', async () => {
+    const res = await request(app).post('/api/v1/auth/forgot-password').send({ email: 'nope' });
+
+    expect(res.status).toBe(400);
+    expect(authService.forgotPassword).not.toHaveBeenCalled();
+  });
+
   it('POST /forgot-password nhận email hợp lệ', async () => {
     authService.forgotPassword.mockResolvedValue({ message: 'Reset link sent' });
 

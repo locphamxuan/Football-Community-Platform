@@ -38,6 +38,9 @@ describe('các endpoint cần đăng nhập', () => {
     ['post', `/api/v1/teams/${TEAM_ID}/join`],
     ['post', `/api/v1/teams/${TEAM_ID}/leave`],
     ['post', `/api/v1/teams/${TEAM_ID}/transfer-management`],
+    ['delete', `/api/v1/teams/${TEAM_ID}/members/${MEMBER_ID}`],
+    ['patch', `/api/v1/teams/${TEAM_ID}/members/${MEMBER_ID}`],
+    ['post', `/api/v1/teams/${TEAM_ID}/invite-code/regenerate`],
   ])('%s %s trả 401 khi thiếu token', async (method, url) => {
     const res = await request(app)[method](url);
     expect(res.status).toBe(401);
@@ -76,6 +79,43 @@ describe('POST /api/v1/teams', () => {
 
     expect(res.status).toBe(400);
     expect(teamService.createTeam).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /api/v1/teams/:id', () => {
+  it('cập nhật thông tin đội', async () => {
+    teamService.updateTeam.mockResolvedValue({ _id: TEAM_ID, homeCity: 'Đà Nẵng' });
+
+    const res = await request(app)
+      .patch(`/api/v1/teams/${TEAM_ID}`)
+      .set(asUser())
+      .field('homeCity', 'Đà Nẵng');
+
+    expect(res.status).toBe(200);
+    expect(teamService.updateTeam).toHaveBeenCalledWith(
+      TEAM_ID, USER_ID, expect.objectContaining({ homeCity: 'Đà Nẵng' }), undefined
+    );
+  });
+
+  it('từ chối tên đội dưới 3 ký tự', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/teams/${TEAM_ID}`)
+      .set(asUser())
+      .field('name', 'FC');
+
+    expect(res.status).toBe(400);
+    expect(teamService.updateTeam).not.toHaveBeenCalled();
+  });
+});
+
+describe('DELETE /api/v1/teams/:id', () => {
+  it('giải thể đội', async () => {
+    teamService.deleteTeam.mockResolvedValue(undefined);
+
+    const res = await request(app).delete(`/api/v1/teams/${TEAM_ID}`).set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(teamService.deleteTeam).toHaveBeenCalledWith(TEAM_ID, USER_ID);
   });
 });
 

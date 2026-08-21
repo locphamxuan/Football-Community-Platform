@@ -14,6 +14,7 @@ describe('toàn bộ /api/v1/users cần đăng nhập', () => {
     ['patch', '/api/v1/users/me/avatar'],
     ['patch', '/api/v1/users/me/notifications'],
     ['get', '/api/v1/users/000000000000000000000002'],
+    ['get', '/api/v1/users/search'],
     ['post', '/api/v1/users/me/push-tokens'],
     ['delete', '/api/v1/users/me/push-tokens'],
   ])('%s %s trả 401 khi thiếu token', async (method, url) => {

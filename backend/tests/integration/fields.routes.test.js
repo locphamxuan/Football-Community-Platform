@@ -38,6 +38,23 @@ describe('các endpoint công khai', () => {
   });
 });
 
+describe('các endpoint cần đăng nhập', () => {
+  it.each([
+    ['get', '/api/v1/fields/owner/my-fields'],
+    ['post', '/api/v1/fields'],
+    ['patch', `/api/v1/fields/${FIELD_ID}`],
+    ['delete', `/api/v1/fields/${FIELD_ID}`],
+    ['post', `/api/v1/fields/${FIELD_ID}/sub-fields`],
+    ['patch', `/api/v1/fields/${FIELD_ID}/sub-fields/${SUB_FIELD_ID}`],
+    ['delete', `/api/v1/fields/${FIELD_ID}/sub-fields/${SUB_FIELD_ID}`],
+    ['patch', `/api/v1/fields/${FIELD_ID}/submit`],
+    ['patch', `/api/v1/fields/${FIELD_ID}/verify`],
+  ])('%s %s trả 401 khi thiếu token', async (method, url) => {
+    const res = await request(app)[method](url);
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /fields/:id/availability', () => {
   it('trả danh sách sân con còn trống', async () => {
     fieldService.checkAvailability.mockResolvedValue([{ subFieldId: SUB_FIELD_ID, isAvailable: true }]);
@@ -166,6 +183,16 @@ describe('PATCH /fields/:id', () => {
 });
 
 describe('sân con', () => {
+  it.each([
+    ['post', `/api/v1/fields/${FIELD_ID}/sub-fields`],
+    ['patch', `/api/v1/fields/${FIELD_ID}/sub-fields/${SUB_FIELD_ID}`],
+    ['delete', `/api/v1/fields/${FIELD_ID}/sub-fields/${SUB_FIELD_ID}`],
+  ])('%s %s chỉ chủ sân mới thao tác được', async (method, url) => {
+    const res = await request(app)[method](url).set(asUser()).send({ name: 'Sân A', fieldType: '5v5', capacity: 10 });
+
+    expect(res.status).toBe(403);
+  });
+
   it('thêm sân con hợp lệ', async () => {
     fieldService.addSubField.mockResolvedValue({ _id: FIELD_ID });
 
@@ -222,6 +249,23 @@ describe('duyệt sân', () => {
 
     expect(res.status).toBe(200);
     expect(fieldService.submitForApproval).toHaveBeenCalledWith(FIELD_ID, USER_ID);
+  });
+
+  it('người dùng thường không tự gửi sân đi duyệt được', async () => {
+    const res = await request(app).patch(`/api/v1/fields/${FIELD_ID}/submit`).set(asUser());
+
+    expect(res.status).toBe(403);
+    expect(fieldService.submitForApproval).not.toHaveBeenCalled();
+  });
+
+  it('approve không phải boolean thì bị từ chối', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/fields/${FIELD_ID}/verify`)
+      .set(asAdmin())
+      .send({ approve: 'yes' });
+
+    expect(res.status).toBe(400);
+    expect(fieldService.verifyField).not.toHaveBeenCalled();
   });
 
   it('chỉ admin được duyệt', async () => {

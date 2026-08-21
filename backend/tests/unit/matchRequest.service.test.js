@@ -52,6 +52,80 @@ beforeEach(() => {
   MatchRequest.findByIdAndUpdate.mockResolvedValue({});
 });
 
+describe('createMatchRequest', () => {
+  const validData = (overrides = {}) => ({
+    requesterTeamId: TEAM_A,
+    opponentTeamId: TEAM_B,
+    date: hoursFromNow(48).toISOString().slice(0, 10),
+    startTime: '18:00',
+    endTime: '20:00',
+    fieldSize: '5v5',
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    Team.findOne.mockResolvedValue(fakeTeam(TEAM_A, MANAGER_A));
+    Team.findById.mockResolvedValue(fakeTeam(TEAM_B, MANAGER_B));
+    MatchRequest.findOne.mockResolvedValue(null);
+    MatchRequest.create.mockResolvedValue({ _id: REQUEST_ID });
+  });
+
+  it('không phải thành viên/quản lý đội mời thì bị từ chối', async () => {
+    Team.findOne.mockResolvedValue(null);
+
+    await expect(matchRequestService.createMatchRequest(OUTSIDER, validData()))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(MatchRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('đội đối thủ không tồn tại thì báo 404', async () => {
+    Team.findById.mockResolvedValue(null);
+
+    await expect(matchRequestService.createMatchRequest(MANAGER_A, validData()))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('đội đối thủ đã ngưng hoạt động thì báo 404', async () => {
+    Team.findById.mockResolvedValue({ ...fakeTeam(TEAM_B, MANAGER_B), status: 'disbanded' });
+
+    await expect(matchRequestService.createMatchRequest(MANAGER_A, validData()))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('không tự thách đấu đội của chính mình', async () => {
+    await expect(matchRequestService.createMatchRequest(MANAGER_A, validData({ opponentTeamId: TEAM_A })))
+      .rejects.toMatchObject({ statusCode: 400, code: 'CONFLICT' });
+    expect(MatchRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('đã có lời mời đang chờ giữa 2 đội thì báo 409, không tạo thêm', async () => {
+    MatchRequest.findOne.mockResolvedValue({ _id: 'existing-request' });
+
+    await expect(matchRequestService.createMatchRequest(MANAGER_A, validData()))
+      .rejects.toMatchObject({ statusCode: 409, code: 'CONFLICT' });
+    expect(MatchRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('tạo lời mời thành công và báo cho quản lý đội đối thủ', async () => {
+    const finalRequest = { _id: REQUEST_ID, status: 'pending' };
+    MatchRequest.findById.mockReturnValue(mockPopulated(finalRequest));
+
+    const result = await matchRequestService.createMatchRequest(MANAGER_A, validData());
+
+    expect(result).toBe(finalRequest);
+    expect(MatchRequest.create).toHaveBeenCalledWith(expect.objectContaining({
+      requesterTeam: TEAM_A,
+      opponentTeam: TEAM_B,
+      requestedBy: MANAGER_A,
+      fieldSize: '5v5',
+    }));
+    const [recipient, payload, actorId] = notify.mock.calls[0];
+    expect(recipient.toString()).toBe(MANAGER_B);
+    expect(payload).toMatchObject({ type: 'match_request_received', link: '/match-requests' });
+    expect(actorId).toBe(MANAGER_A);
+  });
+});
+
 describe('respondToRequest', () => {
   // date/startTime/endTime là required trong schema — thiếu chúng thì fixture không
   // giống bất kỳ document thật nào và test bỏ lọt lỗi ở nhánh dựng thông báo.

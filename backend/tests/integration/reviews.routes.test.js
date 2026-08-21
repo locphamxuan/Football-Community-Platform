@@ -102,6 +102,16 @@ describe('sửa, xoá và thích đánh giá', () => {
     expect(reviewService.updateReview).toHaveBeenCalledWith(REVIEW_ID, USER_ID, { rating: 3, comment: 'Sửa lại' });
   });
 
+  it('rating ngoài khoảng 1-5 thì bị từ chối', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/reviews/${REVIEW_ID}`)
+      .set(asUser())
+      .send({ rating: 6 });
+
+    expect(res.status).toBe(400);
+    expect(reviewService.updateReview).not.toHaveBeenCalled();
+  });
+
   it('người viết xoá đánh giá của mình', async () => {
     reviewService.deleteReview.mockResolvedValue(undefined);
 

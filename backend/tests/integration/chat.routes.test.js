@@ -172,6 +172,19 @@ describe('nhóm chat', () => {
     expect(chatService.updateGroup).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID, { name: 'Tên mới' });
   });
 
+  it.each([
+    ['tên rỗng', { name: '   ' }],
+    ['tên quá dài', { name: 'a'.repeat(GROUP_NAME_MAX_LENGTH + 1) }],
+  ])('đổi tên nhóm trả 400 khi %s', async (_label, body) => {
+    const res = await request(app)
+      .patch(`/api/v1/chat/conversations/${CONVERSATION_ID}`)
+      .send(body)
+      .set(asUser());
+
+    expect(res.status).toBe(400);
+    expect(chatService.updateGroup).not.toHaveBeenCalled();
+  });
+
   it('thêm thành viên', async () => {
     const res = await request(app)
       .post(`/api/v1/chat/conversations/${CONVERSATION_ID}/members`)
@@ -180,6 +193,19 @@ describe('nhóm chat', () => {
 
     expect(res.status).toBe(200);
     expect(chatService.addMembers).toHaveBeenCalledWith(USER_ID, CONVERSATION_ID, [MEMBER_ID]);
+  });
+
+  it.each([
+    ['không mời ai', { memberIds: [] }],
+    ['id thành viên sai định dạng', { memberIds: ['bạn-thân'] }],
+  ])('thêm thành viên trả 400 khi %s', async (_label, body) => {
+    const res = await request(app)
+      .post(`/api/v1/chat/conversations/${CONVERSATION_ID}/members`)
+      .send(body)
+      .set(asUser());
+
+    expect(res.status).toBe(400);
+    expect(chatService.addMembers).not.toHaveBeenCalled();
   });
 
   it('gỡ thành viên', async () => {
@@ -252,6 +278,16 @@ describe('POST /api/v1/chat/conversations/:id/messages', () => {
 });
 
 describe('đọc tin nhắn', () => {
+  it('limit vượt trần 100 thì bị từ chối', async () => {
+    const res = await request(app)
+      .get(`/api/v1/chat/conversations/${CONVERSATION_ID}/messages`)
+      .query({ limit: 200 })
+      .set(asUser());
+
+    expect(res.status).toBe(400);
+    expect(chatService.getMessages).not.toHaveBeenCalled();
+  });
+
   it('lấy lịch sử kèm phân trang', async () => {
     const res = await request(app)
       .get(`/api/v1/chat/conversations/${CONVERSATION_ID}/messages`)
