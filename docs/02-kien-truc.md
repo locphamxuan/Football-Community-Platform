@@ -255,3 +255,11 @@ lớp giải thích cho người dùng, **không phải** lớp bảo vệ — b
   ngay khi middleware được tạo — tức là lúc `require('./app')`, trước khi `server.js` gọi
   `connectRedis()` — và lệnh đầu tiên đó đã tự mở kết nối. Gọi `connect()` lần nữa ném
   "Redis is already connecting/connected" và server chết ngay lúc khởi động.
+- **Nhật ký hành động admin (`adminAuditLog.service.js`) cũng là hệ quả, không phải điều kiện** —
+  cùng nguyên tắc với `notify()`. Đổi role, cấm tài khoản, xác nhận/huỷ hoá đơn, duyệt sân đều
+  ghi một dòng vào `AdminAuditLog` *sau* khi thao tác chính đã thành công; lỗi ghi log chỉ vào
+  logger, không được huỷ ngược thao tác đã làm xong. Mục đích là có dấu vết để điều tra nếu một
+  tài khoản admin bị chiếm hoặc bị lạm quyền — không phải để chặn hành động.
+- **JWT ký/xác thực ghim cứng `algorithm: 'HS256'`**, không để `jsonwebtoken` tự suy luận từ
+  header của token. Thư viện hiện đã tự chặn `alg: none`, nhưng khai rõ thuật toán là phòng thủ
+  theo chiều sâu — không phụ thuộc vào hành vi mặc định của một bản phát hành tương lai.

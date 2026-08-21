@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-19
+> Cập nhật lần cuối: 2026-08-21
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -101,6 +101,16 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - CSRF vẫn chỉ dựa vào `SameSite=Strict` (không thêm CSRF token riêng) — xem ghi chú trong
   [`docs/02-kien-truc.md`](../docs/02-kien-truc.md#xác-thực).
 
+**Rà soát bảo mật: audit log admin + ghim thuật toán JWT** (nhánh `security/hardening-audit`)
+- `AdminAuditLog`: đổi role/cấm user, xác nhận/huỷ hoá đơn, duyệt sân đều ghi một dòng (ai, làm gì,
+  trên đối tượng nào, chi tiết trước/sau). Ghi log là hệ quả — lỗi ghi log không huỷ ngược thao tác
+  chính, cùng nguyên tắc với `notify()`.
+- `GET /admin/audit-log` — xem nhật ký, lọc theo `adminId`/`action`, phân trang.
+- `jwt.sign`/`jwt.verify` ghim cứng `algorithm: 'HS256'` thay vì để thư viện tự suy luận — phòng thủ
+  theo chiều sâu trước tấn công đổi thuật toán.
+- Rà soát thủ công còn lại (CSRF, NoSQL injection, upload, XSS) xác nhận nền tảng đã vững từ các
+  phiên trước — không phát hiện lỗ hổng khai thác được, chỉ 2 điểm trên là đáng vá thêm.
+
 **CI/CD và giám sát dependency** (nhánh `chore/ci-security-scanning`)
 - CodeQL quét tĩnh JS/TS trên mỗi push/PR vào `main`/`dev` cộng một lượt hàng tuần.
 - Dependabot mở PR cập nhật dependency hàng tuần cho cả ba phía và cho GitHub Actions.
@@ -130,8 +140,6 @@ Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
   (backend), `next` (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
   `react-native` (mobile). Mỗi bản nâng đều là breaking change, cần làm riêng và test kỹ, không
   nên gộp vào một lần nâng cấp bảo mật.
-- **Audit log cho hành động admin chưa có** — biết ai duyệt/khoá/xoá gì và lúc nào. Cần trước khi
-  lên sản phẩm thật; đã cân nhắc trong phiên rà soát 2026-08-19 nhưng để lại làm riêng.
 
 ## Quyết định và bẫy cần nhớ
 
