@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { PLAN_CODES } = require('../constants/plans');
+const { AdminAction } = require('../constants/adminAudit');
 
 const paginationQuery = {
   page: z.coerce.number().int().min(1).optional(),
@@ -38,10 +39,18 @@ const updateUserSchema = z
     message: 'Provide status or roles to update',
   });
 
+const auditLogQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  adminId: z.string().optional(),
+  action: z.enum(Object.values(AdminAction)).optional(),
+});
+
 module.exports = {
   revenueQuerySchema,
   ownersQuerySchema,
   adminFieldsQuerySchema,
   adminUsersQuerySchema,
   updateUserSchema,
+  auditLogQuerySchema,
 };

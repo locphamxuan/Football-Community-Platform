@@ -1,5 +1,7 @@
 // Thông báo có test riêng ở notification.service.test.js; ở đây chỉ cần nó không chạm Mongo.
 jest.mock('../../src/services/notification.service');
+// Audit log có test riêng ở adminAuditLog.service.test.js; ở đây chỉ cần xác nhận có gọi.
+jest.mock('../../src/services/adminAuditLog.service');
 jest.mock('../../src/models/Subscription', () => ({ findOne: jest.fn(), findById: jest.fn(), create: jest.fn() }));
 jest.mock('../../src/models/Invoice', () => ({
   find: jest.fn(), findById: jest.fn(), create: jest.fn(),
@@ -13,7 +15,9 @@ const Invoice = require('../../src/models/Invoice');
 const Field = require('../../src/models/Field');
 const Booking = require('../../src/models/Booking');
 const billingService = require('../../src/services/billing.service');
+const adminAuditLogService = require('../../src/services/adminAuditLog.service');
 const { PlanCode, SubscriptionStatus, InvoiceStatus } = require('../../src/constants/plans');
+const { AdminAction, AdminTargetType } = require('../../src/constants/adminAudit');
 
 const OWNER_ID = '000000000000000000000002';
 const ADMIN_ID = '000000000000000000000009';
@@ -222,6 +226,9 @@ describe('confirmInvoicePayment', () => {
     expect(result.status).toBe(InvoiceStatus.PAID);
     expect(sub.totalPaid).toBe(299000);
     expect(sub.status).toBe(SubscriptionStatus.ACTIVE);
+    expect(adminAuditLogService.record).toHaveBeenCalledWith(
+      ADMIN_ID, AdminAction.INVOICE_CONFIRMED, AdminTargetType.INVOICE, INVOICE_ID, expect.any(Object)
+    );
   });
 
   it('còn hoá đơn nợ khác thì thuê bao vẫn ở trạng thái nợ', async () => {
@@ -254,10 +261,13 @@ describe('voidInvoice', () => {
   it('huỷ hoá đơn chưa thanh toán kèm lý do', async () => {
     Invoice.findById.mockResolvedValue(fakeInvoice());
 
-    const result = await billingService.voidInvoice(INVOICE_ID, 'Phát hành nhầm');
+    const result = await billingService.voidInvoice(INVOICE_ID, 'Phát hành nhầm', ADMIN_ID);
 
     expect(result.status).toBe(InvoiceStatus.VOID);
     expect(result.voidReason).toBe('Phát hành nhầm');
+    expect(adminAuditLogService.record).toHaveBeenCalledWith(
+      ADMIN_ID, AdminAction.INVOICE_VOIDED, AdminTargetType.INVOICE, INVOICE_ID, expect.any(Object)
+    );
   });
 
   it('không huỷ hoá đơn đã thu tiền', async () => {

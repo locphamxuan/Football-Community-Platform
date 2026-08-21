@@ -6,7 +6,7 @@ const validate = require('../middleware/validate');
 const Role = require('../constants/roles');
 const {
   revenueQuerySchema, ownersQuerySchema, adminFieldsQuerySchema,
-  adminUsersQuerySchema, updateUserSchema,
+  adminUsersQuerySchema, updateUserSchema, auditLogQuerySchema,
 } = require('../validations/admin.validation');
 const { invoiceQuerySchema, voidInvoiceSchema } = require('../validations/billing.validation');
 
@@ -34,5 +34,8 @@ router.get('/fields', validate(adminFieldsQuerySchema, 'query'), controller.getF
 router.get('/invoices', validate(invoiceQuerySchema, 'query'), controller.getInvoices);
 router.patch('/invoices/:id/confirm', controller.confirmInvoice);
 router.patch('/invoices/:id/void', validate(voidInvoiceSchema), controller.voidInvoice);
+
+// ── Nhật ký hành động admin ───────────────────────────────────────────────────
+router.get('/audit-log', validate(auditLogQuerySchema, 'query'), controller.getAuditLog);
 
 module.exports = router;

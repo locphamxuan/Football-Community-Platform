@@ -7,8 +7,10 @@ const Review = require('../models/Review');
 const Subscription = require('../models/Subscription');
 const Invoice = require('../models/Invoice');
 const billingService = require('./billing.service');
+const adminAuditLogService = require('./adminAuditLog.service');
 const { getPagination } = require('../utils/pagination');
 const { PLANS, getPlan, SubscriptionStatus, InvoiceStatus } = require('../constants/plans');
+const { AdminAction, AdminTargetType } = require('../constants/adminAudit');
 const Role = require('../constants/roles');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
@@ -314,6 +316,7 @@ const updateUserRoles = async (userId, roles, actingAdminId) => {
     }
   }
 
+  const previousRoles = user.roles;
   user.roles = [...new Set(roles)];
   await user.save();
 
@@ -321,6 +324,11 @@ const updateUserRoles = async (userId, roles, actingAdminId) => {
     // Chủ sân mới cần có thuê bao để tính hạn mức và hoá đơn
     await billingService.ensureSubscription(user._id);
   }
+
+  await adminAuditLogService.record(
+    actingAdminId, AdminAction.USER_ROLES_UPDATED, AdminTargetType.USER, userId,
+    { from: previousRoles, to: user.roles }
+  );
 
   return user;
 };
@@ -330,8 +338,16 @@ const updateUserStatus = async (userId, status, actingAdminId) => {
   if (userId === actingAdminId && status !== 'active') {
     throw new AppError('You cannot deactivate your own account', HttpStatus.BAD_REQUEST, ErrorCode.CONFLICT);
   }
+  const previous = await User.findById(userId).select('status');
+  if (!previous) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+
   const user = await User.findByIdAndUpdate(userId, { status }, { new: true, runValidators: true });
-  if (!user) throw new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+
+  await adminAuditLogService.record(
+    actingAdminId, AdminAction.USER_STATUS_UPDATED, AdminTargetType.USER, userId,
+    { from: previous.status, to: status }
+  );
+
   return user;
 };
 

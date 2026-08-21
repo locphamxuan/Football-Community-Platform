@@ -2,12 +2,14 @@ jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
 jest.mock('../../src/services/admin.service');
 jest.mock('../../src/services/billing.service');
 jest.mock('../../src/services/user.service');
+jest.mock('../../src/services/adminAuditLog.service');
 
 const request = require('supertest');
 const app = require('../../src/app');
 const adminService = require('../../src/services/admin.service');
 const billingService = require('../../src/services/billing.service');
 const userService = require('../../src/services/user.service');
+const adminAuditLogService = require('../../src/services/adminAuditLog.service');
 const { asUser, asOwner, asAdmin, USER_ID } = require('../helpers/auth');
 
 const TARGET_USER = '000000000000000000000002';
@@ -24,6 +26,7 @@ const ADMIN_ROUTES = [
   ['get', '/api/v1/admin/invoices'],
   ['patch', `/api/v1/admin/invoices/${INVOICE_ID}/confirm`],
   ['patch', `/api/v1/admin/invoices/${INVOICE_ID}/void`],
+  ['get', '/api/v1/admin/audit-log'],
 ];
 
 describe('khu admin đóng với mọi vai trò khác', () => {
@@ -211,7 +214,7 @@ describe('đối soát hoá đơn', () => {
       .send({ reason: 'Phát hành nhầm' });
 
     expect(res.status).toBe(200);
-    expect(billingService.voidInvoice).toHaveBeenCalledWith(INVOICE_ID, 'Phát hành nhầm');
+    expect(billingService.voidInvoice).toHaveBeenCalledWith(INVOICE_ID, 'Phát hành nhầm', USER_ID);
   });
 
   it('lý do quá dài bị từ chối', async () => {
@@ -222,5 +225,43 @@ describe('đối soát hoá đơn', () => {
 
     expect(res.status).toBe(400);
     expect(billingService.voidInvoice).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/v1/admin/audit-log', () => {
+  it('trả nhật ký hành động admin kèm phân trang', async () => {
+    adminAuditLogService.getAuditLog.mockResolvedValue({
+      logs: [{ action: 'invoice.voided' }], total: 1, page: 1, limit: 10,
+    });
+
+    const res = await request(app).get('/api/v1/admin/audit-log').set(asAdmin());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.logs).toHaveLength(1);
+    expect(res.body.meta.pagination).toMatchObject({ total: 1, page: 1 });
+  });
+
+  it('lọc theo action hợp lệ', async () => {
+    adminAuditLogService.getAuditLog.mockResolvedValue({ logs: [], total: 0, page: 1, limit: 10 });
+
+    const res = await request(app)
+      .get('/api/v1/admin/audit-log')
+      .query({ action: 'user.status_updated' })
+      .set(asAdmin());
+
+    expect(res.status).toBe(200);
+    expect(adminAuditLogService.getAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.status_updated' })
+    );
+  });
+
+  it('action không nằm trong danh sách hợp lệ thì bị từ chối', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/audit-log')
+      .query({ action: 'not-a-real-action' })
+      .set(asAdmin());
+
+    expect(res.status).toBe(400);
+    expect(adminAuditLogService.getAuditLog).not.toHaveBeenCalled();
   });
 });

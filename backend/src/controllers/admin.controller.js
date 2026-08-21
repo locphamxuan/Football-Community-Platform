@@ -1,6 +1,7 @@
 const adminService = require('../services/admin.service');
 const billingService = require('../services/billing.service');
 const userService = require('../services/user.service');
+const adminAuditLogService = require('../services/adminAuditLog.service');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');
@@ -65,12 +66,19 @@ const confirmInvoice = catchAsync(async (req, res) => {
 });
 
 const voidInvoice = catchAsync(async (req, res) => {
-  const invoice = await billingService.voidInvoice(req.params.id, req.body.reason);
+  const invoice = await billingService.voidInvoice(req.params.id, req.body.reason, req.user.id);
   sendSuccess(res, { invoice }, 'Invoice voided');
+});
+
+const getAuditLog = catchAsync(async (req, res) => {
+  const { logs, total, page, limit } = await adminAuditLogService.getAuditLog(req.query);
+  sendSuccess(res, { logs }, 'Audit log retrieved', HttpStatus.OK, {
+    pagination: paginationMeta(total, page, limit),
+  });
 });
 
 module.exports = {
   getOverview, getRevenueSeries, getOwners, getOwnerDetail,
   getUsers, updateUser, getFields,
-  getInvoices, confirmInvoice, voidInvoice,
+  getInvoices, confirmInvoice, voidInvoice, getAuditLog,
 };
