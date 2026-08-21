@@ -468,6 +468,38 @@ describe('createGroup', () => {
   });
 });
 
+describe('updateGroup', () => {
+  it('quản trị nhóm đổi được tên nhóm', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [USER_ID, ParticipantRole.ADMIN],
+      [OWNER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await chatService.updateGroup(USER_ID, CONVERSATION_ID, { name: 'Tên mới' });
+
+    expect(Conversation.updateOne).toHaveBeenCalledWith(
+      { _id: CONVERSATION_ID },
+      { $set: { name: 'Tên mới' } }
+    );
+  });
+
+  it('thành viên thường thì không đổi được tên nhóm', async () => {
+    Conversation.findById.mockReturnValue(queryOf(groupOf(
+      [OWNER_ID, ParticipantRole.ADMIN],
+      [USER_ID, ParticipantRole.MEMBER]
+    )));
+
+    await expect(chatService.updateGroup(USER_ID, CONVERSATION_ID, { name: 'Tên mới' }))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(Conversation.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('hội thoại tay đôi không đổi được "tên nhóm"', async () => {
+    await expect(chatService.updateGroup(USER_ID, CONVERSATION_ID, { name: 'Tên mới' }))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
 describe('addMembers', () => {
   beforeEach(() => {
     mockChattableUsers([{ _id: STRANGER_ID, status: 'active', roles: ['user'], fullName: 'Người mới' }]);
