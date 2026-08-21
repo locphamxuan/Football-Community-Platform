@@ -10,6 +10,7 @@ jest.mock('../../src/config/cloudinary', () => ({
 
 const Team = require('../../src/models/Team');
 const User = require('../../src/models/User');
+const { uploadImage, deleteImage } = require('../../src/config/cloudinary');
 const teamService = require('../../src/services/team.service');
 const Role = require('../../src/constants/roles');
 
@@ -210,6 +211,34 @@ describe('transferManagement', () => {
   });
 });
 
+describe('updateMember', () => {
+  it('quản lý đổi được vai trò thành viên', async () => {
+    const team = fakeTeam({ members: [member(MANAGER_ID, 'manager'), member(MEMBER_ID, 'player')] });
+    Team.findById.mockResolvedValue(team);
+
+    const result = await teamService.updateMember(TEAM_ID, MANAGER_ID, MEMBER_ID, { role: 'captain' });
+
+    expect(result.members[1]).toMatchObject({ role: 'captain' });
+    expect(team.save).toHaveBeenCalled();
+  });
+
+  it('không phải quản lý thì không đổi được', async () => {
+    Team.findById.mockResolvedValue(
+      fakeTeam({ members: [member(MANAGER_ID, 'manager'), member(MEMBER_ID, 'player')] })
+    );
+
+    await expect(teamService.updateMember(TEAM_ID, MEMBER_ID, MEMBER_ID, { role: 'captain' }))
+      .rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('thành viên không tồn tại trả 404', async () => {
+    Team.findById.mockResolvedValue(fakeTeam({ members: [member(MANAGER_ID, 'manager')] }));
+
+    await expect(teamService.updateMember(TEAM_ID, MANAGER_ID, OUTSIDER_ID, { role: 'captain' }))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
 describe('regenerateInviteCode', () => {
   it('quản lý đổi được mã mời', async () => {
     Team.findById.mockResolvedValue(fakeTeam());
@@ -225,6 +254,88 @@ describe('regenerateInviteCode', () => {
 
     await expect(teamService.regenerateInviteCode(TEAM_ID, MEMBER_ID))
       .rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe('updateTeam', () => {
+  const mockUpdateReturns = (value) => {
+    Team.findByIdAndUpdate.mockReturnValue({ populate: () => Promise.resolve(value) });
+  };
+
+  it('đội không tồn tại thì báo 404', async () => {
+    Team.findById.mockResolvedValue(null);
+
+    await expect(teamService.updateTeam(TEAM_ID, MANAGER_ID, { name: 'Đổi tên' }))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('không phải quản lý thì không sửa được', async () => {
+    Team.findById.mockResolvedValue(fakeTeam());
+    mockUpdateReturns({});
+
+    await expect(teamService.updateTeam(TEAM_ID, MEMBER_ID, { name: 'Đổi tên' }))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(Team.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('đổi tên thì sinh slug mới, không trùng slug đã tồn tại', async () => {
+    Team.findById.mockResolvedValue(fakeTeam({ name: 'Probe FC' }));
+    Team.exists.mockResolvedValueOnce({ _id: 'khac' }); // slug đầu tiên đã có đội khác dùng
+    mockUpdateReturns({ name: 'Probe United', slug: 'probe-united-1' });
+
+    await teamService.updateTeam(TEAM_ID, MANAGER_ID, { name: 'Probe United' });
+
+    expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(
+      TEAM_ID,
+      expect.objectContaining({ name: 'Probe United', slug: 'probe-united-1' }),
+      { new: true }
+    );
+  });
+
+  it('gửi lại đúng tên cũ thì không sinh slug mới', async () => {
+    Team.findById.mockResolvedValue(fakeTeam({ name: 'Probe FC' }));
+    mockUpdateReturns({ name: 'Probe FC' });
+
+    await teamService.updateTeam(TEAM_ID, MANAGER_ID, { name: 'Probe FC', homeCity: 'Hà Nội' });
+
+    expect(Team.exists).not.toHaveBeenCalled();
+    expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(
+      TEAM_ID,
+      expect.not.objectContaining({ slug: expect.anything() }),
+      { new: true }
+    );
+  });
+
+  it('đổi logo thì xoá ảnh cũ trên Cloudinary rồi tải ảnh mới', async () => {
+    Team.findById.mockResolvedValue(fakeTeam({
+      logo: 'https://res.cloudinary.com/demo/image/upload/v1700000000/teams/old-logo.png',
+    }));
+    mockUpdateReturns({ logo: 'https://cdn/logo.png' });
+
+    await teamService.updateTeam(TEAM_ID, MANAGER_ID, {}, { buffer: Buffer.from(''), mimetype: 'image/png' });
+
+    expect(deleteImage).toHaveBeenCalledWith('teams/old-logo');
+    expect(uploadImage).toHaveBeenCalled();
+    expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(
+      TEAM_ID, expect.objectContaining({ logo: 'https://cdn/logo.png' }), { new: true }
+    );
+  });
+
+  it('chưa có logo cũ thì không gọi xoá ảnh, chỉ tải ảnh mới', async () => {
+    Team.findById.mockResolvedValue(fakeTeam({ logo: undefined }));
+    mockUpdateReturns({ logo: 'https://cdn/logo.png' });
+
+    await teamService.updateTeam(TEAM_ID, MANAGER_ID, {}, { buffer: Buffer.from(''), mimetype: 'image/png' });
+
+    expect(deleteImage).not.toHaveBeenCalled();
+  });
+
+  it('cập nhật thành công trả về đội đã populate', async () => {
+    Team.findById.mockResolvedValue(fakeTeam());
+    const updated = { _id: TEAM_ID, homeCity: 'Đà Nẵng' };
+    mockUpdateReturns(updated);
+
+    await expect(teamService.updateTeam(TEAM_ID, MANAGER_ID, { homeCity: 'Đà Nẵng' })).resolves.toBe(updated);
   });
 });
 
