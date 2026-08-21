@@ -305,6 +305,7 @@ Toàn bộ nhóm này chỉ dành cho 👑.
 | GET | `/invoices` | Query: `page, limit, status, ownerId` |
 | PATCH | `/invoices/:id/confirm` | Xác nhận đã nhận tiền |
 | PATCH | `/invoices/:id/void` | `reason?` (≤ 300 ký tự) |
+| GET | `/audit-log` | Query: `page, limit, adminId, action` — xem [02-kien-truc.md](02-kien-truc.md) |
 
 ---
 

@@ -285,7 +285,7 @@ describe('duyệt sân', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Field approved');
-    expect(fieldService.verifyField).toHaveBeenCalledWith(FIELD_ID, { approve: true, note: 'Hồ sơ đủ' });
+    expect(fieldService.verifyField).toHaveBeenCalledWith(FIELD_ID, { approve: true, note: 'Hồ sơ đủ' }, USER_ID);
   });
 
   it('admin từ chối sân, mặc định approve là true nên phải gửi false tường minh', async () => {
@@ -297,7 +297,7 @@ describe('duyệt sân', () => {
       .send({ approve: false, note: 'Thiếu ảnh' });
 
     expect(res.body.message).toBe('Field rejected');
-    expect(fieldService.verifyField).toHaveBeenCalledWith(FIELD_ID, { approve: false, note: 'Thiếu ảnh' });
+    expect(fieldService.verifyField).toHaveBeenCalledWith(FIELD_ID, { approve: false, note: 'Thiếu ảnh' }, USER_ID);
   });
 });
 

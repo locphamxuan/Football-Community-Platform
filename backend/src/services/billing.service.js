@@ -6,8 +6,10 @@ const Field = require('../models/Field');
 const Booking = require('../models/Booking');
 const { getPagination } = require('../utils/pagination');
 const { notify } = require('./notification.service');
+const adminAuditLogService = require('./adminAuditLog.service');
 const { NotificationType } = require('../constants/notifications');
 const { PLANS, PlanCode, getPlan, SubscriptionStatus, InvoiceStatus } = require('../constants/plans');
+const { AdminAction, AdminTargetType } = require('../constants/adminAudit');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
@@ -294,10 +296,15 @@ const confirmInvoicePayment = async (invoiceId, adminId) => {
     await subscription.save();
   }
 
+  await adminAuditLogService.record(
+    adminId, AdminAction.INVOICE_CONFIRMED, AdminTargetType.INVOICE, invoiceId,
+    { amount: invoice.amount, owner: invoice.owner }
+  );
+
   return invoice;
 };
 
-const voidInvoice = async (invoiceId, reason) => {
+const voidInvoice = async (invoiceId, reason, adminId) => {
   const invoice = await Invoice.findById(invoiceId);
   if (!invoice) throw new AppError('Invoice not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
   if (invoice.status === InvoiceStatus.PAID) {
@@ -307,6 +314,12 @@ const voidInvoice = async (invoiceId, reason) => {
   invoice.status = InvoiceStatus.VOID;
   invoice.voidReason = reason || 'Huỷ bởi quản trị viên';
   await invoice.save();
+
+  await adminAuditLogService.record(
+    adminId, AdminAction.INVOICE_VOIDED, AdminTargetType.INVOICE, invoiceId,
+    { amount: invoice.amount, owner: invoice.owner, reason: invoice.voidReason }
+  );
+
   return invoice;
 };
 

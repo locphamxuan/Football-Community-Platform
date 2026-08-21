@@ -59,7 +59,7 @@ const deleteSubField = catchAsync(async (req, res) => {
 
 const verifyField = catchAsync(async (req, res) => {
   const approve = req.body.approve !== false;
-  const field = await fieldService.verifyField(req.params.id, { approve, note: req.body.note });
+  const field = await fieldService.verifyField(req.params.id, { approve, note: req.body.note }, req.user.id);
   sendSuccess(res, { field }, approve ? 'Field approved' : 'Field rejected');
 });
 

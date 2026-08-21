@@ -12,15 +12,19 @@ jest.mock('../../src/config/cloudinary', () => ({
   uploadMultipleImages: jest.fn().mockResolvedValue([{ url: 'https://cdn/san.jpg' }]),
   deleteImage: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../../src/services/adminAuditLog.service');
 
 const Field = require('../../src/models/Field');
 const Booking = require('../../src/models/Booking');
 const billingService = require('../../src/services/billing.service');
+const adminAuditLogService = require('../../src/services/adminAuditLog.service');
 const fieldService = require('../../src/services/field.service');
 const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');
 const { AppError } = require('../../src/middleware/errorHandler');
+const { AdminAction, AdminTargetType } = require('../../src/constants/adminAudit');
 
 const OWNER_ID = '000000000000000000000002';
+const ADMIN_ID = '000000000000000000000009';
 const FIELD_ID = '000000000000000000000010';
 const SUB_FIELD_ID = '000000000000000000000011';
 
@@ -316,12 +320,15 @@ describe('verifyField', () => {
   });
 
   it('duyệt thì sân được xác thực và mở bán', async () => {
-    await fieldService.verifyField(FIELD_ID, { approve: true, note: 'Đủ hồ sơ' });
+    await fieldService.verifyField(FIELD_ID, { approve: true, note: 'Đủ hồ sơ' }, ADMIN_ID);
 
     expect(Field.findByIdAndUpdate).toHaveBeenCalledWith(
       FIELD_ID,
       expect.objectContaining({ isVerified: true, status: 'active' }),
       { new: true }
+    );
+    expect(adminAuditLogService.record).toHaveBeenCalledWith(
+      ADMIN_ID, AdminAction.FIELD_VERIFIED, AdminTargetType.FIELD, FIELD_ID, expect.any(Object)
     );
   });
 
