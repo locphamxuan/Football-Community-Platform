@@ -149,6 +149,27 @@ describe('khu chủ sân', () => {
     const res = await request(app).get(`/api/v1/bookings/field/${FIELD_ID}`).set(asUser());
     expect(res.status).toBe(403);
   });
+
+  it('GET /field/:fieldId trả lịch đặt của sân đó', async () => {
+    bookingService.getFieldBookings.mockResolvedValue(emptyPage);
+
+    const res = await request(app).get(`/api/v1/bookings/field/${FIELD_ID}`).set(asOwner());
+
+    expect(res.status).toBe(200);
+    expect(bookingService.getFieldBookings).toHaveBeenCalledWith(FIELD_ID, USER_ID, expect.any(Object), false);
+  });
+});
+
+describe('GET /api/v1/bookings/:id', () => {
+  it('trả chi tiết một đơn đặt sân', async () => {
+    bookingService.getBookingById.mockResolvedValue({ _id: BOOKING_ID, status: 'confirmed' });
+
+    const res = await request(app).get(`/api/v1/bookings/${BOOKING_ID}`).set(asUser());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.booking._id).toBe(BOOKING_ID);
+    expect(bookingService.getBookingById).toHaveBeenCalledWith(BOOKING_ID, USER_ID, false);
+  });
 });
 
 describe('vòng đời một đơn đặt sân', () => {
