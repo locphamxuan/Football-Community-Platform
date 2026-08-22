@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MatchRequest } from '@fcp/shared';
 import { Badge, Button, Card, EmptyState, ErrorState, Loading, TextField } from '../components/ui';
 import ChipRow from '../components/ChipRow';
+import MessageContextButton from '../components/MessageContextButton';
 import RequireAuth from '../components/RequireAuth';
 import { matchRequestService } from '../services/team.service';
+import { useAuth } from '../lib/auth';
 import { messageOf } from '../lib/errors';
 import { MATCH_STATUS_LABELS, formatSlot } from '../domain/format';
 import { colors, fontSize, spacing, type StatusTone } from '../theme';
@@ -24,6 +26,14 @@ const FILTERS = [
   { value: 'accepted', label: 'Đã nhận lời' },
   { value: 'completed', label: 'Hoàn thành' },
 ];
+
+/** Ai đang xem màn này là quản lý của đội nào — người kia là bên nhận tin nhắn. */
+const otherManagerOf = (request: MatchRequest, myId?: string) => {
+  if (!myId) return undefined;
+  if (request.requesterTeam.manager === myId) return request.opponentTeam.manager;
+  if (request.opponentTeam.manager === myId) return request.requesterTeam.manager;
+  return undefined;
+};
 
 function ScoreForm({
   request,
@@ -78,12 +88,14 @@ function ScoreForm({
 
 function RequestCard({
   request,
+  otherManagerId,
   onRespond,
   onCancel,
   onSubmitResult,
   busy,
 }: {
   request: MatchRequest;
+  otherManagerId?: string;
   onRespond: (accept: boolean) => void;
   onCancel: () => void;
   onSubmitResult: (scores: { requesterScore: number; opponentScore: number }) => void;
@@ -143,12 +155,23 @@ function RequestCard({
       {request.status === 'accepted' && showScore && (
         <ScoreForm request={request} onSubmit={onSubmitResult} submitting={busy} />
       )}
+
+      {!!otherManagerId && (
+        <View style={styles.actions}>
+          <MessageContextButton
+            recipientId={otherManagerId}
+            contextType="match_request"
+            contextRef={request._id}
+          />
+        </View>
+      )}
     </Card>
   );
 }
 
 function RequestList() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [status, setStatus] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -209,6 +232,7 @@ function RequestList() {
           renderItem={({ item }) => (
             <RequestCard
               request={item}
+              otherManagerId={otherManagerOf(item, user?.id)}
               busy={busyId === item._id}
               onRespond={(accept) => {
                 setBusyId(item._id);

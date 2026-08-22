@@ -112,7 +112,7 @@ export interface Field {
 // ── Booking ──────────────────────────────────────────────────────────────────
 export interface Booking {
   _id: string;
-  field: Pick<Field, '_id' | 'name' | 'location' | 'images' | 'pricing'>;
+  field: Pick<Field, '_id' | 'name' | 'location' | 'images' | 'pricing'> & { owner: string };
   subField: string;
   user: Pick<User, 'id' | 'username' | 'fullName' | 'avatar' | 'phone'>;
   date: string;
@@ -216,8 +216,8 @@ export interface Team {
 // ── MatchRequest ──────────────────────────────────────────────────────────────
 export interface MatchRequest {
   _id: string;
-  requesterTeam: Pick<Team, '_id' | 'name' | 'logo' | 'slug'> & { stats: { eloRating: number } };
-  opponentTeam: Pick<Team, '_id' | 'name' | 'logo' | 'slug'> & { stats: { eloRating: number } };
+  requesterTeam: Pick<Team, '_id' | 'name' | 'logo' | 'slug'> & { stats: { eloRating: number }; manager: string };
+  opponentTeam: Pick<Team, '_id' | 'name' | 'logo' | 'slug'> & { stats: { eloRating: number }; manager: string };
   requestedBy: Pick<User, 'id' | 'username' | 'fullName' | 'avatar'>;
   field?: Pick<Field, '_id' | 'name' | 'location' | 'images'>;
   date: string;

@@ -10,8 +10,8 @@ const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 
 const populateOptions = [
-  { path: 'requesterTeam', select: 'name logo slug stats.eloRating' },
-  { path: 'opponentTeam', select: 'name logo slug stats.eloRating' },
+  { path: 'requesterTeam', select: 'name logo slug stats.eloRating manager' },
+  { path: 'opponentTeam', select: 'name logo slug stats.eloRating manager' },
   { path: 'requestedBy', select: 'username fullName avatar' },
   { path: 'field', select: 'name location images' },
 ];

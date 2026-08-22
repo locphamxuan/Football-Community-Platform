@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import MessageContextButton from '@/components/chat/MessageContextButton';
 import fieldService from '@/services/field.service';
 import reviewService from '@/services/review.service';
 import useAuthStore from '@/stores/authStore';
@@ -46,7 +47,7 @@ const SURFACE_LABELS: Record<string, string> = {
 
 export default function FieldDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const qc = useQueryClient();
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -369,18 +370,27 @@ export default function FieldDetailPage({ params }: { params: Promise<{ id: stri
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm font-medium mb-2">Chủ sân</p>
-              <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                  {field.owner.fullName?.[0] ?? '?'}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    {field.owner.fullName?.[0] ?? '?'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{field.owner.fullName}</p>
+                    {field.owner.phone && (
+                      <a href={`tel:${field.owner.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+                        <Phone className="h-3 w-3" /> {field.owner.phone}
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{field.owner.fullName}</p>
-                  {field.owner.phone && (
-                    <a href={`tel:${field.owner.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
-                      <Phone className="h-3 w-3" /> {field.owner.phone}
-                    </a>
-                  )}
-                </div>
+                {isAuthenticated && user?.id !== field.owner.id && (
+                  <MessageContextButton
+                    recipientId={field.owner.id}
+                    contextType="field"
+                    contextRef={field._id}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

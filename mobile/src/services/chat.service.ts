@@ -1,4 +1,6 @@
-import type { ChatMessage, ChatParticipantProfile, Conversation, ConversationType } from '@fcp/shared';
+import type {
+  ChatMessage, ChatParticipantProfile, Conversation, ConversationContextType, ConversationType,
+} from '@fcp/shared';
 import { authFetch } from '../lib/authFetch';
 import { toQueryString } from './field.service';
 
@@ -38,6 +40,20 @@ export const chatService = {
     authFetch<{ conversation: Conversation }>('/chat/conversations', {
       method: 'POST',
       body: { recipientId },
+    }),
+
+  /**
+   * Mở (hoặc lấy lại) hội thoại gắn với một ngữ cảnh — sân, lịch đặt, hay lời mời thi đấu.
+   * Backend tự kiểm hai bên có đúng là các bên liên quan tới ngữ cảnh đó không.
+   */
+  openConversation: (payload: {
+    recipientId: string;
+    contextType: ConversationContextType;
+    contextRef: string;
+  }) =>
+    authFetch<{ conversation: Conversation }>('/chat/conversations', {
+      method: 'POST',
+      body: payload,
     }),
 
   createGroup: (payload: { name: string; memberIds: string[] }) =>

@@ -14,15 +14,26 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import MessageContextButton from '@/components/chat/MessageContextButton';
 import matchRequestService from '@/services/matchRequest.service';
+import useAuthStore from '@/stores/authStore';
 import { MATCH_REQUEST_STATUS_LABELS, MATCH_REQUEST_STATUS_COLORS } from '@/lib/constants';
 import type { MatchRequest } from '@/types';
 import { toast } from 'sonner';
 import { Swords, Calendar, Clock, Trophy, CheckCircle, XCircle } from 'lucide-react';
 
+/** Ai đang xem trang này là quản lý của đội nào — người kia là bên nhận tin nhắn. */
+const otherManagerOf = (req: MatchRequest, myId?: string) => {
+  if (!myId) return undefined;
+  if (req.requesterTeam.manager === myId) return req.opponentTeam.manager;
+  if (req.opponentTeam.manager === myId) return req.requesterTeam.manager;
+  return undefined;
+};
+
 export default function MatchRequestsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [resultDialog, setResultDialog] = useState<{ open: boolean; request: MatchRequest | null }>({ open: false, request: null });
   const [scores, setScores] = useState({ requesterScore: 0, opponentScore: 0 });
 
@@ -82,7 +93,9 @@ export default function MatchRequestsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {requests.map((req) => (
+          {requests.map((req) => {
+            const otherManagerId = otherManagerOf(req, user?.id);
+            return (
             <Card key={req._id}>
               <CardContent className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -136,6 +149,14 @@ export default function MatchRequestsPage() {
                         <Trophy className="h-3 w-3 mr-1" />Nhập kết quả
                       </Button>
                     )}
+                    {otherManagerId && (
+                      <MessageContextButton
+                        recipientId={otherManagerId}
+                        contextType="match_request"
+                        contextRef={req._id}
+                        label="Nhắn tin"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -144,7 +165,8 @@ export default function MatchRequestsPage() {
                 )}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 

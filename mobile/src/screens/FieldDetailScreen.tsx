@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import type { Review } from '@fcp/shared';
 import { Badge, Button, Card, DetailRow, ErrorState, Loading } from '../components/ui';
+import MessageContextButton from '../components/MessageContextButton';
 import { fieldService } from '../services/field.service';
 import { reviewService } from '../services/user.service';
+import { useAuth } from '../lib/auth';
 import { messageOf } from '../lib/errors';
 import { formatDate, formatPrice } from '../domain/format';
 import { colors, fontSize, spacing } from '../theme';
@@ -35,6 +37,7 @@ function ReviewRow({ review }: { review: Review }) {
 }
 
 export default function FieldDetailScreen({ fieldId: id }: { fieldId: string }) {
+  const { user } = useAuth();
   const fieldQuery = useQuery({
     queryKey: ['field', id],
     queryFn: () => fieldService.getById(id),
@@ -115,6 +118,22 @@ export default function FieldDetailScreen({ fieldId: id }: { fieldId: string }) 
             ))}
           </Card>
 
+          {field.owner && (
+            <Card>
+              <Text style={styles.sectionTitle}>Chủ sân</Text>
+              <DetailRow label="Tên" value={field.owner.fullName ?? '—'} />
+              {user && user.id !== field.owner.id && (
+                <View style={styles.action}>
+                  <MessageContextButton
+                    recipientId={field.owner.id}
+                    contextType="field"
+                    contextRef={field._id}
+                  />
+                </View>
+              )}
+            </Card>
+          )}
+
           <View style={styles.bookAction}>
             <Button
               title={canBook ? 'Đặt sân này' : 'Sân chưa nhận đặt'}
@@ -147,6 +166,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   priceNote: { color: colors.textSubtle, fontSize: fontSize.xs, marginTop: spacing.sm },
+  action: { marginTop: spacing.md },
   bookAction: { marginBottom: spacing.xl },
   muted: { color: colors.textMuted },
   reviewHead: { flexDirection: 'row', justifyContent: 'space-between' },

@@ -1,6 +1,6 @@
 import api from './api';
 import type {
-  ApiResponse, ChatMessage, Conversation, ConversationType,
+  ApiResponse, ChatMessage, Conversation, ConversationContextType, ConversationType,
 } from '@/types';
 
 export interface ConversationFilters {
@@ -33,6 +33,17 @@ const chatService = {
   /** Mở (hoặc lấy lại) hội thoại tay đôi với một người. */
   openDirect: (recipientId: string) =>
     api.post<ApiResponse<{ conversation: Conversation }>>('/chat/conversations', { recipientId }),
+
+  /**
+   * Mở (hoặc lấy lại) hội thoại gắn với một ngữ cảnh — sân, lịch đặt, hay lời mời thi đấu.
+   * Backend tự kiểm hai bên có đúng là các bên liên quan tới ngữ cảnh đó không.
+   */
+  openConversation: (payload: {
+    recipientId: string;
+    contextType: ConversationContextType;
+    contextRef: string;
+  }) =>
+    api.post<ApiResponse<{ conversation: Conversation }>>('/chat/conversations', payload),
 
   createGroup: (payload: { name: string; memberIds: string[] }) =>
     api.post<ApiResponse<{ conversation: Conversation }>>('/chat/groups', payload),

@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import chatService, { type ConversationFilters } from '@/services/chat.service';
 import { getChatSocket } from '@/lib/socket';
 import type {
-  ChatMessage, Conversation, ConversationUpdatedEvent, NewMessageEvent, TypingEvent,
+  ChatMessage, Conversation, ConversationContextType, ConversationUpdatedEvent, NewMessageEvent,
+  TypingEvent,
 } from '@/types';
 
 export const CHAT_KEY = ['chat'];
@@ -96,6 +97,17 @@ export const useOpenDirect = () => {
 
   return useMutation({
     mutationFn: (recipientId: string) => chatService.openDirect(recipientId),
+    onSuccess: invalidate,
+  });
+};
+
+/** Nút "nhắn tin" gắn ngữ cảnh (sân / lịch đặt / lời mời thi đấu) dùng chung một hook này. */
+export const useOpenConversation = () => {
+  const invalidate = useChatInvalidator();
+
+  return useMutation({
+    mutationFn: (payload: { recipientId: string; contextType: ConversationContextType; contextRef: string }) =>
+      chatService.openConversation(payload),
     onSuccess: invalidate,
   });
 };
