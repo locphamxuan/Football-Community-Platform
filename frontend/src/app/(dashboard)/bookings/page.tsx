@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import MessageContextButton from '@/components/chat/MessageContextButton';
 import bookingService from '@/services/booking.service';
 import { formatDateLong, formatPrice } from '@/lib/format';
 import type { ApiResponse, Booking } from '@/types';
@@ -114,16 +115,24 @@ export default function MyBookingsPage() {
                   {/* Right: price + action */}
                   <div className="flex flex-col items-end gap-2">
                     <span className="font-bold text-primary text-lg">{formatPrice(booking.totalPrice)}</span>
-                    {['pending', 'confirmed'].includes(booking.status) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => setCancelDialog({ open: true, bookingId: booking._id })}
-                      >
-                        Huỷ đặt sân
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <MessageContextButton
+                        recipientId={booking.field.owner}
+                        contextType="booking"
+                        contextRef={booking._id}
+                        label="Nhắn chủ sân"
+                      />
+                      {['pending', 'confirmed'].includes(booking.status) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => setCancelDialog({ open: true, bookingId: booking._id })}
+                        >
+                          Huỷ đặt sân
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
