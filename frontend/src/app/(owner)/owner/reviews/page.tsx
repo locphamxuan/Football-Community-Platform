@@ -16,9 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import StarRating from '@/components/reviews/StarRating';
 import reviewService from '@/services/review.service';
 import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import type { ApiResponse, OwnerReview } from '@/types';
 
 const PAGE_SIZE = 10;
@@ -195,19 +195,5 @@ export default function OwnerReviewsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function StarRating({ value }: { value: number }) {
-  return (
-    <span className="flex items-center gap-0.5" aria-label={`${value} trên 5 sao`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={cn('size-4', i < value ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40')}
-          aria-hidden
-        />
-      ))}
-    </span>
   );
 }
