@@ -15,8 +15,10 @@ codegraph init                       # tại thư mục gốc repo — dựng .c
 codegraph install --target claude     # nối MCP server vào Claude Code
 ```
 
-`codegraph init` đã chạy cho repo này: 190 file, ~1.966 node, ~4.985 cạnh. Sau lần đầu,
-index tự đồng bộ qua file watcher của hệ điều hành.
+`codegraph init` đã chạy cho repo này (270 file, ~2.783 node, ~7.515 cạnh tính tới
+2026-08-22 — con số này chỉ để biết quy mô, không cần theo dõi chính xác). Sau lần đầu,
+index tự đồng bộ qua file watcher của hệ điều hành; `codegraph status` báo "up to date"
+nếu watcher vẫn sống, còn nghi ngờ thì `codegraph sync` chạy tay cũng được.
 
 ## Những gì đã đưa vào repo
 
