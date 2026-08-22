@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Booking } from '@fcp/shared';
 import { Badge, Button, Card, EmptyState, ErrorState, Loading, TextField } from '../components/ui';
 import ChipRow from '../components/ChipRow';
+import MessageContextButton from '../components/MessageContextButton';
 import RequireAuth from '../components/RequireAuth';
 import ReviewDialog from '../components/ReviewDialog';
 import { bookingService } from '../services/booking.service';
@@ -55,6 +56,17 @@ function BookingCard({
       <Text style={styles.price}>{formatPrice(booking.totalPrice)}</Text>
       {!!booking.cancelReason && (
         <Text style={styles.reason}>Lý do huỷ: {booking.cancelReason}</Text>
+      )}
+
+      {!!booking.field?.owner && (
+        <View style={styles.action}>
+          <MessageContextButton
+            recipientId={booking.field.owner}
+            contextType="booking"
+            contextRef={booking._id}
+            label="Nhắn chủ sân"
+          />
+        </View>
       )}
 
       {isCancellable(booking) && (
