@@ -201,7 +201,7 @@ const getMyBookings = async (userId, query) => {
   if (query.endDate) filter.date = { ...(filter.date || {}), $lt: dayRangeUtc(query.endDate).end };
 
   const [bookings, total] = await Promise.all([
-    Booking.find(filter).populate('field', 'name location images').skip(skip).limit(limit).sort('-createdAt'),
+    Booking.find(filter).populate('field', 'name location images owner').skip(skip).limit(limit).sort('-createdAt'),
     Booking.countDocuments(filter),
   ]);
   return { bookings, total, page, limit };
