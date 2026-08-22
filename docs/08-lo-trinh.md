@@ -113,10 +113,13 @@ Mobile có tab "Tin nhắn" với đúng bộ màn hình ấy, cộng màn hình
 `chat_message` mở thẳng đúng hội thoại. Tìm người để nhắn qua `GET /users/search`, đã lọc sẵn
 admin và tài khoản bị khoá.
 
-**Còn lại.** Nút "nhắn tin" đặt trong ngữ cảnh — ở trang sân, lịch đặt và lời mời thi đấu.
-Backend đã nhận `contextType`/`contextRef` từ đầu và có luật riêng cho từng loại, nhưng chưa
-màn hình nào gửi lên: hiện mọi hội thoại client mở đều là `direct`. Đây là phần khiến chat gắn
-vào việc đang làm thay vì là một hộp thư rời.
+**✅ Đã xong — nút "nhắn tin" theo ngữ cảnh.** Trang chi tiết sân (web + mobile) có nút nhắn chủ
+sân (`contextType: 'field'`); trang lịch đặt của người chơi có nút nhắn chủ sân của đúng lịch đó
+(`booking`); trang lời mời thi đấu có nút nhắn quản lý đội đối phương, chỉ hiện khi người xem
+đúng là quản lý một trong hai đội (`match_request`). Mỗi nút gọi lại đúng
+`POST /chat/conversations` đã có, rồi điều hướng thẳng tới hội thoại. Backend populate thêm
+`field.owner` trên `GET /bookings/my-bookings` và `manager` trên hai đội của `MatchRequest` để
+client biết ai là người nhận — trước đó các endpoint này không trả đủ id để dựng nút.
 
 **Chưa làm, có chủ đích.** Gửi ảnh trong tin nhắn, xoá / thu hồi tin nhắn, chặn người dùng.
 Mỗi cái là một quyết định riêng chứ không phải phần còn thiếu của cái đã làm — đặc biệt là chặn

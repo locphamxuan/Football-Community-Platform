@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-21
+> Cập nhật lần cuối: 2026-08-22
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -88,6 +88,14 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Web: hộp thư `/chat`, khung hội thoại, hộp thoại tạo mới/tạo nhóm, lối vào trên navbar kèm số chưa đọc.
 - Mobile: tab "Tin nhắn" (hộp thư, khung chat, tạo mới, thông tin nhóm); thông báo `chat_message` mở thẳng đúng hội thoại.
 
+**Nút "nhắn tin" theo ngữ cảnh** (nhánh `feature/chat-context-entry-points`)
+- Trang chi tiết sân, trang lịch đặt và trang lời mời thi đấu (web + mobile) đều có nút nhắn tin
+  đúng đối tượng, gắn `contextType`/`contextRef` mà backend đã hỗ trợ sẵn từ trước.
+- `GET /bookings/my-bookings` populate thêm `field.owner`; hai đội trong `MatchRequest` populate
+  thêm `manager` — trước đó hai response này thiếu id để client biết nhắn cho ai.
+- Nút lời mời thi đấu chỉ hiện khi người xem đúng là quản lý một trong hai đội (so `manager` với
+  id người đang đăng nhập); không phải quản lý thì không có quyền mở hội thoại đó (backend chặn).
+
 **Access token chuyển sang cookie httpOnly cho web** (nhánh `security/access-token-httponly-cookie`)
 - Web không còn nhận `accessToken` trong response body — cả access lẫn refresh token đều là
   cookie `httpOnly` do backend đặt lúc login/refresh. `authStore` không giữ token nữa, `api.ts`
@@ -122,17 +130,14 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
-- **Chat chưa gắn vào ngữ cảnh.** Backend nhận `contextType`/`contextRef` (`booking`, `match_request`, `field`) và có luật riêng cho từng loại từ đầu, nhưng chưa màn hình nào gửi lên — mọi hội thoại client mở đều là `direct`. Việc còn lại là nút "nhắn tin" ở trang sân, lịch đặt và lời mời thi đấu, trên cả web lẫn mobile.
 - Mobile còn thiếu **tạo/sửa sân**, **đổi gói thuê bao** và **toàn bộ khu admin** — cố ý để trên web vì cần màn hình rộng (biểu mẫu ảnh + bảng giá + sân con, bảng đối soát).
-- Chưa mở PR cho tám nhánh `feature/role-dashboards-and-billing`, `chore/testing-and-mobile-workspace`, `feature/codegraph-tests-redis-docs`, `feature/notifications`, `feature/mobile-app`, `feature/fullstack-notification-preferences`, `feature/mobile-owner-screens`, `feature/chat-group-web-mobile` (nhánh sau xây trên nhánh trước).
 
 ## Việc nên làm tiếp
 
-Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Ba việc đầu bảng:
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Hai việc đầu bảng:
 
-1. Nút "nhắn tin" trong ngữ cảnh (sân / lịch đặt / lời mời thi đấu) — phần khiến chat gắn vào việc đang làm thay vì là một hộp thư rời.
-2. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
-3. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
+1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
+2. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 
