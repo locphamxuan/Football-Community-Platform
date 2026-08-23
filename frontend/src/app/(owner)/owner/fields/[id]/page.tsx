@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import FieldForm from '@/components/owner/FieldForm';
+import FieldPriceOverrides from '@/components/owner/FieldPriceOverrides';
+import FieldPromotions from '@/components/owner/FieldPromotions';
 import SubFieldManager from '@/components/owner/SubFieldManager';
 import fieldService from '@/services/field.service';
 import { FIELD_STATUS_COLORS, FIELD_STATUS_LABELS } from '@/lib/constants';
@@ -142,6 +144,8 @@ export default function EditFieldPage({ params }: { params: Promise<{ id: string
       </Card>
 
       <SubFieldManager field={field} />
+      <FieldPriceOverrides field={field} />
+      <FieldPromotions field={field} />
 
       <div>
         <h2 className="mb-3 font-heading text-xl font-semibold">Thông tin sân</h2>
