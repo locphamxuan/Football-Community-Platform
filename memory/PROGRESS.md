@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-22
+> Cập nhật lần cuối: 2026-08-23
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -127,6 +127,18 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Đã áp các bản vá không phá API (`npm audit fix`, không `--force`) cho backend và frontend —
   xem "Việc nên làm tiếp" cho phần còn lại cần nâng bản major.
 
+**Giá linh hoạt và khuyến mãi cho chủ sân** (nhánh `feature/flexible-pricing-promotions`)
+- `Field.priceOverrides` (ghi đè bảng giá cho một khoảng ngày — lễ/Tết, mùa cao điểm) và
+  `Field.promotions` (mã giảm giá theo % hoặc số tiền cố định, giới hạn được theo khung giờ,
+  khoảng ngày, số lượt dùng). Chủ sân quản lý ở trang chi tiết sân trên web.
+- Tách `pricing.service.js` (thuần, không chạm DB) khỏi `booking.service.js`: `calcSlotAmounts`
+  là điểm duy nhất làm phép tính overlap-thời-gian × đơn giá; `calcBookingPrice` hợp nhất
+  ghi đè + khuyến mãi trên nền đó — không có nhánh tính giá thứ hai.
+- `GET /fields/:id/price-quote` thay thế ước lượng giá cũ ở phía client trên trang tạo lịch đặt
+  (bản cũ tính sai kiểu "giá giờ bắt đầu × số giờ").
+- CRUD ghi đè/khuyến mãi tách sang `fieldPricing.service.js` — chủ đích tách khỏi
+  `field.service.js` (CRUD sân cốt lõi) theo quy tắc file không phình to trong `CLAUDE.md`.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -134,10 +146,9 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 
 ## Việc nên làm tiếp
 
-Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Hai việc đầu bảng:
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Việc đầu bảng:
 
-1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
-2. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
+1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay trước, MoMo sau) — bỏ khâu admin đối soát tay.
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 

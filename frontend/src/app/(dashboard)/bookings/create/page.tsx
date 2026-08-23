@@ -24,7 +24,7 @@ import SlotPicker from '@/components/bookings/SlotPicker';
 import fieldService from '@/services/field.service';
 import bookingService from '@/services/booking.service';
 import { formatPrice } from '@/lib/format';
-import type { ApiResponse, Field } from '@/types';
+import type { ApiResponse } from '@/types';
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Tiền mặt tại sân' },
@@ -41,15 +41,6 @@ const buildTimeOptions = (open: string, close: string) => {
   return out;
 };
 
-/** Mirror calcPrice backend: giá theo khung giờ BẮT ĐẦU (sáng <12h, chiều <18h, tối) × số giờ. */
-const previewPrice = (field: Field, date: string, startTime: string, duration: number) => {
-  const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
-  const slots = isWeekend ? field.pricing.weekend : field.pricing.weekday;
-  const hour = parseInt(startTime.split(':')[0], 10);
-  const pph = hour < 12 ? slots.morning : hour < 18 ? slots.afternoon : slots.evening;
-  return pph * duration;
-};
-
 function CreateBookingContent() {
   const router = useRouter();
   const fieldId = useSearchParams().get('fieldId') ?? '';
@@ -61,6 +52,7 @@ function CreateBookingContent() {
   const [subFieldId, setSubFieldId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('cash');
   const [notes, setNotes] = useState('');
+  const [promoCode, setPromoCode] = useState('');
 
   const { data: fieldRes, isPending: fieldLoading } = useQuery({
     queryKey: ['field', fieldId],
@@ -96,11 +88,24 @@ function CreateBookingContent() {
     ? (parseInt(endTime.slice(0, 2), 10) * 60 + parseInt(endTime.slice(3), 10)
         - parseInt(startTime.slice(0, 2), 10) * 60 - parseInt(startTime.slice(3), 10)) / 60
     : 0;
-  const estimatedPrice = field && timesChosen ? previewPrice(field, date, startTime, duration) : 0;
+
+  const trimmedPromoCode = promoCode.trim();
+  const { data: quoteRes, isFetching: quoteLoading } = useQuery({
+    queryKey: ['price-quote', fieldId, date, startTime, endTime, trimmedPromoCode],
+    queryFn: () => fieldService.getPriceQuote(fieldId, {
+      date, startTime, endTime, promoCode: trimmedPromoCode || undefined,
+    }),
+    enabled: Boolean(field) && timesChosen && !startInPast,
+  });
+  const quote = quoteRes?.data?.data;
 
   const create = useMutation({
     mutationFn: () =>
-      bookingService.createBooking({ fieldId, subFieldId, date, startTime, endTime, paymentMethod, notes: notes || undefined }),
+      bookingService.createBooking({
+        fieldId, subFieldId, date, startTime, endTime, paymentMethod,
+        notes: notes || undefined,
+        promoCode: trimmedPromoCode || undefined,
+      }),
     onSuccess: () => {
       toast.success('Đặt sân thành công! Chờ chủ sân xác nhận.');
       router.push('/bookings');
@@ -239,12 +244,37 @@ function CreateBookingContent() {
               </div>
             </div>
 
+            <div className="space-y-1 sm:max-w-xs">
+              <Label htmlFor="promo-code">Mã khuyến mãi (tuỳ chọn)</Label>
+              <Input
+                id="promo-code"
+                placeholder="SALE10"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              />
+              {quote?.promoError && (
+                <p className="text-xs text-destructive">{quote.promoError}</p>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary/5 p-4">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Tạm tính ({duration} giờ, giá theo khung giờ bắt đầu)
-                </p>
-                <p className="font-heading text-2xl font-bold text-primary">{formatPrice(estimatedPrice)}</p>
+                <p className="text-sm text-muted-foreground">Tạm tính ({duration} giờ)</p>
+                {quoteLoading ? (
+                  <Skeleton className="h-8 w-32" />
+                ) : (
+                  <>
+                    {quote && quote.discount > 0 && (
+                      <p className="text-sm text-muted-foreground line-through">{formatPrice(quote.basePrice)}</p>
+                    )}
+                    <p className="font-heading text-2xl font-bold text-primary">
+                      {formatPrice(quote?.totalPrice ?? 0)}
+                    </p>
+                    {quote && quote.discount > 0 && (
+                      <p className="text-sm text-emerald-600">Đã giảm {formatPrice(quote.discount)}</p>
+                    )}
+                  </>
+                )}
               </div>
               <Button size="lg" onClick={() => create.mutate()} disabled={create.isPending}>
                 {create.isPending ? 'Đang đặt...' : 'Xác nhận đặt sân'}

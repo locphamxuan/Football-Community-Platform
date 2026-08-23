@@ -66,6 +66,50 @@ const verifyFieldSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const dateRange = (schema) => schema.refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
+  message: 'endDate must be on or after startDate',
+  path: ['endDate'],
+});
+
+const createPriceOverrideSchema = dateRange(z.object({
+  name: z.string().min(1).max(100),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  weekday: pricingSlot,
+  weekend: pricingSlot,
+}));
+
+const promoValue = z.number().min(0);
+const createPromotionSchema = dateRange(z.object({
+  code: z.string().min(3).max(30).trim(),
+  type: z.enum(['percentage', 'fixed']),
+  value: promoValue,
+  slots: z.array(z.enum(['morning', 'afternoon', 'evening'])).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  maxUses: z.number().int().min(1).optional(),
+}).refine((d) => d.type !== 'percentage' || d.value <= 100, {
+  message: 'Percentage promotion value must be between 0 and 100',
+  path: ['value'],
+}));
+
+const updatePromotionSchema = z.object({
+  type: z.enum(['percentage', 'fixed']).optional(),
+  value: promoValue.optional(),
+  slots: z.array(z.enum(['morning', 'afternoon', 'evening'])).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  active: z.boolean().optional(),
+  maxUses: z.number().int().min(1).optional(),
+});
+
+const priceQuoteQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time HH:mm'),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time HH:mm'),
+  promoCode: z.string().trim().max(30).optional(),
+});
+
 module.exports = {
   createFieldSchema,
   updateFieldSchema,
@@ -73,4 +117,8 @@ module.exports = {
   updateSubFieldSchema,
   availabilityQuerySchema,
   verifyFieldSchema,
+  createPriceOverrideSchema,
+  createPromotionSchema,
+  updatePromotionSchema,
+  priceQuoteQuerySchema,
 };
