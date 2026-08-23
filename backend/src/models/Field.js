@@ -20,6 +20,45 @@ const pricingSlotSchema = new mongoose.Schema(
   { _id: false }
 );
 
+/** Ghi đè giá cho một khoảng ngày cụ thể (lễ/Tết, giá theo mùa) — thay hẳn weekday/weekend gốc. */
+const priceOverrideSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    weekday: { type: pricingSlotSchema, required: true },
+    weekend: { type: pricingSlotSchema, required: true },
+  },
+  { timestamps: true }
+);
+
+/** Mã khuyến mãi của chủ sân — có thể giới hạn theo khung giờ, khoảng ngày và số lượt dùng. */
+const promotionSchema = new mongoose.Schema(
+  {
+    code: { type: String, required: true, trim: true, uppercase: true, maxlength: 30 },
+    type: { type: String, enum: ['percentage', 'fixed'], required: true },
+    value: {
+      type: Number,
+      required: true,
+      min: 0,
+      validate: {
+        validator: function valuePercentageCap(v) {
+          return this.type !== 'percentage' || v <= 100;
+        },
+        message: 'Percentage promotion value must be between 0 and 100',
+      },
+    },
+    // Rỗng = áp dụng cho toàn bộ khung giờ.
+    slots: { type: [{ type: String, enum: ['morning', 'afternoon', 'evening'] }], default: [] },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    active: { type: Boolean, default: true },
+    maxUses: { type: Number, min: 1 },
+    usedCount: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true }
+);
+
 const fieldSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -42,6 +81,8 @@ const fieldSchema = new mongoose.Schema(
       weekday: { type: pricingSlotSchema, required: true },
       weekend: { type: pricingSlotSchema, required: true },
     },
+    priceOverrides: { type: [priceOverrideSchema], default: [] },
+    promotions: { type: [promotionSchema], default: [] },
     operatingHours: {
       open: { type: String, default: '06:00' },
       close: { type: String, default: '23:00' },
