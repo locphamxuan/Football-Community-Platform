@@ -10,6 +10,7 @@ jest.mock('../../src/models/Booking', () => ({
 jest.mock('../../src/models/Field', () => ({
   findById: jest.fn(),
   findByIdAndUpdate: jest.fn(),
+  updateOne: jest.fn(),
 }));
 jest.mock('../../src/models/Team', () => ({ findOne: jest.fn() }));
 
@@ -262,6 +263,7 @@ describe('createBooking', () => {
 
   beforeEach(() => {
     Field.findById.mockResolvedValue(makeField());
+    Field.updateOne.mockResolvedValue({ modifiedCount: 1 });
     Booking.countDocuments.mockResolvedValue(0);
     Booking.create.mockResolvedValue({ _id: BOOKING_ID, deleteOne: jest.fn().mockResolvedValue(undefined) });
   });
@@ -371,6 +373,37 @@ describe('createBooking', () => {
     expect(recipient).toBe(OWNER_ID);
     expect(payload).toMatchObject({ type: 'booking_created', link: '/owner/bookings' });
     expect(actorId).toBe(BOOKER_ID);
+  });
+
+  it('mã khuyến mãi hợp lệ giảm đúng giá và tăng lượt dùng sau khi tạo', async () => {
+    const promo = {
+      code: 'SALE10', type: 'percentage', value: 10, slots: [],
+      startDate: '2020-01-01', endDate: '2099-01-01', active: true, usedCount: 0,
+    };
+    Field.findById.mockResolvedValue(makeField({ promotions: [promo] }));
+    Booking.findById.mockReturnValue({ populate: () => Promise.resolve({ _id: BOOKING_ID }) });
+    const data = validData({ startTime: '10:00', endTime: '11:00', promoCode: 'sale10' });
+    const isWeekend = [0, 6].includes(new Date(data.date).getUTCDay());
+    const basePrice = isWeekend ? 120000 : 100000;
+
+    await bookingService.createBooking(BOOKER_ID, data);
+
+    expect(Booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      totalPrice: basePrice - Math.round(basePrice * 0.1),
+      basePrice,
+      discount: Math.round(basePrice * 0.1),
+      promoCode: 'SALE10',
+    }));
+    expect(Field.updateOne).toHaveBeenCalledWith(
+      { _id: FIELD_ID, 'promotions.code': 'SALE10' },
+      { $inc: { 'promotions.$.usedCount': 1 } }
+    );
+  });
+
+  it('mã khuyến mãi sai thì báo 400, không tạo booking', async () => {
+    await expect(bookingService.createBooking(BOOKER_ID, validData({ promoCode: 'KHONGTONTAI' })))
+      .rejects.toMatchObject({ statusCode: 400, code: 'PROMO_CODE_INVALID' });
+    expect(Booking.create).not.toHaveBeenCalled();
   });
 
   it('đặt hộ đội mà mình là thành viên thì thành công', async () => {

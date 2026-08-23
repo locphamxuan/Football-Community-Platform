@@ -13,6 +13,7 @@ const createBookingSchema = z
     teamId: z.string().optional(),
     notes: z.string().max(500).optional(),
     paymentMethod: z.enum(['cash', 'bank_transfer', 'online']).optional(),
+    promoCode: z.string().trim().max(30).optional(),
   })
   .refine((d) => d.startTime < d.endTime, { message: 'End time must be after start time', path: ['endTime'] });
 

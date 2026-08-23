@@ -4,9 +4,12 @@ const Field = require('../models/Field');
 const Team = require('../models/Team');
 const { getPagination } = require('../utils/pagination');
 const { cache, CacheKeys } = require('../config/redis');
-const { formatSlotLabel } = require('../utils/datetime');
+const { formatSlotLabel, toMinutes } = require('../utils/datetime');
 const { notify } = require('./notification.service');
 const { NotificationType } = require('../constants/notifications');
+const {
+  calcDuration, calcPrice, resolvePricingForDate, calcBookingPrice,
+} = require('./pricing.service');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
@@ -15,19 +18,6 @@ const ErrorCode = require('../constants/errorCodes');
 const CANCEL_WINDOW_HOURS = 2;
 const MIN_DURATION_HOURS = 0.5;
 const MAX_DURATION_HOURS = 6;
-
-// Ba khung giá trong ngày, tính theo phút kể từ 00:00.
-const PRICE_SLOTS = [
-  { key: 'morning', from: 0, to: 12 * 60 },
-  { key: 'afternoon', from: 12 * 60, to: 18 * 60 },
-  { key: 'evening', from: 18 * 60, to: 24 * 60 },
-];
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-const toMinutes = (time) => {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-};
 
 /**
  * Khoảng [00:00, 24:00) UTC của một ngày.
@@ -40,24 +30,24 @@ const dayRangeUtc = (dateInput) => {
   return { start, end: new Date(start.getTime() + 86400000) };
 };
 
-const calcDuration = (start, end) => (toMinutes(end) - toMinutes(start)) / 60;
-
 /**
- * Giá được chia theo phần thời gian thực nằm trong từng khung giá.
- * Đặt 17:00–20:00 phải tính 1h giá chiều + 2h giá tối, không phải 3h giá chiều.
+ * Báo giá trước khi đặt (không ghi gì vào DB) — nguồn sự thật duy nhất cho ô xem giá phía
+ * client, thay vì để frontend tự ước lượng lại logic tính giá.
+ * Mã khuyến mãi sai/hết hạn không làm hỏng cả báo giá — trả về giá gốc kèm `promoError`.
  */
-const calcPrice = (pricing, date, startTime, endTime) => {
-  const isWeekend = [0, 6].includes(new Date(date).getUTCDay());
-  const rates = isWeekend ? pricing.weekend : pricing.weekday;
-  const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
+const previewBookingPrice = async (fieldId, date, startTime, endTime, promoCode) => {
+  const field = await Field.findById(fieldId).select('pricing priceOverrides promotions');
+  if (!field) throw new AppError('Field not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
-  const total = PRICE_SLOTS.reduce((sum, slot) => {
-    const overlap = Math.min(end, slot.to) - Math.max(start, slot.from);
-    return overlap > 0 ? sum + (rates[slot.key] * overlap) / 60 : sum;
-  }, 0);
-
-  return Math.round(total);
+  try {
+    return calcBookingPrice(field, date, startTime, endTime, promoCode);
+  } catch (err) {
+    if (err instanceof AppError && err.code === ErrorCode.PROMO_CODE_INVALID) {
+      const basePrice = calcPrice(resolvePricingForDate(field, date), date, startTime, endTime);
+      return { totalPrice: basePrice, basePrice, discount: 0, promoCode: null, promoError: err.message };
+    }
+    throw err;
+  }
 };
 
 const isSlotFree = async (subFieldId, date, startTime, endTime, excludeId) => {
@@ -144,7 +134,9 @@ const createBooking = async (userId, data) => {
   const free = await isSlotFree(data.subFieldId, bookingDate, data.startTime, data.endTime);
   if (!free) throw new AppError('This time slot is already booked', HttpStatus.CONFLICT, ErrorCode.SLOT_NOT_AVAILABLE);
 
-  const totalPrice = calcPrice(field.pricing, bookingDate, data.startTime, data.endTime);
+  const { totalPrice, basePrice, discount, promoCode } = calcBookingPrice(
+    field, bookingDate, data.startTime, data.endTime, data.promoCode
+  );
 
   const booking = await Booking.create({
     field: field._id,
@@ -156,6 +148,9 @@ const createBooking = async (userId, data) => {
     endTime: data.endTime,
     duration,
     totalPrice,
+    basePrice,
+    discount,
+    promoCode,
     notes: data.notes || '',
     paymentMethod: data.paymentMethod || 'cash',
   });
@@ -165,6 +160,14 @@ const createBooking = async (userId, data) => {
   if (!stillFree) {
     await booking.deleteOne();
     throw new AppError('This time slot has just been booked by someone else', HttpStatus.CONFLICT, ErrorCode.SLOT_NOT_AVAILABLE);
+  }
+
+  // Chỉ tính lượt dùng sau khi chắc chắn booking không bị rollback ở bước kiểm tra lại phía trên
+  if (promoCode) {
+    await Field.updateOne(
+      { _id: field._id, 'promotions.code': promoCode },
+      { $inc: { 'promotions.$.usedCount': 1 } }
+    );
   }
 
   await invalidateAvailability(field._id, bookingDate);
@@ -551,5 +554,8 @@ module.exports = {
   createBooking, getBookingById, getMyBookings, getTeamBookings, getFieldBookings,
   getOwnerBookings, getOwnerStats, getOwnerRevenueSeries,
   cancelBooking, confirmBooking, completeBooking, markNoShow,
-  calcPrice, calcDuration, dayRangeUtc,
+  dayRangeUtc, previewBookingPrice,
+  // Re-exported từ pricing.service.js để giữ tương thích ngược cho code/test đang
+  // `require('./booking.service')` để lấy các hàm tính giá — không định nghĩa lại ở đây.
+  calcPrice, calcDuration, resolvePricingForDate, calcBookingPrice,
 };
