@@ -30,6 +30,7 @@ export interface CreateBookingPayload {
   teamId?: string;
   notes?: string;
   paymentMethod?: 'cash' | 'bank_transfer' | 'online';
+  promoCode?: string;
 }
 
 const bookingService = {
