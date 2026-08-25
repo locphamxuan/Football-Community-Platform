@@ -77,6 +77,41 @@ export interface SubField {
   status: 'available' | 'maintenance' | 'closed';
 }
 
+/** Ghi đè giá cho một khoảng ngày cụ thể (lễ/Tết, giá theo mùa) — thay hẳn weekday/weekend gốc. */
+export interface PriceOverride {
+  _id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  weekday: { morning: number; afternoon: number; evening: number };
+  weekend: { morning: number; afternoon: number; evening: number };
+}
+
+/** Mã khuyến mãi của chủ sân — có thể giới hạn theo khung giờ, khoảng ngày và số lượt dùng. */
+export interface Promotion {
+  _id: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  /** Rỗng = áp dụng cho toàn bộ khung giờ. */
+  slots: ('morning' | 'afternoon' | 'evening')[];
+  startDate: string;
+  endDate: string;
+  active: boolean;
+  maxUses?: number;
+  usedCount: number;
+}
+
+/** Báo giá trước khi đặt — trả về bởi `GET /fields/:id/price-quote`. */
+export interface PriceQuote {
+  totalPrice: number;
+  basePrice: number;
+  discount: number;
+  promoCode: string | null;
+  /** Có mặt khi mã khuyến mãi truyền lên không hợp lệ/hết hạn — báo giá vẫn trả về giá gốc. */
+  promoError?: string;
+}
+
 export interface Field {
   _id: string;
   owner: Pick<User, 'id' | 'username' | 'fullName' | 'avatar' | 'phone'>;
@@ -96,6 +131,8 @@ export interface Field {
     weekday: { morning: number; afternoon: number; evening: number };
     weekend: { morning: number; afternoon: number; evening: number };
   };
+  priceOverrides: PriceOverride[];
+  promotions: Promotion[];
   operatingHours: { open: string; close: string };
   amenities: string[];
   rules: string[];
@@ -120,6 +157,10 @@ export interface Booking {
   endTime: string;
   duration: number;
   totalPrice: number;
+  /** Giá trước khuyến mãi. Vắng mặt trên các booking tạo trước khi có tính năng khuyến mãi. */
+  basePrice?: number;
+  discount?: number;
+  promoCode?: string | null;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   paymentStatus: 'unpaid' | 'paid' | 'refunded';
   paymentMethod: 'cash' | 'bank_transfer' | 'online';

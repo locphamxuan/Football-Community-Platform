@@ -127,6 +127,7 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Đã áp các bản vá không phá API (`npm audit fix`, không `--force`) cho backend và frontend —
   xem "Việc nên làm tiếp" cho phần còn lại cần nâng bản major.
 
+
 **Cổng thanh toán online VNPay cho hoá đơn thuê bao** (nhánh `feature/vnpay-payment-gateway`)
 - `POST /billing/invoices/:id/checkout` tạo link thanh toán; webhook IPN
   (`GET /webhooks/payments/vnpay/ipn`, nằm ngoài `/api`) xác minh chữ ký HMAC-SHA512 và idempotent
@@ -135,6 +136,17 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
   file cài đặt mới, không sửa `billing.service.js`. MoMo **chưa cài đặt**.
 - Đường chuyển khoản thủ công (báo mã giao dịch, admin đối soát) vẫn giữ nguyên làm dự phòng.
 - Chi tiết kiến trúc: [`docs/02-kien-truc.md`](../docs/02-kien-truc.md#thanh-toán-online-provider-abstraction).
+**Giá linh hoạt và khuyến mãi cho chủ sân** (nhánh `feature/flexible-pricing-promotions`)
+- `Field.priceOverrides` (ghi đè bảng giá cho một khoảng ngày — lễ/Tết, mùa cao điểm) và
+  `Field.promotions` (mã giảm giá theo % hoặc số tiền cố định, giới hạn được theo khung giờ,
+  khoảng ngày, số lượt dùng). Chủ sân quản lý ở trang chi tiết sân trên web.
+- Tách `pricing.service.js` (thuần, không chạm DB) khỏi `booking.service.js`: `calcSlotAmounts`
+  là điểm duy nhất làm phép tính overlap-thời-gian × đơn giá; `calcBookingPrice` hợp nhất
+  ghi đè + khuyến mãi trên nền đó — không có nhánh tính giá thứ hai.
+- `GET /fields/:id/price-quote` thay thế ước lượng giá cũ ở phía client trên trang tạo lịch đặt
+  (bản cũ tính sai kiểu "giá giờ bắt đầu × số giờ").
+- CRUD ghi đè/khuyến mãi tách sang `fieldPricing.service.js` — chủ đích tách khỏi
+  `field.service.js` (CRUD sân cốt lõi) theo quy tắc file không phình to trong `CLAUDE.md`.
 
 ## Đang làm / còn dở
 
@@ -148,6 +160,9 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 1. MoMo cho cổng thanh toán (VNPay đã xong — xem "Đã xong" phía trên) — cùng interface
    `payments/provider.interface.js` đã có sẵn.
 2. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Việc đầu bảng:
+
+1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay trước, MoMo sau) — bỏ khâu admin đối soát tay.
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 

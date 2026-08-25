@@ -10,4 +10,10 @@ const formatSlotLabel = (date, startTime, endTime) => {
   return `${d}/${m}/${y} ${startTime}–${endTime}`;
 };
 
-module.exports = { formatSlotLabel };
+/** "18:00" → 1080 (số phút kể từ 00:00). */
+const toMinutes = (time) => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+module.exports = { formatSlotLabel, toMinutes };

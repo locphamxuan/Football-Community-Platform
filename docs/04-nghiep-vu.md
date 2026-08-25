@@ -13,9 +13,45 @@ Mỗi khung có giá riêng cho ngày thường và cuối tuần.
 Đặt 17:00–20:00 **không** phải 3 giờ giá chiều, mà là 1 giờ giá chiều + 2 giờ giá tối.
 Cắt kiểu "lấy giá theo giờ bắt đầu" sẽ khiến khách đặt lúc 17:59 trả giá chiều cho cả buổi tối.
 
-- Cài đặt: `calcPrice` trong `backend/src/services/booking.service.js`
+- Cài đặt: `calcPrice`/`calcSlotAmounts` trong `backend/src/services/pricing.service.js`
 - Cuối tuần xác định theo **UTC** (`getUTCDay`), khớp với cách lưu ngày.
-- Test: `backend/tests/unit/pricing.test.js`
+- Test: `backend/tests/unit/pricing.test.js` (qua `calcPrice`/`calcDuration` re-export ở
+  `booking.service.js`, giữ tương thích ngược) và `backend/tests/unit/pricing.service.test.js`.
+
+### Giá theo ngày và khuyến mãi
+
+Sân có thể có **ghi đè giá theo ngày** (`Field.priceOverrides` — lễ/Tết, mùa cao điểm) và
+**mã khuyến mãi** (`Field.promotions` — giảm theo phần trăm hoặc số tiền cố định, có thể giới
+hạn theo khung giờ, khoảng ngày và số lượt dùng).
+
+Mọi biến thể đều đi qua đúng một đường tính: `calcBookingPrice(field, date, startTime, endTime,
+promoCode)` trong `backend/src/services/pricing.service.js` — hàm này gọi `resolvePricingForDate`
+(chọn bảng giá: ghi đè nếu ngày rơi vào khoảng ghi đè, mặc định nếu không), rồi `calcSlotAmounts`
+(giống hệt phép tính overlap-thời-gian của `calcPrice`), rồi `resolvePromotion` (tìm mã còn hiệu
+lực) để trừ đúng phần tiền của khung giờ mà mã áp dụng. **Không viết nhánh tính giá thứ hai** — dự
+án từng có một hàm `calculatePrice` sai kiểu này trong `field.service.js` và đã bị xoá (xem
+`docs/08-lo-trinh.md`).
+
+Khuyến mãi giới hạn theo khung giờ (`slots`) chỉ trừ trên phần tiền của đúng những khung đó, không
+trừ trên tổng — đặt 17:00–20:00 với mã chỉ áp dụng buổi chiều thì chỉ phần 17:00–18:00 được giảm.
+
+Mã khuyến mãi sai/hết hạn/hết lượt ném lỗi `PROMO_CODE_INVALID` khi đặt sân thật
+(`POST /bookings`), nhưng **không** làm hỏng báo giá xem trước
+(`GET /fields/:id/price-quote`) — endpoint đó bắt lỗi này và trả về giá gốc kèm `promoError` để
+người dùng biết mã sai mà không chặn họ xem giá.
+
+`GET /fields/:id/price-quote` là nguồn sự thật duy nhất cho ô xem giá phía client — trang tạo lịch
+đặt không còn tự ước lượng giá (bản cũ tính sai theo kiểu "giá của giờ bắt đầu × số giờ", không
+khớp cách chia khung thật).
+
+- Cài đặt: `resolvePricingForDate`, `resolvePromotion`, `calcBookingPrice`,
+  `previewBookingPrice` (`backend/src/services/pricing.service.js` và
+  `backend/src/services/booking.service.js`); CRUD ghi đè/khuyến mãi ở
+  `backend/src/services/fieldPricing.service.js`.
+- Lượt dùng mã (`usedCount`) chỉ tăng **sau khi** booking vượt qua bước kiểm tra trùng giờ lần hai
+  — tránh đếm nhầm khi hai request cùng đặt một khung giờ và một trong hai bị hoàn tác.
+- Test: `backend/tests/unit/pricing.service.test.js`, `backend/tests/unit/fieldPricing.service.test.js`,
+  `backend/tests/unit/booking.service.test.js` (case `promoCode`).
 
 ### Điều kiện để đặt được
 

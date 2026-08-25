@@ -83,6 +83,7 @@ danh sách đang tắt, không phải phần thêm bớt — mảng rỗng nghĩ
 | GET | `/` | — | Query: `page, limit, search, city, district, minRating, lat, lng` |
 | GET | `/:id` | — | Có cache Redis 10 phút |
 | GET | `/:id/availability` | — | Query bắt buộc: `date` (YYYY-MM-DD), `startTime`, `endTime`; tuỳ chọn `fieldType`. Cache 30 giây |
+| GET | `/:id/price-quote` | — | Query bắt buộc: `date, startTime, endTime`; tuỳ chọn `promoCode`. Báo giá trước khi đặt, không ghi DB |
 | GET | `/owner/my-fields` | 🏟 👑 | Sân của chính chủ sân |
 | POST | `/` | 🏟 | `multipart` + JSON fields `location, pricing, operatingHours, amenities, rules`. Qua hạn mức gói |
 | PATCH | `/:id` | 🏟 👑 | Như trên, thêm `status` (`active`/`inactive`) và `removeImages` |
@@ -90,6 +91,11 @@ danh sách đang tắt, không phải phần thêm bớt — mảng rỗng nghĩ
 | POST | `/:id/sub-fields` | 🏟 | `name, fieldType (5v5/7v7/11v11), surface?, capacity (6–22)`. Qua hạn mức gói |
 | PATCH | `/:id/sub-fields/:subFieldId` | 🏟 | Thêm `status` (`available`/`maintenance`/`closed`) |
 | DELETE | `/:id/sub-fields/:subFieldId` | 🏟 | Từ chối nếu sân con còn lịch |
+| POST | `/:id/price-overrides` | 🏟 | `name, startDate, endDate, weekday, weekend` — ghi đè giá cho một khoảng ngày |
+| DELETE | `/:id/price-overrides/:overrideId` | 🏟 | |
+| POST | `/:id/promotions` | 🏟 | `code, type (percentage/fixed), value, slots?, startDate, endDate, maxUses?` |
+| PATCH | `/:id/promotions/:promoId` | 🏟 | Từng phần — dùng để bật/tắt `active` hoặc sửa hạn |
+| DELETE | `/:id/promotions/:promoId` | 🏟 | |
 | PATCH | `/:id/submit` | 🏟 | Gửi sân đi duyệt; cần ít nhất một sân con |
 | PATCH | `/:id/verify` | 👑 | `approve?` (mặc định `true`), `note?` |
 
@@ -99,7 +105,7 @@ Toàn bộ nhóm này cần đăng nhập.
 
 | Method | Đường dẫn | Quyền | Body / Ghi chú |
 |---|---|---|---|
-| POST | `/` | 🔒 | `fieldId, subFieldId, date, startTime, endTime, teamId?, notes?, paymentMethod?` |
+| POST | `/` | 🔒 | `fieldId, subFieldId, date, startTime, endTime, teamId?, notes?, paymentMethod?, promoCode?` |
 | GET | `/my-bookings` | 🔒 | Query: `page, limit, status, startDate, endDate` |
 | GET | `/team/bookings` | 🔒 | Lịch của các đội mình dẫn dắt. Query thêm `teamId` |
 | GET | `/:id` | 🔒 | Người đặt, chủ sân hoặc admin |
@@ -346,6 +352,10 @@ Client phân nhánh theo `code`, không theo `message`.
 | `BOOKING_NOT_CANCELLABLE` | 400 | Sai trạng thái, hoặc đã quá hạn huỷ |
 | `FIELD_NOT_ACTIVE` | 400 | Sân đang tắt nhận đặt |
 | `FIELD_NOT_VERIFIED` | 400 | Sân chưa được admin duyệt |
+| `PROMO_CODE_INVALID` | 400 | Mã khuyến mãi không tồn tại, chưa active, hết hạn hoặc hết lượt dùng |
+| `DUPLICATE_PROMO_CODE` | 400 | Sân đã có mã này đang active |
+| `PRICE_OVERRIDE_NOT_FOUND` | 404 | Không có ghi đè giá với id đó |
+| `PROMOTION_NOT_FOUND` | 404 | Không có mã khuyến mãi với id đó |
 | `INVOICE_NOT_PAYABLE` | 400 | Hoá đơn đã thanh toán hoặc đã huỷ |
 | `PAYMENT_PROVIDER_UNAVAILABLE` | 503 | Cổng thanh toán chưa cấu hình (thiếu `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET`) — chỉ xảy ra ở `POST /billing/invoices/:id/checkout` |
 | `EMAIL_ALREADY_EXISTS` / `USERNAME_ALREADY_EXISTS` | 409 | Đăng ký trùng |

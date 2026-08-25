@@ -134,14 +134,21 @@ spam thật để nhìn.
 
 ## Ưu tiên 3 — Giá trị cho chủ sân
 
-### 3.1 Giá linh hoạt và khuyến mãi
+### 3.1 Giá linh hoạt và khuyến mãi — ✅ đã xong (nhánh `feature/flexible-pricing-promotions`)
 
 **Vì sao.** Ba khung giá cố định không đủ diễn tả thực tế: sân trống buổi sáng ngày thường,
 kín cứng 18–20h. Chủ sân cần công cụ tự kéo khách vào giờ vắng.
 
-**Phạm vi.** Ghi đè giá theo ngày cụ thể (lễ, Tết), mã giảm giá theo khung giờ, giá theo mùa.
-Phải giữ nguyên nguyên tắc **chia giá theo phần thời gian nằm trong từng khung** — mọi biến thể
-đều đi qua `calcPrice`, không viết nhánh tính giá thứ hai.
+**Đã làm.** Ghi đè giá theo ngày cụ thể (`Field.priceOverrides`), mã giảm giá theo phần trăm
+hoặc số tiền cố định, giới hạn được theo khung giờ/khoảng ngày/số lượt dùng
+(`Field.promotions`). Chủ sân quản lý ở trang chi tiết sân (web) qua
+`POST/DELETE /fields/:id/price-overrides` và `POST/PATCH/DELETE /fields/:id/promotions`.
+`GET /fields/:id/price-quote` thay thế ước lượng giá cũ ở phía client trên trang tạo lịch đặt.
+
+Giữ nguyên nguyên tắc **chia giá theo phần thời gian nằm trong từng khung** — mọi biến thể đều
+đi qua `calcSlotAmounts`/`calcPrice` trong `backend/src/services/pricing.service.js`
+(`calcBookingPrice` là điểm hợp nhất giá gốc + ghi đè + khuyến mãi), không viết nhánh tính giá
+thứ hai. Chi tiết ở `docs/04-nghiep-vu.md`.
 
 > Đã từng có một hàm tính giá thứ hai (`calculatePrice` trong `field.service.js`) tính sai
 > theo kiểu "lấy giá của giờ bắt đầu cho cả buổi". Nó đã bị xoá. Đừng tạo lại.

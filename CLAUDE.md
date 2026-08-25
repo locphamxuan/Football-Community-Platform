@@ -5,6 +5,15 @@
 - **Reply to the user in Vietnamese.** All explanations, summaries, and questions go in Vietnamese.
 - **Code, identifiers, and commit messages stay in English.**
 
+## Vòng đời phát triển sản phẩm
+
+Dự án này được vận hành như một sản phẩm thực tế, không phải bài tập demo — mọi tính năng mới đi qua đủ các bước:
+
+- **Thiết kế trước khi code**: tính năng có ảnh hưởng kiến trúc (tích hợp bên thứ ba, luồng tiền, thay đổi schema dùng chung) phải có ghi chú thiết kế ngắn trong `docs/02-kien-truc.md` — quyết định và lý do — trước hoặc cùng lúc với PR đầu tiên của tính năng đó.
+- **Tính năng liên quan đến tiền** (thanh toán, hoá đơn, đối soát) bắt buộc: xác thực chữ ký/HMAC với bên thứ ba, chống replay/idempotent cho webhook, không tin dữ liệu phía client cho số tiền — server luôn là nguồn sự thật cuối cùng.
+- **Nâng cấp breaking dependency** làm riêng từng gói một nhánh, verify đầy đủ checklist của từng phía trước khi merge — không gộp nhiều nâng cấp lớn vào một lần.
+- Mọi tính năng mới vẫn phải theo đủ các mục đã có sẵn ở dưới đây: test, verify, docs, PROGRESS.md, branch riêng, commit theo Conventional Commits.
+
 ## Repository layout
 
 One repo holds every side of the product:
@@ -42,6 +51,8 @@ Before committing, **verify every side you touched** — never commit unverified
 
 - **No dead code.** No unused exports, variables, files, or npm dependencies; no commented-out blocks kept "just in case" — git history already keeps them.
 - **One implementation per rule.** A business rule lives in exactly one function. A second copy always drifts and one of the copies becomes silently wrong.
+- **Chia nghiệp vụ theo role khi các role có logic khác nhau đáng kể.** Một service phục vụ nhiều role (chủ sân, admin, người chơi...) mà nghiệp vụ của từng role đủ lớn/khác nhau thì tách thành các file riêng theo role (vd `services/billing/owner.js`, `services/billing/admin.js`) thay vì gộp chung một file ngày càng phình to và trộn lẫn quyền hạn. Chỉ gộp chung phần thực sự dùng chung giữa các role (hàm tính toán thuần, helper không phụ thuộc quyền hạn).
+- **Một file không phình to.** Khi một file service/component vượt khoảng 300 dòng, tách theo domain con hoặc theo role thành thư mục con thay vì tiếp tục nhồi thêm vào một file — tổ chức thư mục phải phản ánh đúng ranh giới nghiệp vụ, không phải nơi tiện tay thêm hàm mới.
 - Keep controllers thin: read `req`, call a service, send a response. Business rules belong in `services/`, data shape belongs in `validations/`.
 - Comment the **why**, never the what. If a line needs a comment to explain what it does, rename things instead.
 - Prefer deleting over disabling. An unused feature behind a flag is still code someone must read.

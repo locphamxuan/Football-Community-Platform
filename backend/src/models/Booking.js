@@ -12,6 +12,9 @@ const bookingSchema = new mongoose.Schema(
     endTime: { type: String, required: true },   // "20:00"
     duration: { type: Number, required: true, min: 0.5 }, // giờ
     totalPrice: { type: Number, required: true, min: 0 },
+    basePrice: { type: Number, min: 0 },
+    discount: { type: Number, default: 0, min: 0 },
+    promoCode: { type: String },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'cancelled', 'completed', 'no_show'],
