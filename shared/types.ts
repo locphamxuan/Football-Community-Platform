@@ -266,6 +266,7 @@ export type NotificationType =
   | 'match_request_answered'
   | 'match_result_submitted'
   | 'invoice_issued'
+  | 'invoice_paid'
   | 'chat_message';
 
 export interface Notification {
@@ -421,6 +422,8 @@ export interface Invoice {
   reportedAt?: string;
   paidAt?: string;
   voidReason?: string;
+  paymentProvider: 'manual' | 'vnpay' | 'momo';
+  gatewayTransactionId?: string;
   createdAt: string;
 }
 
