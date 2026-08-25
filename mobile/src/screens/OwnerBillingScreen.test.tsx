@@ -1,3 +1,4 @@
+import { Linking } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { Invoice, SubscriptionOverview } from '@fcp/shared';
 import OwnerBillingScreen from './OwnerBillingScreen';
@@ -13,6 +14,7 @@ jest.mock('../services/owner.service', () => ({
     invoices: jest.fn(),
     setAutoRenew: jest.fn(),
     reportPayment: jest.fn(),
+    checkout: jest.fn(),
   },
 }));
 
@@ -21,6 +23,7 @@ const mockSubscription = ownerService.subscription as jest.Mock;
 const mockInvoices = ownerService.invoices as jest.Mock;
 const mockAutoRenew = ownerService.setAutoRenew as jest.Mock;
 const mockReport = ownerService.reportPayment as jest.Mock;
+const mockCheckout = ownerService.checkout as jest.Mock;
 
 const overview = (overrides: Partial<SubscriptionOverview> = {}) =>
   ({
@@ -58,6 +61,8 @@ beforeEach(() => {
   mockInvoices.mockResolvedValue({ invoices: [invoice()] });
   mockAutoRenew.mockResolvedValue({ subscription: {} });
   mockReport.mockResolvedValue({ invoice: {} });
+  mockCheckout.mockResolvedValue({ paymentUrl: 'https://sandbox.vnpayment.vn/pay?x=1' });
+  jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
 // RNTL 14 render bất đồng bộ (React 19 concurrent) — luôn phải await
@@ -108,6 +113,15 @@ describe('OwnerBillingScreen', () => {
     fireEvent.press(submitButton());
 
     await waitFor(() => expect(mockReport).toHaveBeenCalledWith('i1', 'FT24081312345'));
+  });
+
+  it('bấm thanh toán online thì mở link VNPay trả về', async () => {
+    await renderWithQuery(<OwnerBillingScreen />);
+
+    fireEvent.press(await screen.findByLabelText('Thanh toán online cho hoá đơn INV-2608'));
+
+    await waitFor(() => expect(mockCheckout).toHaveBeenCalledWith('i1'));
+    await waitFor(() => expect(Linking.openURL).toHaveBeenCalledWith('https://sandbox.vnpayment.vn/pay?x=1'));
   });
 
   it('hoá đơn đã khai báo thì chờ đối soát, không cho khai lại', async () => {

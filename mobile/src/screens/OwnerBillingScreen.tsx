@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import type { Invoice, InvoiceStatus } from '@fcp/shared';
@@ -29,9 +29,13 @@ const INVOICE_TONES: Record<InvoiceStatus, StatusTone> = {
 function InvoiceCard({
   invoice,
   onReport,
+  onCheckout,
+  checkoutPending,
 }: {
   invoice: Invoice;
   onReport: (invoice: Invoice) => void;
+  onCheckout: (invoice: Invoice) => void;
+  checkoutPending: boolean;
 }) {
   return (
     <Card>
@@ -46,10 +50,19 @@ function InvoiceCard({
       {invoice.status === 'pending' && (
         <View style={styles.action}>
           <Button
-            title="Tôi đã chuyển khoản"
-            accessibilityLabel={`Khai báo đã chuyển khoản cho hoá đơn ${invoice.code}`}
-            onPress={() => onReport(invoice)}
+            title="Thanh toán online"
+            accessibilityLabel={`Thanh toán online cho hoá đơn ${invoice.code}`}
+            loading={checkoutPending}
+            onPress={() => onCheckout(invoice)}
           />
+          <View style={styles.action}>
+            <Button
+              title="Tôi đã chuyển khoản"
+              variant="outline"
+              accessibilityLabel={`Khai báo đã chuyển khoản cho hoá đơn ${invoice.code}`}
+              onPress={() => onReport(invoice)}
+            />
+          </View>
         </View>
       )}
       {invoice.status === 'awaiting_confirmation' && (
@@ -96,6 +109,12 @@ function OwnerBillingBody() {
       Alert.alert('Đã gửi', 'Ban quản trị sẽ đối soát và xác nhận hoá đơn.');
     },
     onError: (err) => Alert.alert('Không gửi được', messageOf(err)),
+  });
+
+  const checkout = useMutation({
+    mutationFn: (invoiceId: string) => ownerService.checkout(invoiceId),
+    onSuccess: ({ paymentUrl }) => Linking.openURL(paymentUrl),
+    onError: (err) => Alert.alert('Không mở được trang thanh toán', messageOf(err)),
   });
 
   if (overview.isLoading) return <Loading label="Đang tải gói thuê bao" />;
@@ -199,6 +218,8 @@ function OwnerBillingBody() {
               setReporting(target);
               setReference('');
             }}
+            onCheckout={(target) => checkout.mutate(target._id)}
+            checkoutPending={checkout.isPending}
           />
         ))
       )}
