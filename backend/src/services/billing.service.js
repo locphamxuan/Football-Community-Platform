@@ -4,9 +4,11 @@ const Subscription = require('../models/Subscription');
 const Invoice = require('../models/Invoice');
 const Field = require('../models/Field');
 const Booking = require('../models/Booking');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const { getPagination } = require('../utils/pagination');
 const { notify } = require('./notification.service');
 const adminAuditLogService = require('./adminAuditLog.service');
+const { getProvider } = require('./payments');
 const { NotificationType } = require('../constants/notifications');
 const { PLANS, PlanCode, getPlan, SubscriptionStatus, InvoiceStatus } = require('../constants/plans');
 const { AdminAction, AdminTargetType } = require('../constants/adminAudit');
@@ -271,17 +273,14 @@ const getInvoices = async (query) => {
   return { invoices, total, page, limit };
 };
 
-/** Admin đối soát: ghi nhận tiền, kích hoạt lại thuê bao. */
-const confirmInvoicePayment = async (invoiceId, adminId) => {
-  const invoice = await Invoice.findById(invoiceId);
-  if (!invoice) throw new AppError('Invoice not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
-  if (![InvoiceStatus.PENDING, InvoiceStatus.AWAITING_CONFIRMATION].includes(invoice.status)) {
-    throw new AppError('Invoice is already settled', HttpStatus.BAD_REQUEST, ErrorCode.INVOICE_NOT_PAYABLE);
-  }
-
+/**
+ * Đánh dấu hoá đơn đã thanh toán và mở lại thuê bao nếu hết công nợ — dùng chung cho đường
+ * thủ công (admin xác nhận) và đường cổng thanh toán (IPN). Người gọi tự set các field riêng
+ * (`confirmedBy` hoặc `paymentProvider`/`gatewayTransactionId`) trước khi gọi hàm này.
+ */
+const settleInvoice = async (invoice) => {
   invoice.status = InvoiceStatus.PAID;
   invoice.paidAt = new Date();
-  invoice.confirmedBy = new mongoose.Types.ObjectId(adminId);
   await invoice.save();
 
   const subscription = await Subscription.findById(invoice.subscription);
@@ -295,6 +294,18 @@ const confirmInvoicePayment = async (invoiceId, adminId) => {
     if (stillOwing === 0) subscription.status = SubscriptionStatus.ACTIVE;
     await subscription.save();
   }
+};
+
+/** Admin đối soát: ghi nhận tiền, kích hoạt lại thuê bao. */
+const confirmInvoicePayment = async (invoiceId, adminId) => {
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice) throw new AppError('Invoice not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  if (![InvoiceStatus.PENDING, InvoiceStatus.AWAITING_CONFIRMATION].includes(invoice.status)) {
+    throw new AppError('Invoice is already settled', HttpStatus.BAD_REQUEST, ErrorCode.INVOICE_NOT_PAYABLE);
+  }
+
+  invoice.confirmedBy = new mongoose.Types.ObjectId(adminId);
+  await settleInvoice(invoice);
 
   await adminAuditLogService.record(
     adminId, AdminAction.INVOICE_CONFIRMED, AdminTargetType.INVOICE, invoiceId,
@@ -302,6 +313,104 @@ const confirmInvoicePayment = async (invoiceId, adminId) => {
   );
 
   return invoice;
+};
+
+// ─── thanh toán online ──────────────────────────────────────────────────────
+/** Chủ sân bấm "Thanh toán online" — tạo link thanh toán và một lượt giao dịch đang chờ. */
+const createCheckoutSession = async (ownerId, invoiceId, providerName, ipAddr) => {
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice) throw new AppError('Invoice not found', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+  if (invoice.owner.toString() !== ownerId) {
+    throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+  }
+  if (![InvoiceStatus.PENDING, InvoiceStatus.AWAITING_CONFIRMATION].includes(invoice.status)) {
+    throw new AppError('Only pending invoices can be paid', HttpStatus.BAD_REQUEST, ErrorCode.INVOICE_NOT_PAYABLE);
+  }
+
+  const gateway = getProvider(providerName);
+  const txnRef = `${invoice.code}-${randomBytes(4).toString('hex').toUpperCase()}`;
+
+  await PaymentTransaction.create({
+    invoice: invoice._id,
+    provider: gateway.name,
+    providerTxnRef: txnRef,
+    amount: invoice.amount,
+  });
+
+  const paymentUrl = gateway.createPaymentUrl(
+    { txnRef, amount: invoice.amount, orderInfo: `Thanh toan hoa don ${invoice.code}` },
+    { ipAddr }
+  );
+
+  return { paymentUrl };
+};
+
+/** Cổng xác nhận thanh toán thành công — không phải admin nên không ghi `confirmedBy`. */
+const confirmInvoicePaymentViaGateway = async (invoiceId, { provider, transactionId }) => {
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice || invoice.status === InvoiceStatus.PAID) return; // idempotent no-op
+
+  invoice.paymentProvider = provider;
+  invoice.gatewayTransactionId = transactionId;
+  await settleInvoice(invoice);
+
+  await notify(invoice.owner, {
+    type: NotificationType.INVOICE_PAID,
+    title: `Hoá đơn ${invoice.code} đã thanh toán`,
+    body: `${invoice.description} · ${invoice.amount.toLocaleString('vi-VN')}đ`,
+    link: '/owner/billing',
+  });
+};
+
+/**
+ * Xử lý IPN của cổng thanh toán — trả về mã theo đúng bảng cổng yêu cầu, không ném lỗi (cổng
+ * chỉ hiểu response JSON của nó, một exception ở đây chỉ khiến cổng retry vô ích).
+ * Idempotent qua `PaymentTransaction`: `findOneAndUpdate` với điều kiện `status: 'pending'` đảm
+ * bảo chỉ một trong nhiều lần gọi trùng thắng được chuyển trạng thái, IPN gọi lại sau đó luôn
+ * gặp `status !== 'pending'` và trả 02 mà không cộng tiền lần hai.
+ */
+const handleGatewayIpn = async (providerName, query) => {
+  const gateway = getProvider(providerName);
+
+  if (!gateway.verifySignature(query)) {
+    return { rspCode: '97', message: 'Invalid signature' };
+  }
+
+  const { txnRef, amount, transactionId } = gateway.parseCallback(query);
+  const txn = await PaymentTransaction.findOne({ provider: gateway.name, providerTxnRef: txnRef });
+  if (!txn) return { rspCode: '01', message: 'Order not found' };
+
+  if (txn.status !== 'pending') {
+    return { rspCode: '02', message: 'Order already confirmed' };
+  }
+
+  if (Math.round(amount) !== Math.round(txn.amount)) {
+    await PaymentTransaction.updateOne({ _id: txn._id, status: 'pending' }, { status: 'failed', rawResponse: query });
+    return { rspCode: '04', message: 'Invalid amount' };
+  }
+
+  if (!gateway.isSuccess(query)) {
+    await PaymentTransaction.updateOne({ _id: txn._id, status: 'pending' }, { status: 'failed', rawResponse: query });
+    return { rspCode: '00', message: 'Confirm Success' };
+  }
+
+  const claimed = await PaymentTransaction.findOneAndUpdate(
+    { _id: txn._id, status: 'pending' },
+    { status: 'success', rawResponse: query },
+    { new: true }
+  );
+  if (!claimed) return { rspCode: '02', message: 'Order already confirmed' };
+
+  await confirmInvoicePaymentViaGateway(txn.invoice, { provider: gateway.name, transactionId });
+
+  return { rspCode: '00', message: 'Confirm Success' };
+};
+
+/** Return URL — chỉ để đưa người dùng về đúng chỗ, không dùng để xác nhận thanh toán (xem docs/02-kien-truc.md). */
+const handleGatewayReturn = (providerName, query) => {
+  const gateway = getProvider(providerName);
+  const signatureValid = gateway.verifySignature(query);
+  return { success: signatureValid && gateway.isSuccess(query) };
 };
 
 const voidInvoice = async (invoiceId, reason, adminId) => {
@@ -377,4 +486,8 @@ module.exports = {
   assertCanAddSubField,
   monthRange,
   addMonths,
+  createCheckoutSession,
+  confirmInvoicePaymentViaGateway,
+  handleGatewayIpn,
+  handleGatewayReturn,
 };

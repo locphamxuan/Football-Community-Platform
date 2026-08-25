@@ -103,4 +103,16 @@ const uploadLimiter = createLimiter({
   message: 'Too many uploads, please try again in a minute.',
 });
 
-module.exports = { globalLimiter, writeLimiter, authLimiter, uploadLimiter };
+/**
+ * Webhook cổng thanh toán nằm ngoài `/api` (xem app.js) nên không đi qua `globalLimiter` —
+ * cần trần riêng vì endpoint không JWT, chữ ký là hàng rào chính nhưng vẫn nên chặn lũ request.
+ * Ngưỡng rộng hơn `writeLimiter` vì cổng có thể retry hợp lệ nhiều lần trong thời gian ngắn.
+ */
+const webhookLimiter = createLimiter({
+  prefix: 'webhook',
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Too many payment callbacks, please try again shortly.',
+});
+
+module.exports = { globalLimiter, writeLimiter, authLimiter, uploadLimiter, webhookLimiter };

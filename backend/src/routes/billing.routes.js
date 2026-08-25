@@ -5,7 +5,7 @@ const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const Role = require('../constants/roles');
 const {
-  changePlanSchema, autoRenewSchema, reportPaymentSchema, invoiceQuerySchema,
+  changePlanSchema, autoRenewSchema, reportPaymentSchema, invoiceQuerySchema, checkoutSchema,
 } = require('../validations/billing.validation');
 
 const router = Router();
@@ -21,5 +21,6 @@ router.patch('/subscription/auto-renew', validate(autoRenewSchema), controller.s
 
 router.get('/invoices', validate(invoiceQuerySchema, 'query'), controller.getMyInvoices);
 router.post('/invoices/:id/report-payment', validate(reportPaymentSchema), controller.reportPayment);
+router.post('/invoices/:id/checkout', validate(checkoutSchema), controller.checkout);
 
 module.exports = router;
