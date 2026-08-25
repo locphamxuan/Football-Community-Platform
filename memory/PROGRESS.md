@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-23
+> Cập nhật lần cuối: 2026-08-25
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -139,6 +139,40 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - CRUD ghi đè/khuyến mãi tách sang `fieldPricing.service.js` — chủ đích tách khỏi
   `field.service.js` (CRUD sân cốt lõi) theo quy tắc file không phình to trong `CLAUDE.md`.
 
+**Nâng `nodemailer` lên major mới để vá lỗ hổng high** (nhánh `chore/upgrade-nodemailer`)
+- `6.10.1` → `9.0.5`. Đã đọc changelog chính thức: không có breaking change nào chạm tới
+  `createTransport`/`.verify()`/`.sendMail()` — ba API duy nhất dự án dùng
+  (`backend/src/config/email.js`).
+- Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
+  một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
+
+**Nâng `next` để vá lỗ hổng high — hoá ra không phải bản major** (nhánh `chore/upgrade-nextjs`)
+- `npm outdated`/`npm view next dist-tags` lúc làm cho thấy `16.2.7` (bản đang cài) **đã là bản
+  major mới nhất** (`16.x`) — bản vá lỗ hổng high của `next`/`postcss`/`sharp` chỉ là bản nhỏ
+  `16.3.3`, `isSemVerMajor: false`. Giả định trong "nợ hạ tầng" trước đây (coi đây là một trong
+  ba việc nâng major) sai — sửa lại ở đây cho đúng thực tế thay vì lặp lại giả định cũ.
+- `npm audit` sau khi nâng: 0 lỗ hổng. Xác minh đủ `tsc`/`lint`/`test`/`build`, cộng khởi động
+  `next dev` thật và tải `/`, `/fields`, `/login` — cả ba trả 200.
+
+**Nâng chuỗi Expo/React Native lên bản mới nhất của SDK 57** (nhánh `chore/upgrade-expo-rn`)
+- Dùng `npx expo install --check`/`--fix` (công cụ chính thức của Expo biết đúng bản tương
+  thích từng gói theo SDK) thay vì `npm update` tay — SDK 57 (`57.0.11`) **cũng đã là bản major
+  mới nhất** (SDK 58 mới ở canary), nên đây cũng là nâng bản nhỏ trong cùng SDK, không phải
+  breaking migration: `expo` → `57.0.16`, `expo-router` → `57.0.16`, `expo-notifications` →
+  `57.0.14`, `expo-linking` → `57.0.7`, `expo-constants` → `57.0.14`, `jest-expo` → `57.0.4`.
+  **`react-native` giữ nguyên `0.86.2`** — bản `0.87.0` nằm ngoài compatibility matrix mà
+  `expo install --check` xác nhận cho SDK 57, không được bump theo.
+- `react` thoáng bị kéo lên `19.2.8` giữa chừng (peer dependency của `react-dom` trong nhánh hỗ
+  trợ web tuỳ chọn của `expo-router`, dự án này không dùng); sau khi `expo-router` về đúng bản
+  SDK 57 thì tự quay lại đúng `19.2.3` mà SDK 57 mong đợi.
+- Còn lại một cụm lỗ hổng high trong `@expo/cli` (qua `xcode`/`metro`/`image-size`) — chỉ chạy
+  lúc `expo start`/build trên máy lập trình viên, không lọt vào app đã build. Bản vá đòi bump
+  `@expo/cli` ra ngoài SDK 57 đã kiểm tương thích, nên **cố ý để lại**, không force.
+- Xác minh: `tsc`/`test` sạch (143 test), cộng bundle thật qua Metro cho nền tảng Android
+  (`expo start` → tải `/node_modules/expo-router/entry.bundle?platform=android...`, 200, ~7MB,
+  không lỗi) — mức kiểm tra gần nhất với thiết bị thật mà môi trường này cho phép, vì không có
+  emulator/thiết bị để build development build thật (xem "Đang làm / còn dở").
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -150,12 +184,10 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay trước, MoMo sau) — bỏ khâu admin đối soát tay.
 
-Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
-
-- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `nodemailer`
-  (backend), `next` (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
-  `react-native` (mobile). Mỗi bản nâng đều là breaking change, cần làm riêng và test kỹ, không
-  nên gộp vào một lần nâng cấp bảo mật.
+Ngoài lộ trình tính năng, ba việc nâng cấp dependency trong "nợ hạ tầng" trước đây
+(`nodemailer`, `next`, chuỗi `expo`/`react-native`) đã xong — xem "Đã xong" phía trên. Còn tồn
+đọng: cụm lỗ hổng high trong `@expo/cli` (dev-tool only, không lọt vào app) — chờ Expo phát hành
+bản vá nằm trong SDK 57.
 
 ## Quyết định và bẫy cần nhớ
 
