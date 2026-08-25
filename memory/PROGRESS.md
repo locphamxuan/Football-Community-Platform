@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-23
+> Cập nhật lần cuối: 2026-08-25
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -139,6 +139,13 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - CRUD ghi đè/khuyến mãi tách sang `fieldPricing.service.js` — chủ đích tách khỏi
   `field.service.js` (CRUD sân cốt lõi) theo quy tắc file không phình to trong `CLAUDE.md`.
 
+**Nâng `nodemailer` lên major mới để vá lỗ hổng high** (nhánh `chore/upgrade-nodemailer`)
+- `6.10.1` → `9.0.5`. Đã đọc changelog chính thức: không có breaking change nào chạm tới
+  `createTransport`/`.verify()`/`.sendMail()` — ba API duy nhất dự án dùng
+  (`backend/src/config/email.js`) — cho cấu hình SMTP host/port/auth thông thường.
+- Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
+  một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -152,9 +159,10 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 
-- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `nodemailer`
-  (backend), `next` (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
-  `react-native` (mobile). Mỗi bản nâng đều là breaking change, cần làm riêng và test kỹ, không
+- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `next`
+  (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
+  `react-native` (mobile). `nodemailer` đã nâng xong — xem "Đã xong". Mỗi bản nâng đều là
+  breaking change, cần làm riêng và test kỹ, không
   nên gộp vào một lần nâng cấp bảo mật.
 
 ## Quyết định và bẫy cần nhớ
