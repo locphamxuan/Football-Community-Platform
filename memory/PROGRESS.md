@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-23
+> Cập nhật lần cuối: 2026-08-25
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -139,6 +139,21 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - CRUD ghi đè/khuyến mãi tách sang `fieldPricing.service.js` — chủ đích tách khỏi
   `field.service.js` (CRUD sân cốt lõi) theo quy tắc file không phình to trong `CLAUDE.md`.
 
+**Nâng `nodemailer` lên major mới để vá lỗ hổng high** (nhánh `chore/upgrade-nodemailer`)
+- `6.10.1` → `9.0.5`. Đã đọc changelog chính thức: không có breaking change nào chạm tới
+  `createTransport`/`.verify()`/`.sendMail()` — ba API duy nhất dự án dùng
+  (`backend/src/config/email.js`).
+- Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
+  một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
+
+**Nâng `next` để vá lỗ hổng high — hoá ra không phải bản major** (nhánh `chore/upgrade-nextjs`)
+- `npm outdated`/`npm view next dist-tags` lúc làm cho thấy `16.2.7` (bản đang cài) **đã là bản
+  major mới nhất** (`16.x`) — bản vá lỗ hổng high của `next`/`postcss`/`sharp` chỉ là bản nhỏ
+  `16.3.3`, `isSemVerMajor: false`. Giả định trong "nợ hạ tầng" trước đây (coi đây là một trong
+  ba việc nâng major) sai — sửa lại ở đây cho đúng thực tế thay vì lặp lại giả định cũ.
+- `npm audit` sau khi nâng: 0 lỗ hổng. Xác minh đủ `tsc`/`lint`/`test`/`build`, cộng khởi động
+  `next dev` thật và tải `/`, `/fields`, `/login` — cả ba trả 200.
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -152,10 +167,10 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 
-- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `nodemailer`
-  (backend), `next` (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
-  `react-native` (mobile). Mỗi bản nâng đều là breaking change, cần làm riêng và test kỹ, không
-  nên gộp vào một lần nâng cấp bảo mật.
+- **Nâng major chuỗi `expo`/`metro`/`react-native` (mobile)** để vá lỗ hổng high còn lại —
+  `nodemailer` và `next` đã xong, xem "Đã xong". Đây là nâng cấp rủi ro cao nhất trong ba việc:
+  môi trường hiện tại không có thiết bị/emulator để build và kiểm push notification thật, chỉ
+  verify được qua `typecheck`/`test`.
 
 ## Quyết định và bẫy cần nhớ
 
