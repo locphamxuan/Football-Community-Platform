@@ -35,6 +35,11 @@ const reportPayment = catchAsync(async (req, res) => {
   sendSuccess(res, { invoice }, 'Payment reported, awaiting confirmation');
 });
 
+const checkout = catchAsync(async (req, res) => {
+  const result = await billingService.createCheckoutSession(req.user.id, req.params.id, req.body.provider, req.ip);
+  sendSuccess(res, result);
+});
+
 module.exports = {
-  getPlans, getMySubscription, changePlan, setAutoRenew, getMyInvoices, reportPayment,
+  getPlans, getMySubscription, changePlan, setAutoRenew, getMyInvoices, reportPayment, checkout,
 };

@@ -35,6 +35,10 @@ Biến tuỳ chọn đáng chú ý:
 | `REDIS_URL` | `redis://localhost:6379` | |
 | `RATE_LIMIT_*` | xem [05](05-redis-rate-limit.md) | |
 | `CHAT_RATE_MAX` | 30 | Tin nhắn tối đa mỗi tài khoản trong 60 giây. Đếm trong `chat.service` chứ không phải middleware, vì tin nhắn qua WebSocket không đi qua express |
+| `VNPAY_TMN_CODE` | rỗng | Mã merchant VNPay. **Tuỳ chọn** — thiếu thì `checkout` trả `PAYMENT_PROVIDER_UNAVAILABLE` (503) thay vì chặn server khởi động; đường chuyển khoản thủ công vẫn chạy bình thường |
+| `VNPAY_HASH_SECRET` | rỗng | Secret key ký/xác minh chữ ký HMAC-SHA512 |
+| `VNPAY_URL` | sandbox VNPay | Sandbox demo dùng được ngay, không cần đăng ký merchant thật — xem [tài liệu tích hợp VNPay](https://sandbox.vnpayment.vn/apis/) để lấy `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` demo |
+| `VNPAY_RETURN_URL` | `{CLIENT_URL}/owner/billing` | Trang trình duyệt quay về sau khi thanh toán — chỉ UX, không xác nhận đơn |
 
 ## Chạy local
 

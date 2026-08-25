@@ -61,11 +61,18 @@ export const ownerService = {
 
   /**
    * Chủ sân tự khai mã giao dịch sau khi chuyển khoản; admin đối soát rồi mới đổi hoá đơn
-   * sang `paid`. Chưa có cổng thanh toán nên đây vẫn là đường duy nhất.
+   * sang `paid`. Vẫn giữ làm phương án dự phòng cạnh cổng thanh toán online.
    */
   reportPayment: (invoiceId: string, paymentReference: string) =>
     authFetch<{ invoice: Invoice }>(`/billing/invoices/${invoiceId}/report-payment`, {
       method: 'POST',
       body: { paymentReference },
+    }),
+
+  /** Tạo link thanh toán VNPay — mở bằng trình duyệt ngoài (`Linking.openURL`), không WebView. */
+  checkout: (invoiceId: string) =>
+    authFetch<{ paymentUrl: string }>(`/billing/invoices/${invoiceId}/checkout`, {
+      method: 'POST',
+      body: { provider: 'vnpay' },
     }),
 };
