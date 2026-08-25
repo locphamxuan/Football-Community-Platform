@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-22
+> Cập nhật lần cuối: 2026-08-23
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -127,6 +127,15 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Đã áp các bản vá không phá API (`npm audit fix`, không `--force`) cho backend và frontend —
   xem "Việc nên làm tiếp" cho phần còn lại cần nâng bản major.
 
+**Cổng thanh toán online VNPay cho hoá đơn thuê bao** (nhánh `feature/vnpay-payment-gateway`)
+- `POST /billing/invoices/:id/checkout` tạo link thanh toán; webhook IPN
+  (`GET /webhooks/payments/vnpay/ipn`, nằm ngoài `/api`) xác minh chữ ký HMAC-SHA512 và idempotent
+  qua `PaymentTransaction` (unique `{provider, providerTxnRef}`) — gọi lại không cộng tiền hai lần.
+- Kiến trúc `backend/src/services/payments/` theo interface chung — thêm MoMo sau chỉ cần một
+  file cài đặt mới, không sửa `billing.service.js`. MoMo **chưa cài đặt**.
+- Đường chuyển khoản thủ công (báo mã giao dịch, admin đối soát) vẫn giữ nguyên làm dự phòng.
+- Chi tiết kiến trúc: [`docs/02-kien-truc.md`](../docs/02-kien-truc.md#thanh-toán-online-provider-abstraction).
+
 ## Đang làm / còn dở
 
 - **Thông báo đẩy chưa kiểm trên thiết bị thật** — Expo Go trên Android từ SDK 53 không cấp được push token, cần development build và `eas.projectId` trong `app.json`. Đường đi trên backend đã có test và đã chạy thử với stack thật.
@@ -134,9 +143,10 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 
 ## Việc nên làm tiếp
 
-Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Hai việc đầu bảng:
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md).
 
-1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay/MoMo) — bỏ khâu admin đối soát tay.
+1. MoMo cho cổng thanh toán (VNPay đã xong — xem "Đã xong" phía trên) — cùng interface
+   `payments/provider.interface.js` đã có sẵn.
 2. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:

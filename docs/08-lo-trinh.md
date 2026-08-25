@@ -9,20 +9,24 @@ Trạng thái hiện tại: xem [`memory/PROGRESS.md`](../memory/PROGRESS.md).
 
 ## Ưu tiên 1 — Doanh thu và thanh toán
 
-### 1.1 Cổng thanh toán trực tuyến cho hoá đơn thuê bao
+### 1.1 Cổng thanh toán trực tuyến cho hoá đơn thuê bao — ✅ VNPay xong (nhánh `feature/vnpay-payment-gateway`), MoMo còn lại
 
 **Vì sao.** Hiện chủ sân chuyển khoản rồi khai mã giao dịch, admin đối soát tay. Mỗi hoá đơn
 tốn công một người và có độ trễ hàng giờ tới hàng ngày; càng nhiều chủ sân thì càng không kham nổi.
 
-**Phạm vi.** Tích hợp VNPay hoặc MoMo (hai cổng phổ biến nhất cho SME Việt Nam):
+**Đã làm (VNPay).** `POST /billing/invoices/:id/checkout` tạo link thanh toán từ một `Invoice`
+đang `pending`/`awaiting_confirmation`. Webhook IPN (`GET /webhooks/payments/vnpay/ipn`) xác
+minh chữ ký HMAC-SHA512, chịu được gọi lại nhiều lần nhờ `PaymentTransaction` (idempotent —
+xác nhận hai lần không cộng `totalPaid` hai lần). Đường chuyển khoản thủ công vẫn giữ nguyên
+làm phương án dự phòng, không bị thay thế. Kiến trúc `payments/` được viết theo interface
+chung (`provider.interface.js`) để thêm MoMo sau không phải sửa `billing.service.js`.
 
-- Tạo link thanh toán từ một `Invoice` đang `pending`.
-- Endpoint nhận IPN/webhook — **phải xác minh chữ ký**, và **phải chịu được gọi lại nhiều lần**
-  (cổng gửi lặp là chuyện bình thường): xác nhận hai lần không được cộng `totalPaid` hai lần.
-- Giữ nguyên đường chuyển khoản thủ công làm phương án dự phòng.
+**Còn lại (MoMo).** `getProvider('momo')` chưa có cài đặt — cần `momo.provider.js` theo đúng
+API collection-link của MoMo (chữ ký HMAC-SHA256, request khác field so với VNPay) cài đặt
+cùng interface đã có.
 
-**Xong khi.** Hoá đơn tự chuyển `paid` sau webhook hợp lệ; thuê bao tự `active` khi hết công nợ;
-có test cho webhook trùng lặp và cho chữ ký sai.
+**Xong khi (MoMo).** Hoá đơn tự chuyển `paid` sau webhook hợp lệ của MoMo; thuê bao tự `active`
+khi hết công nợ; có test cho webhook trùng lặp và cho chữ ký sai — cùng chuẩn đã áp cho VNPay.
 
 ### 1.2 Thanh toán tiền đặt sân (đặt cọc)
 

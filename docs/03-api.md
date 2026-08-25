@@ -168,7 +168,20 @@ Toàn bộ nhóm này cần đăng nhập.
 | PATCH | `/subscription/plan` | 🏟 👑 | `plan` (`free`/`basic`/`pro`) |
 | PATCH | `/subscription/auto-renew` | 🏟 👑 | `autoRenew` (boolean) |
 | GET | `/invoices` | 🏟 👑 | Query: `page, limit, status` |
-| POST | `/invoices/:id/report-payment` | 🏟 👑 | `paymentReference` (3–100 ký tự) |
+| POST | `/invoices/:id/report-payment` | 🏟 👑 | `paymentReference` (3–100 ký tự) — đường thủ công |
+| POST | `/invoices/:id/checkout` | 🏟 👑 | `provider?` (mặc định `vnpay`) → trả `{ paymentUrl }` |
+
+### Webhook cổng thanh toán — `/webhooks/payments` (nằm ngoài `/api/v1`)
+
+Không JWT — VNPay gọi vào server-to-server (IPN) hoặc redirect trình duyệt người dùng (return).
+Chữ ký HMAC là hàng rào chính, không phải cookie/token. Xem
+[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thanh-toán-online-vnpay) và
+[02 — Kiến trúc](02-kien-truc.md#thanh-toán-online-provider-abstraction).
+
+| Method | Đường dẫn | Ghi chú |
+|---|---|---|
+| GET | `/vnpay/ipn` | Server-to-server, idempotent. Trả JSON `{RspCode, Message}`, luôn HTTP 200 |
+| GET | `/vnpay/return` | Redirect trình duyệt về `/owner/billing?payment=success\|failed` — chỉ UX, không xác nhận đơn |
 
 ## Thông báo — `/notifications`
 
@@ -194,6 +207,7 @@ mọi truy vấn đều bị chặn cứng bằng `recipient = người gọi`, 
 | `match_request_answered` | Lời mời được nhận hoặc từ chối | Người gửi lời mời |
 | `match_result_submitted` | Một bên nhập tỉ số | Quản lý đội còn lại |
 | `invoice_issued` | Phát hành hoá đơn thuê bao | Chủ sân |
+| `invoice_paid` | Cổng thanh toán xác nhận hoá đơn đã trả (IPN) | Chủ sân |
 | `chat_message` | Có tin nhắn mới **và** người nhận không có thiết bị nào đang kết nối | Người nhận tin nhắn |
 
 Quy tắc và lý do: [04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thông-báo-in-app).
@@ -333,6 +347,7 @@ Client phân nhánh theo `code`, không theo `message`.
 | `FIELD_NOT_ACTIVE` | 400 | Sân đang tắt nhận đặt |
 | `FIELD_NOT_VERIFIED` | 400 | Sân chưa được admin duyệt |
 | `INVOICE_NOT_PAYABLE` | 400 | Hoá đơn đã thanh toán hoặc đã huỷ |
+| `PAYMENT_PROVIDER_UNAVAILABLE` | 503 | Cổng thanh toán chưa cấu hình (thiếu `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET`) — chỉ xảy ra ở `POST /billing/invoices/:id/checkout` |
 | `EMAIL_ALREADY_EXISTS` / `USERNAME_ALREADY_EXISTS` | 409 | Đăng ký trùng |
 | `RESET_TOKEN_INVALID` | 400 | Token đặt lại mật khẩu sai hoặc hết hạn |
 | `TOO_MANY_REQUESTS` | 429 | Vượt rate limit |
