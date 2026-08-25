@@ -109,6 +109,10 @@ và trường hợp dữ liệu sai. Xoá mọi script thử, file log, bản gh
 `.github/workflows/ci.yml` chạy lint / typecheck / test / build **riêng cho từng phía**, dùng
 `dorny/paths-filter` nên chỉ phía nào có thay đổi mới chạy job của phía đó. Mỗi job còn chạy
 `npm audit` hai lần: `--audit-level=critical` là cổng chặn (build đỏ nếu có lỗ hổng mức
+critical), `--audit-level=high` chỉ để ghi log chứ không chặn — chuỗi `expo`/`metro`/
+`react-native` (mobile) hiện có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây
+giờ sẽ khoá đỏ CI vĩnh viễn cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change
+(`nodemailer` và `next` đã nâng xong — bản `next` hoá ra chỉ cần nâng bản nhỏ, không phải major;
 critical), `--audit-level=high` chỉ để ghi log chứ không chặn — một số gói (Next.js, Expo...)
 có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây giờ sẽ khoá đỏ CI vĩnh viễn
 cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change (`nodemailer` đã nâng lên v9,
