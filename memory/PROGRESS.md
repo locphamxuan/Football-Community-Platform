@@ -163,6 +163,24 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - `npm audit` sau khi nâng: 0 lỗ hổng. Xác minh đủ `tsc`/`lint`/`test`/`build`, cộng khởi động
   `next dev` thật và tải `/`, `/fields`, `/login` — cả ba trả 200.
 
+**Nâng chuỗi Expo/React Native lên bản mới nhất của SDK 57** (nhánh `chore/upgrade-expo-rn`)
+- Dùng `npx expo install --check`/`--fix` (công cụ chính thức của Expo biết đúng bản tương
+  thích từng gói theo SDK) thay vì `npm update` tay — SDK 57 (`57.0.11`) **cũng đã là bản major
+  mới nhất** (SDK 58 mới ở canary), nên đây cũng là nâng bản nhỏ trong cùng SDK, không phải
+  breaking migration: `expo` → `57.0.16`, `expo-router` → `57.0.16`, `expo-notifications` →
+  `57.0.14`, `expo-linking` → `57.0.7`, `expo-constants` → `57.0.14`, `jest-expo` → `57.0.4`.
+  **`react-native` giữ nguyên `0.86.2`** — bản `0.87.0` nằm ngoài compatibility matrix mà
+  `expo install --check` xác nhận cho SDK 57, không được bump theo.
+- `react` thoáng bị kéo lên `19.2.8` giữa chừng (peer dependency của `react-dom` trong nhánh hỗ
+  trợ web tuỳ chọn của `expo-router`, dự án này không dùng); sau khi `expo-router` về đúng bản
+  SDK 57 thì tự quay lại đúng `19.2.3` mà SDK 57 mong đợi.
+- Còn lại một cụm lỗ hổng high trong `@expo/cli` (qua `xcode`/`metro`/`image-size`) — chỉ chạy
+  lúc `expo start`/build trên máy lập trình viên, không lọt vào app đã build. Bản vá đòi bump
+  `@expo/cli` ra ngoài SDK 57 đã kiểm tương thích, nên **cố ý để lại**, không force.
+- Xác minh: `tsc`/`test` sạch (143 test), cộng bundle thật qua Metro cho nền tảng Android
+  (`expo start` → tải `/node_modules/expo-router/entry.bundle?platform=android...`, 200, ~7MB,
+  không lỗi) — mức kiểm tra gần nhất với thiết bị thật mà môi trường này cho phép, vì không có
+  emulator/thiết bị để build development build thật (xem "Đang làm / còn dở").
   (`backend/src/config/email.js`) — cho cấu hình SMTP host/port/auth thông thường.
 - Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
   một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
@@ -183,6 +201,10 @@ Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay trước, MoMo sau) — bỏ khâu admin đối soát tay.
 
+Ngoài lộ trình tính năng, ba việc nâng cấp dependency trong "nợ hạ tầng" trước đây
+(`nodemailer`, `next`, chuỗi `expo`/`react-native`) đã xong — xem "Đã xong" phía trên. Còn tồn
+đọng: cụm lỗ hổng high trong `@expo/cli` (dev-tool only, không lọt vào app) — chờ Expo phát hành
+bản vá nằm trong SDK 57.
 Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 
 - **Nâng major chuỗi `expo`/`metro`/`react-native` (mobile)** để vá lỗ hổng high còn lại —
@@ -193,7 +215,6 @@ Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
   `react-native` (mobile). `nodemailer` đã nâng xong — xem "Đã xong". Mỗi bản nâng đều là
   breaking change, cần làm riêng và test kỹ, không
   nên gộp vào một lần nâng cấp bảo mật.
-
 ## Quyết định và bẫy cần nhớ
 
 - **Doanh thu nền tảng ≠ tiền đặt sân.** Tiền khách trả cho chủ sân là GMV, doanh thu nền tảng chỉ là hoá đơn thuê bao. Đừng gộp hai con số này ở bất kỳ dashboard nào.

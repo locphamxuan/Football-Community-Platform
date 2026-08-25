@@ -109,6 +109,14 @@ và trường hợp dữ liệu sai. Xoá mọi script thử, file log, bản gh
 `.github/workflows/ci.yml` chạy lint / typecheck / test / build **riêng cho từng phía**, dùng
 `dorny/paths-filter` nên chỉ phía nào có thay đổi mới chạy job của phía đó. Mỗi job còn chạy
 `npm audit` hai lần: `--audit-level=critical` là cổng chặn (build đỏ nếu có lỗ hổng mức
+critical), `--audit-level=high` chỉ để ghi log chứ không chặn. `nodemailer`, `next` và chuỗi
+`expo`/`expo-router`/`expo-notifications`/`expo-linking`/`expo-constants` đã nâng lên bản mới
+nhất tương thích (xem `memory/PROGRESS.md`) — `next` và `expo` hoá ra chỉ cần bản nhỏ trong
+cùng major, không phải major mới như giả định ban đầu. Còn lại một cụm lỗ hổng high trong
+`@expo/cli` (qua `xcode`/`metro`/`image-size`) chỉ dùng lúc build/dev trên máy lập trình viên,
+không lọt vào app đã build — `npm audit fix`/`--force` đều đòi bump `@expo/cli` ra ngoài đúng
+bản Expo SDK 57 đã kiểm tương thích, nên để nguyên và giữ mức log-only cho tới khi Expo phát
+=======
 critical), `--audit-level=high` chỉ để ghi log chứ không chặn — chuỗi `expo`/`metro`/
 `react-native` (mobile) hiện có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây
 giờ sẽ khoá đỏ CI vĩnh viễn cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change
