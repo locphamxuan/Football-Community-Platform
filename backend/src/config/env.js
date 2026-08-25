@@ -55,6 +55,15 @@ const env = {
   // Số tin nhắn tối đa một tài khoản gửi được trong 60 giây. Trần này nằm trong service
   // chứ không phải middleware, vì tin nhắn qua WebSocket không đi qua tầng HTTP nào cả.
   CHAT_RATE_MAX: number('CHAT_RATE_MAX', '30'),
+
+  // ── Thanh toán (VNPay) ──────────────────────────────────────────────────────
+  // Optional, không required(): server vẫn phải chạy được khi chưa cấu hình merchant
+  // thật — billing.service tự báo PAYMENT_PROVIDER_UNAVAILABLE lúc gọi checkout, không
+  // chặn cả server lúc khởi động vì thanh toán online không phải điều kiện tiên quyết.
+  VNPAY_TMN_CODE: optional('VNPAY_TMN_CODE'),
+  VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET'),
+  VNPAY_URL: optional('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+  VNPAY_RETURN_URL: optional('VNPAY_RETURN_URL', `${optional('CLIENT_URL', 'http://localhost:3000')}/owner/billing`),
 };
 
 module.exports = env;

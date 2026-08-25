@@ -25,8 +25,12 @@ const invoiceSchema = new mongoose.Schema(
     paymentReference: { type: String, default: '' },
     reportedAt: { type: Date },
     paidAt: { type: Date },
+    /** Vắng mặt khi thanh toán qua cổng — không phải admin nào xác nhận cả. */
     confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     voidReason: { type: String, default: '' },
+    paymentProvider: { type: String, enum: ['manual', 'vnpay', 'momo'], default: 'manual' },
+    /** Mã giao dịch phía cổng thanh toán — chỉ có khi `paymentProvider !== 'manual'`. */
+    gatewayTransactionId: { type: String },
   },
   { timestamps: true }
 );

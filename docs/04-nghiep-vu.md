@@ -177,6 +177,39 @@ hoá đơn nào chưa thanh toán. Hoá đơn đã `paid` thì không huỷ đư
 - Cài đặt: `backend/src/services/billing.service.js`
 - Test: `backend/tests/unit/billing.service.test.js`, `backend/tests/unit/billing.test.js`
 
+### Thanh toán online (VNPay)
+
+Chủ sân bấm "Thanh toán online" ở hoá đơn `pending`/`awaiting_confirmation` → server tạo một
+`PaymentTransaction` (`status: 'pending'`) và trả link VNPay. Chủ sân thanh toán xong, hai việc
+xảy ra **độc lập nhau**:
+
+1. **Return URL** (`GET /webhooks/payments/vnpay/return`) — trình duyệt được redirect về đây.
+   Chỉ dùng để báo "thành công"/"thất bại" cho UX, **không xác nhận đơn** — có thể không bao
+   giờ xảy ra (đóng tab, mất mạng giữa chừng).
+2. **IPN** (`GET /webhooks/payments/vnpay/ipn`) — VNPay gọi server-to-server, độc lập với việc
+   người dùng có quay lại trang hay không. Đây mới là nguồn sự thật duy nhất xác nhận thanh toán.
+
+Xử lý IPN, theo đúng thứ tự (dừng ở bước đầu tiên không qua được):
+
+1. Xác minh chữ ký HMAC-SHA512 — sai thì trả `RspCode: 97`, không tra gì thêm.
+2. Tra `PaymentTransaction` theo `(provider, providerTxnRef)` — không thấy thì `01`.
+3. Đã xử lý rồi (`status !== 'pending'`, tức IPN gọi lại) → `02`, **không cộng tiền lần hai**.
+4. Số tiền không khớp `PaymentTransaction.amount` → `04`, đánh dấu giao dịch `failed`.
+5. Hợp lệ → `findOneAndUpdate` với điều kiện `status: 'pending'` (chỉ một trong nhiều request
+   đồng thời thắng), rồi mới gọi `confirmInvoicePaymentViaGateway` — dùng chung `settleInvoice`
+   với đường đối soát thủ công, chỉ khác là ghi `paymentProvider`/`gatewayTransactionId` thay vì
+   `confirmedBy` (không có admin nào trong luồng này) → `00`.
+
+Đường thủ công (chuyển khoản + admin đối soát) **vẫn giữ nguyên** làm phương án dự phòng —
+không xoá, không thay thế.
+
+- Cài đặt: `backend/src/services/payments/`, `backend/src/services/billing.service.js`
+  (`createCheckoutSession`, `handleGatewayIpn`, `handleGatewayReturn`), kiến trúc chi tiết ở
+  [`docs/02-kien-truc.md`](02-kien-truc.md#thanh-toán-online-provider-abstraction).
+- Test: `backend/tests/unit/vnpay.provider.test.js`, `backend/tests/unit/billing.service.test.js`,
+  `backend/tests/integration/paymentWebhook.routes.test.js`.
+- MoMo chưa cài đặt — `getProvider('momo')` sẽ báo cổng chưa hỗ trợ (interface đã sẵn sàng).
+
 ## Sân và duyệt sân
 
 - Tạo sân phải qua **hạn mức gói** (`assertCanCreateField`), thêm sân con cũng vậy.

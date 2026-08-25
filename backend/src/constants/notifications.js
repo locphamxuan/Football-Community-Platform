@@ -13,6 +13,7 @@ const NotificationType = {
   MATCH_REQUEST_ANSWERED: 'match_request_answered',
   MATCH_RESULT_SUBMITTED: 'match_result_submitted',
   INVOICE_ISSUED: 'invoice_issued',
+  INVOICE_PAID: 'invoice_paid',
   /**
    * Chỉ bắn khi người nhận **không có thiết bị nào đang kết nối** — người đang mở ứng dụng
    * đã thấy tin nhắn hiện ra rồi, thêm một thông báo nữa là kêu hai lần cho cùng một việc.
