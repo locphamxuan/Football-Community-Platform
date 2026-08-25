@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
-import { AlertTriangle, Check, CreditCard, ReceiptText, Volleyball } from 'lucide-react';
+import { AlertTriangle, Check, CreditCard, ReceiptText, Volleyball, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,10 +25,28 @@ import { formatDate, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { ApiResponse, Invoice, PlanCode } from '@/types';
 
-export default function OwnerBillingPage() {
+function OwnerBillingContent() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [reference, setReference] = useState('');
+
+  // VNPay redirect người dùng về đây sau khi thanh toán — chỉ để báo kết quả, không dùng để
+  // xác nhận đơn (IPN mới là nguồn sự thật, xem docs/02-kien-truc.md).
+  useEffect(() => {
+    const payment = searchParams.get('payment');
+    if (!payment) return;
+    if (payment === 'success') {
+      toast.success('Thanh toán thành công! Hoá đơn sẽ cập nhật trong giây lát.');
+    } else {
+      toast.error('Thanh toán không thành công hoặc đã bị huỷ.');
+    }
+    qc.invalidateQueries({ queryKey: ['billing-subscription'] });
+    qc.invalidateQueries({ queryKey: ['billing-invoices'] });
+    router.replace('/owner/billing');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const { data, isPending } = useQuery({
     queryKey: ['billing-subscription'],
@@ -79,6 +98,14 @@ export default function OwnerBillingPage() {
       setPaying(null);
       setReference('');
       invalidate();
+    },
+    onError,
+  });
+
+  const checkout = useMutation({
+    mutationFn: (invoiceId: string) => billingService.checkout(invoiceId),
+    onSuccess: (res) => {
+      window.location.href = res.data.data.paymentUrl;
     },
     onError,
   });
@@ -261,16 +288,26 @@ export default function OwnerBillingPage() {
                     </td>
                     <td className="py-2.5 text-right">
                       {inv.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setPaying(inv);
-                            setReference('');
-                          }}
-                        >
-                          Tôi đã chuyển khoản
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            disabled={checkout.isPending}
+                            onClick={() => checkout.mutate(inv._id)}
+                          >
+                            <Wallet className="size-4" aria-hidden />
+                            Thanh toán online
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPaying(inv);
+                              setReference('');
+                            }}
+                          >
+                            Tôi đã chuyển khoản
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -314,6 +351,14 @@ export default function OwnerBillingPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function OwnerBillingPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
+      <OwnerBillingContent />
+    </Suspense>
   );
 }
 

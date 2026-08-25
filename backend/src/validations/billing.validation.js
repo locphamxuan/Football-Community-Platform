@@ -24,10 +24,15 @@ const voidInvoiceSchema = z.object({
   reason: z.string().max(300).optional(),
 });
 
+const checkoutSchema = z.object({
+  provider: z.enum(['vnpay', 'momo']).optional().default('vnpay'),
+});
+
 module.exports = {
   changePlanSchema,
   autoRenewSchema,
   reportPaymentSchema,
   invoiceQuerySchema,
   voidInvoiceSchema,
+  checkoutSchema,
 };

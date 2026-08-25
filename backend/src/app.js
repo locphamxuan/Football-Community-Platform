@@ -7,11 +7,12 @@ const morgan = require('morgan');
 
 const env = require('./config/env');
 const { getRedisStatus } = require('./config/redis');
-const { globalLimiter, writeLimiter } = require('./middleware/rateLimiter');
+const { globalLimiter, writeLimiter, webhookLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 const apiRoutes = require('./routes');
+const paymentWebhookRoutes = require('./routes/paymentWebhook.routes');
 
 const app = express();
 
@@ -37,6 +38,12 @@ app.use(mongoSanitize()); // chặn NoSQL injection
 if (env.NODE_ENV !== 'test') {
   app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
+
+// ── Webhook cổng thanh toán ───────────────────────────────────────────────────
+// Nằm ngoài /api: VNPay gọi vào không mang JWT nên `authenticate` không áp dụng, và endpoint
+// này không nên bị `globalLimiter`/`writeLimiter` (dựng cho người dùng đã đăng nhập) áp vào —
+// có trần riêng (`webhookLimiter`). Chữ ký VNPay là hàng rào chính, không phải JWT hay CSRF.
+app.use('/webhooks/payments', webhookLimiter, paymentWebhookRoutes);
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 // Trần chung cho mọi request, cộng thêm trần chặt hơn cho các request ghi.

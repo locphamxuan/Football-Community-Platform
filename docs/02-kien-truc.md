@@ -172,6 +172,44 @@ Các câu hỏi mà mọi màn hình chat đều hỏi — hội thoại này t�
 mình có phải quản trị nhóm không — nằm trong một file hàm thuần mỗi phía. Chúng không dùng
 chung được vì `shared/types.ts` chỉ chứa type, không mang được giá trị runtime sang cả hai bên.
 
+## Thanh toán online: provider abstraction
+
+Nhánh `feature/vnpay-payment-gateway` thêm cổng thanh toán VNPay cho hoá đơn thuê bao, cạnh
+đường thủ công (chủ sân báo mã chuyển khoản, admin đối soát) vốn đã có — đường thủ công vẫn
+giữ nguyên làm phương án dự phòng.
+
+```
+backend/src/services/payments/
+  provider.interface.js   JSDoc mô tả hợp đồng: createPaymentUrl, verifySignature, isSuccess, parseCallback
+  vnpay.provider.js       cài đặt cho VNPay
+  index.js                getProvider(name) — tra registry, ném PAYMENT_PROVIDER_UNAVAILABLE nếu chưa cấu hình
+```
+
+`billing.service.js` chỉ gọi qua `getProvider(name)`, không import thẳng `vnpay.provider.js` —
+thêm MoMo sau này là thêm một file cài đặt hợp đồng, không sửa `createCheckoutSession`/
+`handleGatewayIpn`.
+
+**Vì sao webhook nằm ngoài `/api`** (`app.js`, mount `/webhooks/payments` trước
+`app.use('/api', globalLimiter, writeLimiter)`): VNPay gọi vào không mang JWT — `authenticate`
+không áp dụng được — và endpoint không nên chia sẻ trần rate-limit dựng cho người dùng đã đăng
+nhập. Có `webhookLimiter` riêng (đếm theo IP, vì không có `req.user`). Cùng lý do `/health` nằm
+ngoài `/api` để probe của Docker không bị đếm.
+
+**Vì sao có `PaymentTransaction` thay vì tái dùng `AdminAuditLog`.** Một lượt gọi cổng thanh
+toán không phải hành động của admin — không có `adminId` nào trong luồng IPN — nên nhồi vào
+audit log (vốn có mục đích riêng: dò dấu vết nếu tài khoản admin bị lạm quyền, xem
+`adminAuditLog.service.js`) là sai chỗ. `PaymentTransaction` có unique index
+`{provider, providerTxnRef}`: đây chính là cơ chế idempotent — IPN gọi lại (VNPay tự retry khi
+không nhận được response) luôn tìm thấy bản ghi cũ, `findOneAndUpdate` với điều kiện
+`status: 'pending'` đảm bảo chỉ một trong nhiều lần gọi trùng thắng được chuyển sang `'success'`,
+không cộng `Subscription.totalPaid` hai lần.
+
+**Return URL không phải nguồn sự thật.** VNPay redirect trình duyệt người dùng về
+`vnp_ReturnUrl` sau khi thanh toán, nhưng lượt redirect này có thể không xảy ra (người dùng
+đóng tab, mất mạng) và không đảm bảo tính toàn vẹn ngang IPN. `handleGatewayReturn` chỉ đọc để
+quyết định thông báo "thành công"/"thất bại" cho UX, **không** gọi `confirmInvoicePaymentViaGateway`
+— việc đó chỉ `handleGatewayIpn` (server-to-server) làm.
+
 ## Mobile: một màn hình đi qua đâu
 
 ```

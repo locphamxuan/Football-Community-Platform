@@ -35,6 +35,10 @@ Biến tuỳ chọn đáng chú ý:
 | `REDIS_URL` | `redis://localhost:6379` | |
 | `RATE_LIMIT_*` | xem [05](05-redis-rate-limit.md) | |
 | `CHAT_RATE_MAX` | 30 | Tin nhắn tối đa mỗi tài khoản trong 60 giây. Đếm trong `chat.service` chứ không phải middleware, vì tin nhắn qua WebSocket không đi qua express |
+| `VNPAY_TMN_CODE` | rỗng | Mã merchant VNPay. **Tuỳ chọn** — thiếu thì `checkout` trả `PAYMENT_PROVIDER_UNAVAILABLE` (503) thay vì chặn server khởi động; đường chuyển khoản thủ công vẫn chạy bình thường |
+| `VNPAY_HASH_SECRET` | rỗng | Secret key ký/xác minh chữ ký HMAC-SHA512 |
+| `VNPAY_URL` | sandbox VNPay | Sandbox demo dùng được ngay, không cần đăng ký merchant thật — xem [tài liệu tích hợp VNPay](https://sandbox.vnpayment.vn/apis/) để lấy `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` demo |
+| `VNPAY_RETURN_URL` | `{CLIENT_URL}/owner/billing` | Trang trình duyệt quay về sau khi thanh toán — chỉ UX, không xác nhận đơn |
 
 ## Chạy local
 
@@ -112,7 +116,15 @@ cùng major, không phải major mới như giả định ban đầu. Còn lại
 `@expo/cli` (qua `xcode`/`metro`/`image-size`) chỉ dùng lúc build/dev trên máy lập trình viên,
 không lọt vào app đã build — `npm audit fix`/`--force` đều đòi bump `@expo/cli` ra ngoài đúng
 bản Expo SDK 57 đã kiểm tương thích, nên để nguyên và giữ mức log-only cho tới khi Expo phát
-hành bản vá nằm trong SDK 57.
+=======
+critical), `--audit-level=high` chỉ để ghi log chứ không chặn — chuỗi `expo`/`metro`/
+`react-native` (mobile) hiện có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây
+giờ sẽ khoá đỏ CI vĩnh viễn cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change
+(`nodemailer` và `next` đã nâng xong — bản `next` hoá ra chỉ cần nâng bản nhỏ, không phải major;
+critical), `--audit-level=high` chỉ để ghi log chứ không chặn — một số gói (Next.js, Expo...)
+có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây giờ sẽ khoá đỏ CI vĩnh viễn
+cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change (`nodemailer` đã nâng lên v9,
+xem `memory/PROGRESS.md`).
 
 `.github/workflows/codeql.yml` quét tĩnh JavaScript/TypeScript bằng CodeQL — chạy trên mỗi
 push/PR vào `main`/`dev` và thêm một lượt hàng tuần (thứ Hai) để bắt lỗ hổng mới phát hiện

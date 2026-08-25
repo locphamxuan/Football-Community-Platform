@@ -39,6 +39,7 @@ describe('phân quyền khu thuê bao', () => {
     ['patch', '/api/v1/billing/subscription/auto-renew'],
     ['get', '/api/v1/billing/invoices'],
     ['post', `/api/v1/billing/invoices/${INVOICE_ID}/report-payment`],
+    ['post', `/api/v1/billing/invoices/${INVOICE_ID}/checkout`],
   ])('%s %s trả 401 khi thiếu token', async (method, url) => {
     const res = await request(app)[method](url);
     expect(res.status).toBe(401);
@@ -156,5 +157,38 @@ describe('hoá đơn của chủ sân', () => {
 
     expect(res.status).toBe(400);
     expect(billingService.reportPayment).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/v1/billing/invoices/:id/checkout', () => {
+  it('tạo link thanh toán VNPay', async () => {
+    billingService.createCheckoutSession.mockResolvedValue({ paymentUrl: 'https://sandbox.vnpayment.vn/pay?x=1' });
+
+    const res = await request(app)
+      .post(`/api/v1/billing/invoices/${INVOICE_ID}/checkout`)
+      .set(asOwner())
+      .send({ provider: 'vnpay' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.paymentUrl).toBe('https://sandbox.vnpayment.vn/pay?x=1');
+    expect(billingService.createCheckoutSession).toHaveBeenCalledWith(USER_ID, INVOICE_ID, 'vnpay', expect.any(String));
+  });
+
+  it('không truyền provider thì mặc định vnpay', async () => {
+    billingService.createCheckoutSession.mockResolvedValue({ paymentUrl: 'https://x' });
+
+    await request(app).post(`/api/v1/billing/invoices/${INVOICE_ID}/checkout`).set(asOwner()).send({});
+
+    expect(billingService.createCheckoutSession).toHaveBeenCalledWith(USER_ID, INVOICE_ID, 'vnpay', expect.any(String));
+  });
+
+  it('provider lạ bị từ chối', async () => {
+    const res = await request(app)
+      .post(`/api/v1/billing/invoices/${INVOICE_ID}/checkout`)
+      .set(asOwner())
+      .send({ provider: 'paypal' });
+
+    expect(res.status).toBe(400);
+    expect(billingService.createCheckoutSession).not.toHaveBeenCalled();
   });
 });

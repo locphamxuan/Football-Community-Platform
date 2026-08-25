@@ -25,6 +25,7 @@ const TYPE_HINTS: Record<NotificationType, string> = {
   match_request_answered: 'Đội bạn mời đã nhận hoặc từ chối lời mời.',
   match_result_submitted: 'Đối thủ vừa nhập tỉ số, chờ bạn xác nhận.',
   invoice_issued: 'Hoá đơn thuê bao mới cần thanh toán.',
+  invoice_paid: 'Hoá đơn thuê bao đã thanh toán thành công.',
   chat_message: 'Có tin nhắn mới khi bạn không mở ứng dụng.',
 };
 

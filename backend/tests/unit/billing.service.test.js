@@ -9,12 +9,19 @@ jest.mock('../../src/models/Invoice', () => ({
 }));
 jest.mock('../../src/models/Field', () => ({ find: jest.fn(), countDocuments: jest.fn() }));
 jest.mock('../../src/models/Booking', () => ({ countDocuments: jest.fn(), aggregate: jest.fn() }));
+jest.mock('../../src/models/PaymentTransaction', () => ({
+  create: jest.fn(), findOne: jest.fn(), findOneAndUpdate: jest.fn(), updateOne: jest.fn(),
+}));
+jest.mock('../../src/services/payments', () => ({ getProvider: jest.fn() }));
 
 const Subscription = require('../../src/models/Subscription');
 const Invoice = require('../../src/models/Invoice');
 const Field = require('../../src/models/Field');
 const Booking = require('../../src/models/Booking');
+const PaymentTransaction = require('../../src/models/PaymentTransaction');
+const { getProvider } = require('../../src/services/payments');
 const billingService = require('../../src/services/billing.service');
+const { notify } = require('../../src/services/notification.service');
 const adminAuditLogService = require('../../src/services/adminAuditLog.service');
 const { PlanCode, SubscriptionStatus, InvoiceStatus } = require('../../src/constants/plans');
 const { AdminAction, AdminTargetType } = require('../../src/constants/adminAudit');
@@ -274,6 +281,184 @@ describe('voidInvoice', () => {
     Invoice.findById.mockResolvedValue(fakeInvoice({ status: InvoiceStatus.PAID }));
 
     await expect(billingService.voidInvoice(INVOICE_ID)).rejects.toMatchObject({ code: 'INVOICE_NOT_PAYABLE' });
+  });
+});
+
+describe('createCheckoutSession', () => {
+  const fakeProvider = () => ({
+    name: 'vnpay',
+    createPaymentUrl: jest.fn().mockReturnValue('https://sandbox.vnpayment.vn/pay?x=1'),
+  });
+
+  it('trả về paymentUrl và tạo một PaymentTransaction đang chờ', async () => {
+    const provider = fakeProvider();
+    getProvider.mockReturnValue(provider);
+    Invoice.findById.mockResolvedValue(fakeInvoice());
+
+    const result = await billingService.createCheckoutSession(OWNER_ID, INVOICE_ID, 'vnpay', '127.0.0.1');
+
+    expect(result).toEqual({ paymentUrl: 'https://sandbox.vnpayment.vn/pay?x=1' });
+    expect(PaymentTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      invoice: INVOICE_ID, provider: 'vnpay', amount: 299000,
+    }));
+    expect(provider.createPaymentUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 299000 }), { ipAddr: '127.0.0.1' }
+    );
+  });
+
+  it('hoá đơn không thuộc chủ sân thì 403, không tạo giao dịch', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    Invoice.findById.mockResolvedValue(fakeInvoice({ owner: { toString: () => 'nguoi-khac' } }));
+
+    await expect(billingService.createCheckoutSession(OWNER_ID, INVOICE_ID, 'vnpay', '127.0.0.1'))
+      .rejects.toMatchObject({ statusCode: 403 });
+    expect(PaymentTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('hoá đơn đã thanh toán rồi thì không cho checkout lại', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    Invoice.findById.mockResolvedValue(fakeInvoice({ status: InvoiceStatus.PAID }));
+
+    await expect(billingService.createCheckoutSession(OWNER_ID, INVOICE_ID, 'vnpay', '127.0.0.1'))
+      .rejects.toMatchObject({ code: 'INVOICE_NOT_PAYABLE' });
+  });
+
+  it('cổng chưa cấu hình thì báo lỗi từ getProvider, không tạo giao dịch', async () => {
+    Invoice.findById.mockResolvedValue(fakeInvoice());
+    getProvider.mockImplementation(() => {
+      const { AppError } = require('../../src/middleware/errorHandler');
+      throw new AppError('Payment provider "vnpay" is not configured', 503, 'PAYMENT_PROVIDER_UNAVAILABLE');
+    });
+
+    await expect(billingService.createCheckoutSession(OWNER_ID, INVOICE_ID, 'vnpay', '127.0.0.1'))
+      .rejects.toMatchObject({ code: 'PAYMENT_PROVIDER_UNAVAILABLE' });
+    expect(PaymentTransaction.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('confirmInvoicePaymentViaGateway', () => {
+  it('ghi nhận thanh toán qua cổng và báo cho chủ sân', async () => {
+    const invoice = fakeInvoice({ status: InvoiceStatus.AWAITING_CONFIRMATION });
+    const sub = fakeSubscription({ status: SubscriptionStatus.PAST_DUE });
+    Invoice.findById.mockResolvedValue(invoice);
+    Subscription.findById.mockResolvedValue(sub);
+
+    await billingService.confirmInvoicePaymentViaGateway(INVOICE_ID, { provider: 'vnpay', transactionId: 'TXN123' });
+
+    expect(invoice.status).toBe(InvoiceStatus.PAID);
+    expect(invoice.paymentProvider).toBe('vnpay');
+    expect(invoice.gatewayTransactionId).toBe('TXN123');
+    expect(invoice.confirmedBy).toBeUndefined();
+    expect(sub.totalPaid).toBe(299000);
+    expect(notify).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ type: 'invoice_paid' }));
+  });
+
+  it('hoá đơn đã paid rồi thì không xử lý lại (idempotent)', async () => {
+    const invoice = fakeInvoice({ status: InvoiceStatus.PAID });
+    Invoice.findById.mockResolvedValue(invoice);
+
+    await billingService.confirmInvoicePaymentViaGateway(INVOICE_ID, { provider: 'vnpay', transactionId: 'TXN123' });
+
+    expect(invoice.save).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleGatewayIpn', () => {
+  const query = { vnp_TxnRef: 'INV-001-ABC', vnp_Amount: '29900000', vnp_ResponseCode: '00', vnp_TransactionStatus: '00', vnp_TransactionNo: 'TXN1' };
+
+  const fakeProvider = (overrides = {}) => ({
+    name: 'vnpay',
+    verifySignature: jest.fn().mockReturnValue(true),
+    isSuccess: jest.fn().mockReturnValue(true),
+    parseCallback: jest.fn().mockReturnValue({ txnRef: 'INV-001-ABC', amount: 299000, transactionId: 'TXN1' }),
+    ...overrides,
+  });
+
+  it('chữ ký sai thì trả 97, không tra PaymentTransaction', async () => {
+    getProvider.mockReturnValue(fakeProvider({ verifySignature: jest.fn().mockReturnValue(false) }));
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '97', message: 'Invalid signature' });
+    expect(PaymentTransaction.findOne).not.toHaveBeenCalled();
+  });
+
+  it('không tìm thấy giao dịch thì trả 01', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    PaymentTransaction.findOne.mockResolvedValue(null);
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '01', message: 'Order not found' });
+  });
+
+  it('giao dịch đã xử lý rồi (gọi IPN trùng) thì trả 02, không cộng tiền lần hai', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    PaymentTransaction.findOne.mockResolvedValue({ _id: 'txn1', invoice: INVOICE_ID, amount: 299000, status: 'success' });
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '02', message: 'Order already confirmed' });
+    expect(PaymentTransaction.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('số tiền không khớp thì trả 04 và đánh dấu giao dịch thất bại', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    PaymentTransaction.findOne.mockResolvedValue({ _id: 'txn1', invoice: INVOICE_ID, amount: 500000, status: 'pending' });
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '04', message: 'Invalid amount' });
+    expect(PaymentTransaction.updateOne).toHaveBeenCalledWith(
+      { _id: 'txn1', status: 'pending' }, expect.objectContaining({ status: 'failed' })
+    );
+  });
+
+  it('giao dịch hợp lệ thì chuyển pending -> success và xác nhận hoá đơn', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    PaymentTransaction.findOne.mockResolvedValue({ _id: 'txn1', invoice: INVOICE_ID, amount: 299000, status: 'pending' });
+    PaymentTransaction.findOneAndUpdate.mockResolvedValue({ _id: 'txn1', status: 'success' });
+    Invoice.findById.mockResolvedValue(fakeInvoice());
+    Subscription.findById.mockResolvedValue(fakeSubscription());
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '00', message: 'Confirm Success' });
+    expect(PaymentTransaction.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'txn1', status: 'pending' }, expect.objectContaining({ status: 'success' }), { new: true }
+    );
+  });
+
+  it('hai IPN cùng lúc tranh nhau — request thua findOneAndUpdate trả 02, không xác nhận hoá đơn lần hai', async () => {
+    getProvider.mockReturnValue(fakeProvider());
+    PaymentTransaction.findOne.mockResolvedValue({ _id: 'txn1', invoice: INVOICE_ID, amount: 299000, status: 'pending' });
+    PaymentTransaction.findOneAndUpdate.mockResolvedValue(null); // request kia đã thắng trước
+
+    const result = await billingService.handleGatewayIpn('vnpay', query);
+
+    expect(result).toEqual({ rspCode: '02', message: 'Order already confirmed' });
+    expect(Invoice.findById).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleGatewayReturn', () => {
+  it('chữ ký hợp lệ và giao dịch thành công thì success: true', () => {
+    getProvider.mockReturnValue({
+      verifySignature: jest.fn().mockReturnValue(true),
+      isSuccess: jest.fn().mockReturnValue(true),
+    });
+
+    expect(billingService.handleGatewayReturn('vnpay', {})).toEqual({ success: true });
+  });
+
+  it('chữ ký sai thì success: false dù isSuccess có báo true', () => {
+    getProvider.mockReturnValue({
+      verifySignature: jest.fn().mockReturnValue(false),
+      isSuccess: jest.fn().mockReturnValue(true),
+    });
+
+    expect(billingService.handleGatewayReturn('vnpay', {})).toEqual({ success: false });
   });
 });
 

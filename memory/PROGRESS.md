@@ -127,6 +127,15 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Đã áp các bản vá không phá API (`npm audit fix`, không `--force`) cho backend và frontend —
   xem "Việc nên làm tiếp" cho phần còn lại cần nâng bản major.
 
+
+**Cổng thanh toán online VNPay cho hoá đơn thuê bao** (nhánh `feature/vnpay-payment-gateway`)
+- `POST /billing/invoices/:id/checkout` tạo link thanh toán; webhook IPN
+  (`GET /webhooks/payments/vnpay/ipn`, nằm ngoài `/api`) xác minh chữ ký HMAC-SHA512 và idempotent
+  qua `PaymentTransaction` (unique `{provider, providerTxnRef}`) — gọi lại không cộng tiền hai lần.
+- Kiến trúc `backend/src/services/payments/` theo interface chung — thêm MoMo sau chỉ cần một
+  file cài đặt mới, không sửa `billing.service.js`. MoMo **chưa cài đặt**.
+- Đường chuyển khoản thủ công (báo mã giao dịch, admin đối soát) vẫn giữ nguyên làm dự phòng.
+- Chi tiết kiến trúc: [`docs/02-kien-truc.md`](../docs/02-kien-truc.md#thanh-toán-online-provider-abstraction).
 **Giá linh hoạt và khuyến mãi cho chủ sân** (nhánh `feature/flexible-pricing-promotions`)
 - `Field.priceOverrides` (ghi đè bảng giá cho một khoảng ngày — lễ/Tết, mùa cao điểm) và
   `Field.promotions` (mã giảm giá theo % hoặc số tiền cố định, giới hạn được theo khung giờ,
@@ -172,6 +181,9 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
   (`expo start` → tải `/node_modules/expo-router/entry.bundle?platform=android...`, 200, ~7MB,
   không lỗi) — mức kiểm tra gần nhất với thiết bị thật mà môi trường này cho phép, vì không có
   emulator/thiết bị để build development build thật (xem "Đang làm / còn dở").
+  (`backend/src/config/email.js`) — cho cấu hình SMTP host/port/auth thông thường.
+- Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
+  một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
 
 ## Đang làm / còn dở
 
@@ -180,6 +192,11 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 
 ## Việc nên làm tiếp
 
+Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md).
+
+1. MoMo cho cổng thanh toán (VNPay đã xong — xem "Đã xong" phía trên) — cùng interface
+   `payments/provider.interface.js` đã có sẵn.
+2. Giá linh hoạt và khuyến mãi cho chủ sân — mọi biến thể vẫn phải đi qua `calcPrice`.
 Lộ trình đầy đủ kèm phạm vi và định nghĩa hoàn thành: [`docs/08-lo-trinh.md`](../docs/08-lo-trinh.md). Việc đầu bảng:
 
 1. Cổng thanh toán trực tuyến cho hoá đơn thuê bao (VNPay trước, MoMo sau) — bỏ khâu admin đối soát tay.
@@ -188,7 +205,16 @@ Ngoài lộ trình tính năng, ba việc nâng cấp dependency trong "nợ h�
 (`nodemailer`, `next`, chuỗi `expo`/`react-native`) đã xong — xem "Đã xong" phía trên. Còn tồn
 đọng: cụm lỗ hổng high trong `@expo/cli` (dev-tool only, không lọt vào app) — chờ Expo phát hành
 bản vá nằm trong SDK 57.
+Ngoài lộ trình tính năng, còn tồn đọng về hạ tầng:
 
+- **Nâng major chuỗi `expo`/`metro`/`react-native` (mobile)** để vá lỗ hổng high còn lại —
+  `nodemailer` và `next` đã xong, xem "Đã xong". Đây là nâng cấp rủi ro cao nhất trong ba việc:
+  môi trường hiện tại không có thiết bị/emulator để build và kiểm push notification thật, chỉ
+  verify được qua `typecheck`/`test`.- **Nâng major các dependency còn lỗ hổng high** mà `npm audit fix` không tự vá được: `next`
+  (frontend, kéo theo `postcss`/`sharp`), toàn bộ chuỗi `expo`/`metro`/
+  `react-native` (mobile). `nodemailer` đã nâng xong — xem "Đã xong". Mỗi bản nâng đều là
+  breaking change, cần làm riêng và test kỹ, không
+  nên gộp vào một lần nâng cấp bảo mật.
 ## Quyết định và bẫy cần nhớ
 
 - **Doanh thu nền tảng ≠ tiền đặt sân.** Tiền khách trả cho chủ sân là GMV, doanh thu nền tảng chỉ là hoá đơn thuê bao. Đừng gộp hai con số này ở bất kỳ dashboard nào.

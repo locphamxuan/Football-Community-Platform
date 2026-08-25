@@ -16,6 +16,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   match_request_answered: Swords,
   match_result_submitted: Trophy,
   invoice_issued: Receipt,
+  invoice_paid: Receipt,
   chat_message: MessageSquare,
 };
 
