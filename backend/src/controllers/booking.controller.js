@@ -1,4 +1,4 @@
-const bookingService = require('../services/booking.service');
+const bookingService = require('../services/booking');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');

@@ -1,5 +1,5 @@
 const fieldPricingService = require('../services/fieldPricing.service');
-const bookingService = require('../services/booking.service');
+const bookingService = require('../services/booking');
 const { sendSuccess } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');

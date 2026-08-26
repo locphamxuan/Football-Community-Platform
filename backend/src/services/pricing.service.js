@@ -4,7 +4,7 @@ const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 
 /**
- * Toàn bộ logic tính giá sân — thuần, không chạm DB — tách riêng khỏi booking.service.js
+ * Toàn bộ logic tính giá sân — thuần, không chạm DB — tách riêng khỏi services/booking/
  * (vòng đời booking: tạo/huỷ/xác nhận) để mỗi file chỉ giữ một nhánh nghiệp vụ.
  */
 
