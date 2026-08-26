@@ -4,7 +4,7 @@ jest.mock('../../src/models/Field', () => ({
   findByIdAndUpdate: jest.fn(), create: jest.fn(), countDocuments: jest.fn(),
 }));
 jest.mock('../../src/models/Booking', () => ({ find: jest.fn(), countDocuments: jest.fn() }));
-jest.mock('../../src/services/billing.service', () => ({
+jest.mock('../../src/services/billing', () => ({
   assertCanCreateField: jest.fn().mockResolvedValue({}),
   assertCanAddSubField: jest.fn().mockResolvedValue({}),
 }));
@@ -16,7 +16,7 @@ jest.mock('../../src/services/adminAuditLog.service');
 
 const Field = require('../../src/models/Field');
 const Booking = require('../../src/models/Booking');
-const billingService = require('../../src/services/billing.service');
+const billingService = require('../../src/services/billing');
 const adminAuditLogService = require('../../src/services/adminAuditLog.service');
 const fieldService = require('../../src/services/field.service');
 const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');

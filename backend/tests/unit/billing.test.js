@@ -1,4 +1,4 @@
-const { addMonths, monthRange } = require('../../src/services/billing.service');
+const { addMonths, monthRange } = require('../../src/services/billing');
 const { PLANS, PLAN_CODES, getPlan, PlanCode } = require('../../src/constants/plans');
 const { getPagination } = require('../../src/utils/pagination');
 

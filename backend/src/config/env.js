@@ -58,7 +58,7 @@ const env = {
 
   // ── Thanh toán (VNPay) ──────────────────────────────────────────────────────
   // Optional, không required(): server vẫn phải chạy được khi chưa cấu hình merchant
-  // thật — billing.service tự báo PAYMENT_PROVIDER_UNAVAILABLE lúc gọi checkout, không
+  // thật — services/billing tự báo PAYMENT_PROVIDER_UNAVAILABLE lúc gọi checkout, không
   // chặn cả server lúc khởi động vì thanh toán online không phải điều kiện tiên quyết.
   VNPAY_TMN_CODE: optional('VNPAY_TMN_CODE'),
   VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET'),

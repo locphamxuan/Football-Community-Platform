@@ -1,4 +1,4 @@
-const billingService = require('../services/billing.service');
+const billingService = require('../services/billing');
 const env = require('../config/env');
 const logger = require('../utils/logger');
 const catchAsync = require('../utils/catchAsync');

@@ -1,6 +1,6 @@
 /**
  * Hợp đồng mà mọi cổng thanh toán (VNPay, MoMo, ...) phải cài đặt.
- * billing.service.js chỉ gọi qua interface này — thêm cổng mới không phải sửa luồng nghiệp vụ.
+ * services/billing chỉ gọi qua interface này — thêm cổng mới không phải sửa luồng nghiệp vụ.
  *
  * @typedef {Object} PaymentProvider
  * @property {string} name - Tên cổng, khớp `PaymentTransaction.provider` / `Invoice.paymentProvider`.
