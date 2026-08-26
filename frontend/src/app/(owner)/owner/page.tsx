@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import {
-  CalendarCheck, CalendarClock, Clock, MessageSquareText, Plus, Star, TrendingUp, Volleyball, Wallet,
+  AlertTriangle, CalendarCheck, CalendarClock, Clock, CreditCard, MessageSquareText, Plus, Star,
+  TrendingUp, Volleyball, Wallet,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,15 +19,32 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import MonthlyBarChart from '@/components/dashboard/MonthlyBarChart';
 import StatCard from '@/components/dashboard/StatCard';
+import UsageMeter from '@/components/dashboard/UsageMeter';
 import StarRating from '@/components/reviews/StarRating';
+import billingService from '@/services/billing.service';
 import bookingService from '@/services/booking.service';
 import reviewService from '@/services/review.service';
 import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS } from '@/lib/constants';
 import { formatCompactPrice, formatDate, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { OwnerStats } from '@/types';
 
 const REVENUE_TREND_MONTHS = 6;
 const RECENT_REVIEWS_LIMIT = 3;
+/** Trạng thái đã xử lý xong — không tính pending/today vì đã có thẻ riêng. */
+const BOOKING_BREAKDOWN_STATUSES = ['confirmed', 'completed', 'cancelled', 'no_show'] as const;
+const BOOKING_BREAKDOWN_FIELDS: Record<(typeof BOOKING_BREAKDOWN_STATUSES)[number], keyof OwnerStats> = {
+  confirmed: 'confirmedBookings',
+  completed: 'completedBookings',
+  cancelled: 'cancelledBookings',
+  no_show: 'noShowBookings',
+};
+const BOOKING_BREAKDOWN_BAR_COLORS: Record<(typeof BOOKING_BREAKDOWN_STATUSES)[number], string> = {
+  confirmed: 'bg-blue-500',
+  completed: 'bg-green-500',
+  cancelled: 'bg-red-500',
+  no_show: 'bg-gray-500',
+};
 
 export default function OwnerOverviewPage() {
   const { data: statsRes, isPending: statsLoading } = useQuery({
@@ -52,6 +70,21 @@ export default function OwnerOverviewPage() {
     queryFn: () => reviewService.getOwnerReviews({ limit: RECENT_REVIEWS_LIMIT }),
   });
   const recentReviews = reviewsRes?.data?.data?.reviews ?? [];
+  const unansweredReviews = reviewsRes?.data?.data?.unanswered ?? 0;
+
+  const { data: subscriptionRes, isPending: subscriptionLoading } = useQuery({
+    queryKey: ['owner-subscription-overview'],
+    queryFn: () => billingService.getSubscription(),
+  });
+  const overview = subscriptionRes?.data?.data;
+
+  const revenueDelta = stats && stats.lastMonthRevenue > 0
+    ? Math.round(((stats.monthRevenue - stats.lastMonthRevenue) / stats.lastMonthRevenue) * 100)
+    : null;
+
+  const bookingBreakdownTotal = stats
+    ? BOOKING_BREAKDOWN_STATUSES.reduce((sum, s) => sum + stats[BOOKING_BREAKDOWN_FIELDS[s]], 0)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -90,6 +123,7 @@ export default function OwnerOverviewPage() {
               label="Doanh thu tháng này"
               value={formatCompactPrice(stats.monthRevenue)}
               hint={`Từ ${stats.completedBookings} lượt đã hoàn thành`}
+              delta={revenueDelta}
             />
             <StatCard
               icon={<Volleyball className="size-5" aria-hidden />}
@@ -189,9 +223,14 @@ export default function OwnerOverviewPage() {
         {/* Đánh giá gần đây */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex flex-wrap items-center gap-2">
               <Star className="size-5 text-primary" aria-hidden />
               Đánh giá gần đây
+              {unansweredReviews > 0 && (
+                <Badge variant="outline" className="border-0 bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                  {unansweredReviews} chưa phản hồi
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               {stats && stats.averageRating > 0
@@ -229,6 +268,99 @@ export default function OwnerOverviewPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Tỉ lệ trạng thái lịch đặt */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="size-5 text-primary" aria-hidden />
+              Trạng thái lịch đặt
+            </CardTitle>
+            <CardDescription>Trong số các lịch đã xử lý xong</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {statsLoading || !stats ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
+              </div>
+            ) : bookingBreakdownTotal === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Chưa có lịch đặt nào được xử lý.</p>
+            ) : (
+              <ul className="space-y-3">
+                {BOOKING_BREAKDOWN_STATUSES.map((status) => {
+                  const count = stats[BOOKING_BREAKDOWN_FIELDS[status]];
+                  const pct = Math.round((count / bookingBreakdownTotal) * 100);
+                  return (
+                    <li key={status} className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <Badge variant="outline" className={cn('border-0', BOOKING_STATUS_COLORS[status])}>
+                          {BOOKING_STATUS_LABELS[status]}
+                        </Badge>
+                        <span className="text-muted-foreground">{count} · {pct}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn('h-full rounded-full', BOOKING_BREAKDOWN_BAR_COLORS[status])}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gói thuê bao */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="size-5 text-primary" aria-hidden />
+              Gói thuê bao
+            </CardTitle>
+            <CardDescription>
+              {overview ? overview.plan.name : 'Đang tải...'}
+            </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/owner/billing" />}>
+                Quản lý gói
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {subscriptionLoading || !overview ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
+              </div>
+            ) : (
+              <>
+                {overview.outstandingAmount > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+                    <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                    <span>Có hoá đơn chưa thanh toán: {formatPrice(overview.outstandingAmount)}</span>
+                  </div>
+                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <UsageMeter
+                    label="Sân đang dùng"
+                    used={overview.usage.totalFields}
+                    limit={overview.plan.maxFields}
+                    suffix="sân"
+                  />
+                  <UsageMeter
+                    label="Sân con"
+                    used={overview.usage.totalSubFields}
+                    limit={overview.plan.maxSubFieldsPerField * Math.max(overview.usage.totalFields, 1)}
+                    suffix="sân con"
+                  />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
