@@ -185,6 +185,20 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
   một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
 
+**Widget dashboard owner + manager dùng dữ liệu đã có sẵn** (nhánh `feature/dashboard-widgets-owner-manager`)
+- Owner (`/owner`): tỉ lệ trạng thái lịch đặt (xác nhận/hoàn thành/huỷ/no-show), biến động doanh
+  thu so tháng trước (dùng field `delta` sẵn có của `StatCard`), badge số đánh giá chưa phản hồi,
+  khối gói thuê bao (usage sân/sân con + cảnh báo hoá đơn chưa thanh toán).
+- Manager (`/manager`): thẻ liệt kê từng đội đang dẫn dắt (Elo, tỉ lệ thắng, T/H/B, số thành
+  viên) — trước đó `dashboard.teams` đã được fetch nhưng chỉ dùng phần `totals` gộp.
+- Không đổi backend — mọi widget dùng lại field response đã có nhưng chưa render
+  (`OwnerStats.lastMonthRevenue`/`confirmedBookings`/..., `getOwnerReviews().unanswered`,
+  `getSubscription()`, `getManagerDashboard().teams`).
+- Tách `UsageMeter` (thanh đo hạn mức gói) từ chỗ khai báo cục bộ trong `/owner/billing` thành
+  component dùng chung `components/dashboard/UsageMeter.tsx`, vì dashboard mới cần lại đúng UI đó.
+- Xác minh: `tsc`/`lint`/`test` (82 test)/`build` sạch. **Chưa kiểm bằng trình duyệt thật** — môi
+  trường làm việc không có công cụ chụp màn hình/điều khiển trình duyệt.
+
 **Trang quản lý thành viên đội cho quản lý** (nhánh `feature/manager-team-members-crud`)
 - Trang `/manager/teams/[id]/members`: sửa vai trò (đội trưởng/cầu thủ) + vị trí thi đấu + trạng
   thái từng thành viên, gỡ thành viên khỏi đội, xem/sao chép/tạo lại mã mời — dùng lại các
