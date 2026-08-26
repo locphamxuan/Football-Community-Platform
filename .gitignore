@@ -10,8 +10,17 @@ claude-mem.db*
 ai-tools/
 external-skills/
 
-# CodeGraph: index cục bộ của từng máy. `.mcp.json` thì có commit.
+# CodeGraph: index cục bộ của từng máy, cộng file cấu hình MCP.
 .codegraph/
+.mcp.json
+
+# Tài liệu/hướng dẫn dành cho công cụ AI — không public qua repo.
+CLAUDE.md
+**/CLAUDE.md
+AGENTS.md
+**/AGENTS.md
+docs/09-codegraph.md
+memory/
 
 # === Chung ===
 node_modules/
