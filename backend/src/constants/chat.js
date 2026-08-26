@@ -3,7 +3,7 @@
  *
  * Ngữ cảnh nằm trong khoá chống trùng, nên trao đổi về trận đấu này không lẫn vào
  * trận khác, và nó cũng là thứ quyết định ai được mở hội thoại với ai
- * (xem `assertCanOpen` trong `chat.service.js`).
+ * (xem `assertCanOpen` trong `services/chat/`).
  *
  * Chỉ có nghĩa với hội thoại tay đôi. Nhóm không sinh ra từ một lịch đặt hay một trận
  * đấu nào nên luôn mang ngữ cảnh `DIRECT` — với nhóm, `type` mới là thứ đáng đọc.

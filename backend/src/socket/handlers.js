@@ -1,4 +1,4 @@
-const chatService = require('../services/chat.service');
+const chatService = require('../services/chat');
 const { ClientEvent, ServerEvent } = require('./events');
 const { userRoom } = require('./emitter');
 const { sendMessageSchema, markReadSchema, typingSchema } = require('../validations/chat.validation');

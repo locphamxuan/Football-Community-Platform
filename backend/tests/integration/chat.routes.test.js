@@ -1,9 +1,9 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/chat.service');
+jest.mock('../../src/services/chat');
 
 const request = require('supertest');
 const app = require('../../src/app');
-const chatService = require('../../src/services/chat.service');
+const chatService = require('../../src/services/chat');
 const { AppError } = require('../../src/middleware/errorHandler');
 const { asUser, asAdmin, USER_ID } = require('../helpers/auth');
 const {
