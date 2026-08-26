@@ -17,7 +17,6 @@ thư mục này trả lời "dự án là gì, chạy thế nào, và đi tiếp
 | [06 — Kiểm thử](06-kiem-thu.md) | Test nằm ở đâu, chạy thế nào, viết thêm ra sao |
 | [07 — Vận hành](07-van-hanh.md) | Biến môi trường, chạy local, Docker, CI, health check |
 | [08 — Lộ trình](08-lo-trinh.md) | Nghiệp vụ và chức năng làm tiếp, theo thứ tự ưu tiên |
-| [09 — CodeGraph](09-codegraph.md) | Công cụ đọc hiểu codebase cho AI agent |
 
 ## Quy ước
 
