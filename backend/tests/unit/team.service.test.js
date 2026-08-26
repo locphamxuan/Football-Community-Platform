@@ -11,7 +11,7 @@ jest.mock('../../src/config/cloudinary', () => ({
 const Team = require('../../src/models/Team');
 const User = require('../../src/models/User');
 const { uploadImage, deleteImage } = require('../../src/config/cloudinary');
-const teamService = require('../../src/services/team.service');
+const teamService = require('../../src/services/team');
 const Role = require('../../src/constants/roles');
 
 const MANAGER_ID = '000000000000000000000001';

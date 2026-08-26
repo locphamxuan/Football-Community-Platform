@@ -1,4 +1,4 @@
-const teamService = require('../services/team.service');
+const teamService = require('../services/team');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');
