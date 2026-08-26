@@ -116,15 +116,7 @@ cùng major, không phải major mới như giả định ban đầu. Còn lại
 `@expo/cli` (qua `xcode`/`metro`/`image-size`) chỉ dùng lúc build/dev trên máy lập trình viên,
 không lọt vào app đã build — `npm audit fix`/`--force` đều đòi bump `@expo/cli` ra ngoài đúng
 bản Expo SDK 57 đã kiểm tương thích, nên để nguyên và giữ mức log-only cho tới khi Expo phát
-=======
-critical), `--audit-level=high` chỉ để ghi log chứ không chặn — chuỗi `expo`/`metro`/
-`react-native` (mobile) hiện có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây
-giờ sẽ khoá đỏ CI vĩnh viễn cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change
-(`nodemailer` và `next` đã nâng xong — bản `next` hoá ra chỉ cần nâng bản nhỏ, không phải major;
-critical), `--audit-level=high` chỉ để ghi log chứ không chặn — một số gói (Next.js, Expo...)
-có lỗ hổng high chỉ vá được bằng bản major mới, ép chặn ngay bây giờ sẽ khoá đỏ CI vĩnh viễn
-cho tới khi ai đó chủ động nâng cấp và kiểm tra breaking change (`nodemailer` đã nâng lên v9,
-xem `memory/PROGRESS.md`).
+hành bản vá nằm trong SDK 57.
 
 `.github/workflows/codeql.yml` quét tĩnh JavaScript/TypeScript bằng CodeQL — chạy trên mỗi
 push/PR vào `main`/`dev` và thêm một lượt hàng tuần (thứ Hai) để bắt lỗ hổng mới phát hiện
