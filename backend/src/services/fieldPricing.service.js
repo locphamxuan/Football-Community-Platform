@@ -6,7 +6,7 @@ const ErrorCode = require('../constants/errorCodes');
 
 /**
  * Quản lý ghi đè giá theo ngày và mã khuyến mãi của chủ sân — tách riêng khỏi
- * field.service.js (CRUD sân/sân con) vì đây là một nhánh nghiệp vụ khác, chỉ chủ sân
+ * services/field/ (CRUD sân/sân con) vì đây là một nhánh nghiệp vụ khác, chỉ chủ sân
  * (và admin thay mặt) thao tác, không liên quan tới thông tin sân cốt lõi.
  */
 

@@ -1,9 +1,9 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/field.service');
+jest.mock('../../src/services/field');
 
 const request = require('supertest');
 const app = require('../../src/app');
-const fieldService = require('../../src/services/field.service');
+const fieldService = require('../../src/services/field');
 const { asUser, asOwner, asAdmin, USER_ID } = require('../helpers/auth');
 
 const FIELD_ID = '000000000000000000000010';
