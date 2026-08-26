@@ -1,6 +1,6 @@
 # Bối cảnh dự án
 
-> Cập nhật lần cuối: 2026-08-25
+> Cập nhật lần cuối: 2026-08-26
 >
 > Tài liệu đầy đủ nằm ở [`docs/`](../docs/README.md). File này chỉ trả lời "dự án đang ở đâu".
 
@@ -184,6 +184,14 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
   (`backend/src/config/email.js`) — cho cấu hình SMTP host/port/auth thông thường.
 - Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
   một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
+
+**Trang quản lý thành viên đội cho quản lý** (nhánh `feature/manager-team-members-crud`)
+- Trang `/manager/teams/[id]/members`: sửa vai trò (đội trưởng/cầu thủ) + vị trí thi đấu + trạng
+  thái từng thành viên, gỡ thành viên khỏi đội, xem/sao chép/tạo lại mã mời — dùng lại các
+  endpoint `/teams/:id/members/:memberId` và `/teams/:id/invite-code/regenerate` đã có sẵn ở
+  backend từ trước (không cần đổi backend, chỉ thêm UI).
+- Liên kết "Quản lý thành viên" thêm vào từng thẻ đội trong `/manager/teams`.
+- Xác minh đủ `tsc`/`lint`/`test` (82 test)/`build` phía frontend.
 
 ## Đang làm / còn dở
 

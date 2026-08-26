@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
-import { MapPin, Trophy, UserCog, Users } from 'lucide-react';
+import { MapPin, Trophy, UserCog, Users, UsersRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -158,6 +158,13 @@ export default function ManagerTeamsPage() {
                       <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/teams/${t._id}`} />}>
                         <Users className="size-4" aria-hidden />
                         Trang đội
+                      </Button>
+                      <Button
+                        variant="outline" size="sm" nativeButton={false}
+                        render={<Link href={`/manager/teams/${t._id}/members`} />}
+                      >
+                        <UsersRound className="size-4" aria-hidden />
+                        Quản lý thành viên
                       </Button>
                       <Button
                         variant="outline"
