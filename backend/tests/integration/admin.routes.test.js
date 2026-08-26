@@ -1,12 +1,12 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/admin.service');
+jest.mock('../../src/services/admin');
 jest.mock('../../src/services/billing');
 jest.mock('../../src/services/user.service');
 jest.mock('../../src/services/adminAuditLog.service');
 
 const request = require('supertest');
 const app = require('../../src/app');
-const adminService = require('../../src/services/admin.service');
+const adminService = require('../../src/services/admin');
 const billingService = require('../../src/services/billing');
 const userService = require('../../src/services/user.service');
 const adminAuditLogService = require('../../src/services/adminAuditLog.service');

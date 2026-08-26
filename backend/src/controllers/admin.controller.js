@@ -1,4 +1,4 @@
-const adminService = require('../services/admin.service');
+const adminService = require('../services/admin');
 const billingService = require('../services/billing');
 const userService = require('../services/user.service');
 const adminAuditLogService = require('../services/adminAuditLog.service');
