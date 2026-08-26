@@ -7,6 +7,7 @@ import {
   Inbox,
   MapPin,
   Send,
+  Shield,
   Swords,
   Trophy,
   Users,
@@ -18,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import StatCard from '@/components/dashboard/StatCard';
 import teamService from '@/services/team.service';
-import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS } from '@/lib/constants';
+import { BOOKING_STATUS_COLORS, BOOKING_STATUS_LABELS, SKILL_LEVEL_COLORS, SKILL_LEVEL_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice, initialsOf } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -105,6 +106,63 @@ export default function ManagerOverviewPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Từng đội đang dẫn dắt */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="size-5 text-primary" aria-hidden />
+            Đội bạn đang dẫn dắt
+          </CardTitle>
+          <CardDescription>Thành tích riêng của từng đội</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
+            </div>
+          ) : (
+            <ul className="divide-y">
+              {dashboard?.teams.map((t) => {
+                const teamWinRate = t.stats.matchesPlayed > 0
+                  ? Math.round((t.stats.wins / t.stats.matchesPlayed) * 100)
+                  : 0;
+                return (
+                  <li key={t._id} className="flex flex-wrap items-center gap-3 py-3">
+                    <Avatar className="size-9">
+                      <AvatarImage src={t.logo} alt={t.name} />
+                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                        {initialsOf(t.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{t.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t.members.length}/{t.maxMembers} thành viên · Elo {t.stats.eloRating}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={cn('border-0', SKILL_LEVEL_COLORS[t.skillLevel])}>
+                      {SKILL_LEVEL_LABELS[t.skillLevel]}
+                    </Badge>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Badge variant="outline" className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                        {t.stats.wins}T
+                      </Badge>
+                      <Badge variant="outline" className="border-0 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        {t.stats.draws}H
+                      </Badge>
+                      <Badge variant="outline" className="border-0 bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400">
+                        {t.stats.losses}B
+                      </Badge>
+                    </div>
+                    <span className="text-sm font-semibold text-primary">{teamWinRate}%</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Trận sắp tới */}
