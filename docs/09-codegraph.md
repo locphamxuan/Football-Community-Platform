@@ -39,7 +39,7 @@ codegraph explore "cancelBooking"        # nguồn của symbol + đường gọ
 codegraph node calcPrice                 # một symbol: nguồn + chuỗi gọi tới/đi
 codegraph callers calcPrice              # ai gọi hàm này
 codegraph impact assertCanCreateField    # đổi hàm này thì ảnh hưởng những đâu
-codegraph affected src/services/billing.service.js   # file test nào liên quan
+codegraph affected src/services/billing/owner.js      # file test nào liên quan
 codegraph files                          # cấu trúc dự án theo index
 ```
 

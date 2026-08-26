@@ -19,7 +19,7 @@ tốn công một người và có độ trễ hàng giờ tới hàng ngày; c�
 minh chữ ký HMAC-SHA512, chịu được gọi lại nhiều lần nhờ `PaymentTransaction` (idempotent —
 xác nhận hai lần không cộng `totalPaid` hai lần). Đường chuyển khoản thủ công vẫn giữ nguyên
 làm phương án dự phòng, không bị thay thế. Kiến trúc `payments/` được viết theo interface
-chung (`provider.interface.js`) để thêm MoMo sau không phải sửa `billing.service.js`.
+chung (`provider.interface.js`) để thêm MoMo sau không phải sửa `services/billing/`.
 
 **Còn lại (MoMo).** `getProvider('momo')` chưa có cài đặt — cần `momo.provider.js` theo đúng
 API collection-link của MoMo (chữ ký HMAC-SHA256, request khác field so với VNPay) cài đặt
@@ -150,7 +150,8 @@ Giữ nguyên nguyên tắc **chia giá theo phần thời gian nằm trong từ
 (`calcBookingPrice` là điểm hợp nhất giá gốc + ghi đè + khuyến mãi), không viết nhánh tính giá
 thứ hai. Chi tiết ở `docs/04-nghiep-vu.md`.
 
-> Đã từng có một hàm tính giá thứ hai (`calculatePrice` trong `field.service.js`) tính sai
+> Đã từng có một hàm tính giá thứ hai (`calculatePrice` trong `field.service.js`, nay là
+> `services/field/`) tính sai
 > theo kiểu "lấy giá của giờ bắt đầu cho cả buổi". Nó đã bị xoá. Đừng tạo lại.
 
 ### 3.2 Đặt lịch định kỳ

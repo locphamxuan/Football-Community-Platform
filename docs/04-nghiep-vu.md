@@ -16,7 +16,7 @@ Cắt kiểu "lấy giá theo giờ bắt đầu" sẽ khiến khách đặt lú
 - Cài đặt: `calcPrice`/`calcSlotAmounts` trong `backend/src/services/pricing.service.js`
 - Cuối tuần xác định theo **UTC** (`getUTCDay`), khớp với cách lưu ngày.
 - Test: `backend/tests/unit/pricing.test.js` (qua `calcPrice`/`calcDuration` re-export ở
-  `booking.service.js`, giữ tương thích ngược) và `backend/tests/unit/pricing.service.test.js`.
+  `services/booking/`, giữ tương thích ngược) và `backend/tests/unit/pricing.service.test.js`.
 
 ### Giá theo ngày và khuyến mãi
 
@@ -29,7 +29,7 @@ promoCode)` trong `backend/src/services/pricing.service.js` — hàm này gọi 
 (chọn bảng giá: ghi đè nếu ngày rơi vào khoảng ghi đè, mặc định nếu không), rồi `calcSlotAmounts`
 (giống hệt phép tính overlap-thời-gian của `calcPrice`), rồi `resolvePromotion` (tìm mã còn hiệu
 lực) để trừ đúng phần tiền của khung giờ mà mã áp dụng. **Không viết nhánh tính giá thứ hai** — dự
-án từng có một hàm `calculatePrice` sai kiểu này trong `field.service.js` và đã bị xoá (xem
+án từng có một hàm `calculatePrice` sai kiểu này trong `field.service.js` (nay là `services/field/`) và đã bị xoá (xem
 `docs/08-lo-trinh.md`).
 
 Khuyến mãi giới hạn theo khung giờ (`slots`) chỉ trừ trên phần tiền của đúng những khung đó, không
@@ -46,7 +46,7 @@ khớp cách chia khung thật).
 
 - Cài đặt: `resolvePricingForDate`, `resolvePromotion`, `calcBookingPrice`,
   `previewBookingPrice` (`backend/src/services/pricing.service.js` và
-  `backend/src/services/booking.service.js`); CRUD ghi đè/khuyến mãi ở
+  `backend/src/services/booking/`); CRUD ghi đè/khuyến mãi ở
   `backend/src/services/fieldPricing.service.js`.
 - Lượt dùng mã (`usedCount`) chỉ tăng **sau khi** booking vượt qua bước kiểm tra trùng giờ lần hai
   — tránh đếm nhầm khi hai request cùng đặt một khung giờ và một trong hai bị hoàn tác.
@@ -174,7 +174,7 @@ Cách này không cần job nền và không bao giờ phát hành trùng hoá �
 Admin xác nhận hoá đơn → cộng `totalPaid`. Thuê bao chỉ trở lại `active` khi **không còn**
 hoá đơn nào chưa thanh toán. Hoá đơn đã `paid` thì không huỷ được.
 
-- Cài đặt: `backend/src/services/billing.service.js`
+- Cài đặt: `backend/src/services/billing/`
 - Test: `backend/tests/unit/billing.service.test.js`, `backend/tests/unit/billing.test.js`
 
 ### Thanh toán online (VNPay)
@@ -203,7 +203,7 @@ Xử lý IPN, theo đúng thứ tự (dừng ở bước đầu tiên không qua
 Đường thủ công (chuyển khoản + admin đối soát) **vẫn giữ nguyên** làm phương án dự phòng —
 không xoá, không thay thế.
 
-- Cài đặt: `backend/src/services/payments/`, `backend/src/services/billing.service.js`
+- Cài đặt: `backend/src/services/payments/`, `backend/src/services/billing/`
   (`createCheckoutSession`, `handleGatewayIpn`, `handleGatewayReturn`), kiến trúc chi tiết ở
   [`docs/02-kien-truc.md`](02-kien-truc.md#thanh-toán-online-provider-abstraction).
 - Test: `backend/tests/unit/vnpay.provider.test.js`, `backend/tests/unit/billing.service.test.js`,
@@ -308,7 +308,7 @@ gian ấy, không phải một bảng nhật ký riêng: thứ tự thời gian 
 kiện nằm chung một dòng. Client vẽ chúng khác tin nhắn thường — vẽ giống nhau thì người đọc
 tưởng có người vừa nói câu đó.
 
-- Cài đặt: `backend/src/services/chat.service.js`, `backend/src/socket/`
+- Cài đặt: `backend/src/services/chat/`, `backend/src/socket/`
 - Test: `backend/tests/unit/chat.service.test.js`,
   `backend/tests/integration/chat.routes.test.js`,
   `backend/tests/integration/socket.test.js`
