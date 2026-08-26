@@ -185,6 +185,36 @@ MongoDB Atlas, Redis chạy qua `docker compose up -d redis`, ảnh lưu trên C
 - Xác minh với stack thật: `verifyEmailConnection()` kết nối thành công lúc boot, và gửi thật
   một email quên mật khẩu qua `/auth/forgot-password` — `sendMail()` chạy xong không lỗi.
 
+**Tổ chức lại 6 backend service theo role/domain** (nhánh `refactor/backend-services-role-split`)
+- File service backend vượt hoặc sát ngưỡng 300 dòng đều đã tách thành thư mục con theo khuôn
+  `services/payments/` sẵn có (barrel `index.js` re-export phẳng, controller không đổi cách gọi
+  hàm, chỉ đổi đường dẫn `require`):
+  - **Tách theo role** (nghiệp vụ khác biệt lớn giữa các role): `booking/` (player/manager/owner
+    + `shared.js` cho `getBookingById`/`cancelBooking` tự rẽ nhánh role bên trong), `billing/`
+    (owner/admin/gateway webhook), `field/` (owner/admin), `team/` (manager/player).
+  - **Tách theo domain con** (không thực sự trộn role): `chat/` (conversations/groups/messages —
+    mọi hàm chạy giống nhau cho player/owner/manager, chỉ admin bị chặn hẳn), `admin/`
+    (overview/owners/moderation — vốn đã thuần một role).
+  - Mỗi thư mục có `helpers.js` cho hàm nội bộ dùng chung giữa các file con, không đi qua
+    `index.js` (không phải API công khai).
+- Refactor thuần, không đổi hành vi — 864 test backend vẫn xanh sau từng bước tách (6 commit
+  riêng, một file một commit). Xác minh thêm bằng stack thật: `docker compose up -d redis` +
+  `node src/server.js` khởi động sạch, gọi endpoint đại diện mỗi mảng (booking/field/team/
+  billing/admin/chat, cả có và không có token) đều đúng.
+- Quyết định thiết kế được ghi vào `docs/02-kien-truc.md` (mục "`services/` chia thư mục con...").
+
+**Bỏ theo dõi các file cấu hình/tài liệu AI khỏi git** (nhánh `chore/gitignore-ai-tooling-files`)
+- `CLAUDE.md`, `AGENTS.md` (frontend/mobile), `.mcp.json`, `docs/09-codegraph.md`, `memory/`
+  (toàn bộ) không còn được git track — vẫn nằm nguyên trên đĩa, Claude Code vẫn đọc và cập nhật
+  bình thường, chỉ không push công khai lên GitHub nữa. `docs/README.md` bỏ dòng trỏ tới
+  `docs/09-codegraph.md` khỏi mục lục vì link sẽ 404 trên bản clone mới.
+
+**Sửa dấu vết merge conflict còn sót + viết lại README.md** (nhánh `docs/readme-and-fix-merge-artifact`)
+- `docs/07-van-hanh.md` từng có một dòng `=======` và 3 bản nháp trùng lặp của cùng một đoạn về
+  `npm audit` sống sót qua một lần merge cũ — đã dọn, giữ đúng bản mới nhất.
+- `README.md` gốc trước đó chỉ có 1 dòng tiêu đề — viết lại đầy đủ: mô tả sản phẩm, 4 vai trò,
+  kiến trúc monorepo, công nghệ từng phía, hướng dẫn chạy local, verify, trỏ vào `docs/`.
+
 **Trang quản lý thành viên đội cho quản lý** (nhánh `feature/manager-team-members-crud`)
 - Trang `/manager/teams/[id]/members`: sửa vai trò (đội trưởng/cầu thủ) + vị trí thi đấu + trạng
   thái từng thành viên, gỡ thành viên khỏi đội, xem/sao chép/tạo lại mã mời — dùng lại các
