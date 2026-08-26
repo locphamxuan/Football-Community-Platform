@@ -38,7 +38,7 @@ const MatchRequest = require('../../src/models/MatchRequest');
 const { notify } = require('../../src/services/notification.service');
 const { emitToUsers, isOnline } = require('../../src/socket/emitter');
 const { cache, CacheKeys, resetCache } = require('../helpers/fakeRedis');
-const chatService = require('../../src/services/chat.service');
+const chatService = require('../../src/services/chat');
 const {
   ConversationContext, ConversationType, ParticipantRole, MessageKind,
 } = require('../../src/constants/chat');

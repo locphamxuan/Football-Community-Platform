@@ -1,9 +1,9 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/billing.service');
+jest.mock('../../src/services/billing');
 
 const request = require('supertest');
 const app = require('../../src/app');
-const billingService = require('../../src/services/billing.service');
+const billingService = require('../../src/services/billing');
 const { asUser, asOwner, asAdmin, USER_ID } = require('../helpers/auth');
 const { PLAN_CODES } = require('../../src/constants/plans');
 

@@ -58,6 +58,23 @@ request
 Controller không được biết `res` là gì ngoài việc chuyển tiếp — nhờ vậy toàn bộ service
 kiểm thử được mà không cần HTTP.
 
+### `services/` chia thư mục con khi một file phình to hoặc trộn nhiều role
+
+Sáu service (booking, billing, field, team, chat, admin) từng là một file phẳng vượt hoặc
+sát ngưỡng 300 dòng — mỗi cái đã tách thành thư mục con, theo `services/payments/` làm khuôn
+mẫu: một `index.js` re-export phẳng đúng tên hàm cũ, nên controller chỉ đổi đường dẫn
+`require`, không đổi cách gọi. Hai kiểu tách:
+
+- **Theo role** (booking, billing, field, team) — file phục vụ nhiều role với nghiệp vụ đủ
+  khác nhau: `player.js`/`owner.js`/`manager.js`/`admin.js`, cộng `shared.js` cho các hàm tự
+  rẽ nhánh theo role bên trong (ví dụ `cancelBooking`) nên không tách theo file được.
+- **Theo domain con** (chat, admin) — file không thực sự trộn role (chat chạy giống nhau cho
+  mọi role trừ admin bị chặn hẳn; admin vốn đã thuần một role), chỉ tách theo mảng nghiệp vụ:
+  `chat/conversations.js`/`groups.js`/`messages.js`, `admin/overview.js`/`owners.js`/`moderation.js`.
+
+Mỗi thư mục có thêm `helpers.js` cho hàm nội bộ dùng chung giữa các file con nhưng không nằm
+trong API công khai gốc (không đi qua `index.js`).
+
 ## Khuôn dạng response
 
 Mọi endpoint trả về cùng một dạng, kể cả khi lỗi:
@@ -185,7 +202,7 @@ backend/src/services/payments/
   index.js                getProvider(name) — tra registry, ném PAYMENT_PROVIDER_UNAVAILABLE nếu chưa cấu hình
 ```
 
-`billing.service.js` chỉ gọi qua `getProvider(name)`, không import thẳng `vnpay.provider.js` —
+`services/billing/` chỉ gọi qua `getProvider(name)`, không import thẳng `vnpay.provider.js` —
 thêm MoMo sau này là thêm một file cài đặt hợp đồng, không sửa `createCheckoutSession`/
 `handleGatewayIpn`.
 

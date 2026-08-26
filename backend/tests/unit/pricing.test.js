@@ -1,4 +1,4 @@
-const { calcPrice, calcDuration } = require('../../src/services/booking.service');
+const { calcPrice, calcDuration } = require('../../src/services/booking');
 
 // 2026-08-10 là thứ hai, 2026-08-15 là thứ bảy (tính theo UTC như calcPrice)
 const MONDAY = '2026-08-10';

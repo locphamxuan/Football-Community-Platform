@@ -2,16 +2,16 @@ jest.mock('../../src/models/User', () => ({
   findById: jest.fn(), findByIdAndUpdate: jest.fn(),
 }));
 jest.mock('../../src/models/Field', () => ({ countDocuments: jest.fn() }));
-jest.mock('../../src/services/billing.service', () => ({
+jest.mock('../../src/services/billing', () => ({
   ensureSubscription: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('../../src/services/adminAuditLog.service');
 
 const User = require('../../src/models/User');
 const Field = require('../../src/models/Field');
-const billingService = require('../../src/services/billing.service');
+const billingService = require('../../src/services/billing');
 const adminAuditLogService = require('../../src/services/adminAuditLog.service');
-const adminService = require('../../src/services/admin.service');
+const adminService = require('../../src/services/admin');
 const { AdminAction, AdminTargetType } = require('../../src/constants/adminAudit');
 
 const ADMIN_ID = '000000000000000000000001';

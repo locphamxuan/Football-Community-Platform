@@ -1,9 +1,9 @@
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/billing.service');
+jest.mock('../../src/services/billing');
 
 const request = require('supertest');
 const app = require('../../src/app');
-const billingService = require('../../src/services/billing.service');
+const billingService = require('../../src/services/billing');
 
 describe('GET /webhooks/payments/vnpay/ipn', () => {
   it('không cần token — nằm ngoài /api/v1', async () => {

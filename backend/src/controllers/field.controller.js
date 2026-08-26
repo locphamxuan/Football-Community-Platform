@@ -1,4 +1,4 @@
-const fieldService = require('../services/field.service');
+const fieldService = require('../services/field');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');

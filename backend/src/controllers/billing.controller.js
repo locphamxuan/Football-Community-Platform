@@ -1,4 +1,4 @@
-const billingService = require('../services/billing.service');
+const billingService = require('../services/billing');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');

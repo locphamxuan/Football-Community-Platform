@@ -1,5 +1,5 @@
-const adminService = require('../services/admin.service');
-const billingService = require('../services/billing.service');
+const adminService = require('../services/admin');
+const billingService = require('../services/billing');
 const userService = require('../services/user.service');
 const adminAuditLogService = require('../services/adminAuditLog.service');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');

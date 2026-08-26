@@ -1,4 +1,4 @@
-const chatService = require('../services/chat.service');
+const chatService = require('../services/chat');
 const { sendSuccess, paginationMeta } = require('../utils/ApiResponse');
 const catchAsync = require('../utils/catchAsync');
 const HttpStatus = require('../constants/httpStatus');

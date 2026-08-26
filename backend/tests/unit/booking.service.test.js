@@ -18,7 +18,7 @@ const Booking = require('../../src/models/Booking');
 const Field = require('../../src/models/Field');
 const Team = require('../../src/models/Team');
 const { notify } = require('../../src/services/notification.service');
-const bookingService = require('../../src/services/booking.service');
+const bookingService = require('../../src/services/booking');
 
 const OWNER_ID = '000000000000000000000002';
 const BOOKER_ID = '000000000000000000000001';

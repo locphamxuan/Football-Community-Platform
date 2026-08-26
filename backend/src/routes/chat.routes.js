@@ -15,7 +15,7 @@ const router = Router();
  * Không có `authorize(...)` ở đâu cả: chủ sân, quản lý đội và người chơi đều nhắn tin, và
  * ai được nói chuyện với ai là câu hỏi về **quan hệ** (có phải hai bên của lịch đặt này không,
  * có trong nhóm này không) chứ không phải về vai trò. Câu hỏi đó chỉ trả lời được khi đã biết
- * hội thoại nào, nên nó nằm trong `chat.service` chứ không phải ở đây.
+ * hội thoại nào, nên nó nằm trong `services/chat/` chứ không phải ở đây.
  *
  * Ngoại lệ duy nhất là quản trị viên nền tảng: họ đứng ngoài mọi cuộc trò chuyện, nên chặn
  * ngay ở cửa thay vì để service từ chối từng thao tác một.

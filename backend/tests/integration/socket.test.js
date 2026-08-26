@@ -9,13 +9,13 @@
  * nên server ở đây dựng thẳng bằng đúng hai mảnh còn lại: `auth` và `handlers`.
  */
 jest.mock('../../src/config/redis', () => require('../helpers/fakeRedis'));
-jest.mock('../../src/services/chat.service');
+jest.mock('../../src/services/chat');
 
 const http = require('http');
 const { Server } = require('socket.io');
 const { io: createClient } = require('socket.io-client');
 
-const chatService = require('../../src/services/chat.service');
+const chatService = require('../../src/services/chat');
 const authenticateSocket = require('../../src/socket/auth');
 const registerHandlers = require('../../src/socket/handlers');
 const { setIo, emitToUsers } = require('../../src/socket/emitter');
