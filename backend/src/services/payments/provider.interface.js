@@ -4,8 +4,10 @@
  *
  * @typedef {Object} PaymentProvider
  * @property {string} name - Tên cổng, khớp `PaymentTransaction.provider` / `Invoice.paymentProvider`.
- * @property {(txn: { txnRef: string, amount: number, orderInfo: string }, ctx: { ipAddr: string }) => string} createPaymentUrl
- *   Trả về URL để redirect người dùng sang trang thanh toán của cổng.
+ * @property {(txn: { txnRef: string, amount: number, orderInfo: string }, ctx: { ipAddr: string }) => string | Promise<string>} createPaymentUrl
+ *   Trả về URL để redirect người dùng sang trang thanh toán của cổng — có thể async (MoMo phải
+ *   gọi API `/create` của MoMo trước khi có URL, VNPay tự ký URL tại chỗ nên là sync). Gọi luôn
+ *   phải `await`.
  * @property {(query: Record<string, string>) => boolean} verifySignature
  *   Xác minh chữ ký của query string cổng gửi về (return URL hoặc IPN).
  * @property {(query: Record<string, string>) => boolean} isSuccess

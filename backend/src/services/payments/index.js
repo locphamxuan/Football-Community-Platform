@@ -1,9 +1,10 @@
 const vnpay = require('./vnpay.provider');
+const momo = require('./momo.provider');
 const { AppError } = require('../../middleware/errorHandler');
 const HttpStatus = require('../../constants/httpStatus');
 const ErrorCode = require('../../constants/errorCodes');
 
-const PROVIDERS = { vnpay };
+const PROVIDERS = { vnpay, momo };
 
 /**
  * @param {string} providerName

@@ -5,13 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
-import { AlertTriangle, Check, CreditCard, ReceiptText, Wallet } from 'lucide-react';
+import {
+  AlertTriangle, Check, ChevronDown, CreditCard, ReceiptText, Wallet,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,7 +109,8 @@ function OwnerBillingContent() {
   });
 
   const checkout = useMutation({
-    mutationFn: (invoiceId: string) => billingService.checkout(invoiceId),
+    mutationFn: ({ invoiceId, provider }: { invoiceId: string; provider: 'vnpay' | 'momo' }) =>
+      billingService.checkout(invoiceId, provider),
     onSuccess: (res) => {
       window.location.href = res.data.data.paymentUrl;
     },
@@ -290,14 +296,21 @@ function OwnerBillingContent() {
                     <td className="py-2.5 text-right">
                       {inv.status === 'pending' && (
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            disabled={checkout.isPending}
-                            onClick={() => checkout.mutate(inv._id)}
-                          >
-                            <Wallet className="size-4" aria-hidden />
-                            Thanh toán online
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger render={<Button size="sm" disabled={checkout.isPending} />}>
+                              <Wallet className="size-4" aria-hidden />
+                              Thanh toán online
+                              <ChevronDown className="size-4" aria-hidden />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => checkout.mutate({ invoiceId: inv._id, provider: 'vnpay' })}>
+                                VNPay
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => checkout.mutate({ invoiceId: inv._id, provider: 'momo' })}>
+                                MoMo
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button
                             size="sm"
                             variant="outline"

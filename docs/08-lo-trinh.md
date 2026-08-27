@@ -9,24 +9,21 @@ Trạng thái hiện tại: xem [`memory/PROGRESS.md`](../memory/PROGRESS.md).
 
 ## Ưu tiên 1 — Doanh thu và thanh toán
 
-### 1.1 Cổng thanh toán trực tuyến cho hoá đơn thuê bao — ✅ VNPay xong (nhánh `feature/vnpay-payment-gateway`), MoMo còn lại
+### 1.1 Cổng thanh toán trực tuyến cho hoá đơn thuê bao — ✅ xong (VNPay: nhánh `feature/vnpay-payment-gateway`, MoMo: nhánh `feature/momo-payment-gateway`)
 
 **Vì sao.** Hiện chủ sân chuyển khoản rồi khai mã giao dịch, admin đối soát tay. Mỗi hoá đơn
 tốn công một người và có độ trễ hàng giờ tới hàng ngày; càng nhiều chủ sân thì càng không kham nổi.
 
-**Đã làm (VNPay).** `POST /billing/invoices/:id/checkout` tạo link thanh toán từ một `Invoice`
-đang `pending`/`awaiting_confirmation`. Webhook IPN (`GET /webhooks/payments/vnpay/ipn`) xác
-minh chữ ký HMAC-SHA512, chịu được gọi lại nhiều lần nhờ `PaymentTransaction` (idempotent —
-xác nhận hai lần không cộng `totalPaid` hai lần). Đường chuyển khoản thủ công vẫn giữ nguyên
-làm phương án dự phòng, không bị thay thế. Kiến trúc `payments/` được viết theo interface
-chung (`provider.interface.js`) để thêm MoMo sau không phải sửa `services/billing/`.
-
-**Còn lại (MoMo).** `getProvider('momo')` chưa có cài đặt — cần `momo.provider.js` theo đúng
-API collection-link của MoMo (chữ ký HMAC-SHA256, request khác field so với VNPay) cài đặt
-cùng interface đã có.
-
-**Xong khi (MoMo).** Hoá đơn tự chuyển `paid` sau webhook hợp lệ của MoMo; thuê bao tự `active`
-khi hết công nợ; có test cho webhook trùng lặp và cho chữ ký sai — cùng chuẩn đã áp cho VNPay.
+**Đã làm.** `POST /billing/invoices/:id/checkout` tạo link thanh toán từ một `Invoice` đang
+`pending`/`awaiting_confirmation`, chọn cổng qua `provider` (`vnpay` mặc định hoặc `momo`).
+Webhook IPN (`GET /webhooks/payments/vnpay/ipn`, `POST /webhooks/payments/momo/ipn`) xác minh
+chữ ký (HMAC-SHA512 VNPay, HMAC-SHA256 MoMo), chịu được gọi lại nhiều lần nhờ
+`PaymentTransaction` (idempotent — xác nhận hai lần không cộng `totalPaid` hai lần). Đường
+chuyển khoản thủ công vẫn giữ nguyên làm phương án dự phòng, không bị thay thế. Kiến trúc
+`payments/` viết theo interface chung (`provider.interface.js`) nên thêm MoMo không phải sửa
+`services/billing/` — chỉ thêm `momo.provider.js`. Khác biệt lớn nhất giữa hai cổng: VNPay tự
+ký URL tại chỗ (sync), MoMo phải gọi API `/create` của MoMo trước để lấy `payUrl` (async) —
+interface chấp nhận cả hai, xem [`docs/02-kien-truc.md`](02-kien-truc.md#thanh-toán-online-provider-abstraction).
 
 ### 1.2 Thanh toán tiền đặt sân (đặt cọc)
 

@@ -8,4 +8,8 @@ const router = Router();
 router.get('/vnpay/ipn', controller.vnpayIpn);
 router.get('/vnpay/return', controller.vnpayReturn);
 
+// MoMo: IPN là POST JSON body (khác VNPay dùng GET query), return URL vẫn là GET redirect.
+router.post('/momo/ipn', controller.momoIpn);
+router.get('/momo/return', controller.momoReturn);
+
 module.exports = router;

@@ -39,6 +39,12 @@ Biến tuỳ chọn đáng chú ý:
 | `VNPAY_HASH_SECRET` | rỗng | Secret key ký/xác minh chữ ký HMAC-SHA512 |
 | `VNPAY_URL` | sandbox VNPay | Sandbox demo dùng được ngay, không cần đăng ký merchant thật — xem [tài liệu tích hợp VNPay](https://sandbox.vnpayment.vn/apis/) để lấy `VNPAY_TMN_CODE`/`VNPAY_HASH_SECRET` demo |
 | `VNPAY_RETURN_URL` | `{CLIENT_URL}/owner/billing` | Trang trình duyệt quay về sau khi thanh toán — chỉ UX, không xác nhận đơn |
+| `MOMO_PARTNER_CODE` | rỗng | Mã đối tác MoMo. **Tuỳ chọn** — thiếu thì `checkout` trả `PAYMENT_PROVIDER_UNAVAILABLE` (503), cùng cơ chế với VNPay |
+| `MOMO_ACCESS_KEY` | rỗng | Access key MoMo cấp cùng partner code |
+| `MOMO_SECRET_KEY` | rỗng | Secret key ký/xác minh chữ ký HMAC-SHA256 |
+| `MOMO_URL` | endpoint test MoMo | Xem [tài liệu tích hợp MoMo](https://developers.momo.vn/) để lấy bộ `MOMO_PARTNER_CODE`/`MOMO_ACCESS_KEY`/`MOMO_SECRET_KEY` test |
+| `MOMO_IPN_URL` | `http://localhost:{PORT}/webhooks/payments/momo/ipn` | Phải là URL công khai gọi được từ MoMo khi test thật (vd. qua ngrok) — MoMo không gọi được vào `localhost` |
+| `MOMO_REDIRECT_URL` | `{CLIENT_URL}/owner/billing` | Trang trình duyệt quay về sau khi thanh toán — chỉ UX, không xác nhận đơn |
 
 ## Chạy local
 
