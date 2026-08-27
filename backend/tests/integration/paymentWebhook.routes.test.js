@@ -63,3 +63,42 @@ describe('GET /webhooks/payments/vnpay/return', () => {
     expect(res.headers.location).toMatch(/\/owner\/billing\?payment=failed$/);
   });
 });
+
+describe('POST /webhooks/payments/momo/ipn', () => {
+  it('không cần token — nằm ngoài /api/v1, luôn trả 204 vì MoMo không có bảng RspCode riêng', async () => {
+    billingService.handleGatewayIpn.mockResolvedValue({ rspCode: '00', message: 'Confirm Success' });
+
+    const res = await request(app).post('/webhooks/payments/momo/ipn').send({ orderId: 'INV-001' });
+
+    expect(res.status).toBe(204);
+    expect(billingService.handleGatewayIpn).toHaveBeenCalledWith('momo', expect.objectContaining({ orderId: 'INV-001' }));
+  });
+
+  it('service ném lỗi bất ngờ thì vẫn trả 204, không crash', async () => {
+    billingService.handleGatewayIpn.mockRejectedValue(new Error('boom'));
+
+    const res = await request(app).post('/webhooks/payments/momo/ipn').send({ orderId: 'INV-001' });
+
+    expect(res.status).toBe(204);
+  });
+});
+
+describe('GET /webhooks/payments/momo/return', () => {
+  it('thành công thì redirect về trang billing kèm payment=success', async () => {
+    billingService.handleGatewayReturn.mockReturnValue({ success: true });
+
+    const res = await request(app).get('/webhooks/payments/momo/return').query({ resultCode: '0' });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/\/owner\/billing\?payment=success$/);
+  });
+
+  it('thất bại hoặc chữ ký sai thì redirect kèm payment=failed', async () => {
+    billingService.handleGatewayReturn.mockReturnValue({ success: false });
+
+    const res = await request(app).get('/webhooks/payments/momo/return').query({ resultCode: '1006' });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/\/owner\/billing\?payment=failed$/);
+  });
+});

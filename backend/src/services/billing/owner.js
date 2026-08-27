@@ -146,7 +146,7 @@ const createCheckoutSession = async (ownerId, invoiceId, providerName, ipAddr) =
     amount: invoice.amount,
   });
 
-  const paymentUrl = gateway.createPaymentUrl(
+  const paymentUrl = await gateway.createPaymentUrl(
     { txnRef, amount: invoice.amount, orderInfo: `Thanh toan hoa don ${invoice.code}` },
     { ipAddr }
   );

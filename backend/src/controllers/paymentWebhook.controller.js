@@ -33,4 +33,30 @@ const vnpayReturn = catchAsync(async (req, res) => {
   res.redirect(`${env.CLIENT_URL}/owner/billing?payment=${success ? 'success' : 'failed'}`);
 });
 
-module.exports = { vnpayIpn, vnpayReturn };
+/**
+ * IPN của MoMo — server-to-server, POST JSON body (khác VNPay dùng GET query). MoMo chỉ cần
+ * xác nhận đã nhận, không có bảng mã response riêng như VNPay nên luôn trả HTTP 204.
+ */
+const momoIpn = catchAsync(async (req, res) => {
+  try {
+    await billingService.handleGatewayIpn('momo', req.body);
+  } catch (err) {
+    logger.error('MoMo IPN handling failed', { error: err.message });
+  }
+  res.status(204).end();
+});
+
+/** Return URL của MoMo — cùng nguyên tắc với VNPay: chỉ điều hướng UX, không xác nhận đơn. */
+const momoReturn = catchAsync(async (req, res) => {
+  let success = false;
+  try {
+    ({ success } = billingService.handleGatewayReturn('momo', req.query));
+  } catch (err) {
+    logger.error('MoMo return handling failed', { error: err.message });
+  }
+  res.redirect(`${env.CLIENT_URL}/owner/billing?payment=${success ? 'success' : 'failed'}`);
+});
+
+module.exports = {
+  vnpayIpn, vnpayReturn, momoIpn, momoReturn,
+};

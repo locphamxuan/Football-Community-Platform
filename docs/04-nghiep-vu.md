@@ -177,28 +177,36 @@ hoá đơn nào chưa thanh toán. Hoá đơn đã `paid` thì không huỷ đư
 - Cài đặt: `backend/src/services/billing/`
 - Test: `backend/tests/unit/billing.service.test.js`, `backend/tests/unit/billing.test.js`
 
-### Thanh toán online (VNPay)
+### Thanh toán online (VNPay, MoMo)
 
-Chủ sân bấm "Thanh toán online" ở hoá đơn `pending`/`awaiting_confirmation` → server tạo một
-`PaymentTransaction` (`status: 'pending'`) và trả link VNPay. Chủ sân thanh toán xong, hai việc
-xảy ra **độc lập nhau**:
+Chủ sân bấm "Thanh toán online" ở hoá đơn `pending`/`awaiting_confirmation`, chọn cổng
+(`vnpay` mặc định hoặc `momo`) → server tạo một `PaymentTransaction` (`status: 'pending'`) và
+trả link thanh toán của cổng đó. Chủ sân thanh toán xong, hai việc xảy ra **độc lập nhau**:
 
-1. **Return URL** (`GET /webhooks/payments/vnpay/return`) — trình duyệt được redirect về đây.
-   Chỉ dùng để báo "thành công"/"thất bại" cho UX, **không xác nhận đơn** — có thể không bao
-   giờ xảy ra (đóng tab, mất mạng giữa chừng).
-2. **IPN** (`GET /webhooks/payments/vnpay/ipn`) — VNPay gọi server-to-server, độc lập với việc
-   người dùng có quay lại trang hay không. Đây mới là nguồn sự thật duy nhất xác nhận thanh toán.
+1. **Return URL** (`GET /webhooks/payments/{vnpay|momo}/return`) — trình duyệt được redirect về
+   đây. Chỉ dùng để báo "thành công"/"thất bại" cho UX, **không xác nhận đơn** — có thể không
+   bao giờ xảy ra (đóng tab, mất mạng giữa chừng).
+2. **IPN** (`GET /webhooks/payments/vnpay/ipn` hoặc `POST /webhooks/payments/momo/ipn`) — cổng
+   gọi server-to-server, độc lập với việc người dùng có quay lại trang hay không. Đây mới là
+   nguồn sự thật duy nhất xác nhận thanh toán. VNPay gọi bằng GET query, MoMo gọi bằng POST JSON
+   body — khác định dạng nhưng cùng đi qua một hàm xử lý chung (`handleGatewayIpn`).
 
-Xử lý IPN, theo đúng thứ tự (dừng ở bước đầu tiên không qua được):
+Xử lý IPN, theo đúng thứ tự (dừng ở bước đầu tiên không qua được), dùng chung cho mọi cổng:
 
-1. Xác minh chữ ký HMAC-SHA512 — sai thì trả `RspCode: 97`, không tra gì thêm.
-2. Tra `PaymentTransaction` theo `(provider, providerTxnRef)` — không thấy thì `01`.
-3. Đã xử lý rồi (`status !== 'pending'`, tức IPN gọi lại) → `02`, **không cộng tiền lần hai**.
-4. Số tiền không khớp `PaymentTransaction.amount` → `04`, đánh dấu giao dịch `failed`.
+1. Xác minh chữ ký (HMAC-SHA512 với VNPay, HMAC-SHA256 với MoMo) — sai thì coi như thất bại,
+   không tra gì thêm.
+2. Tra `PaymentTransaction` theo `(provider, providerTxnRef)` — không thấy thì bỏ qua.
+3. Đã xử lý rồi (`status !== 'pending'`, tức IPN gọi lại) → **không cộng tiền lần hai**.
+4. Số tiền không khớp `PaymentTransaction.amount` → đánh dấu giao dịch `failed`.
 5. Hợp lệ → `findOneAndUpdate` với điều kiện `status: 'pending'` (chỉ một trong nhiều request
    đồng thời thắng), rồi mới gọi `confirmInvoicePaymentViaGateway` — dùng chung `settleInvoice`
    với đường đối soát thủ công, chỉ khác là ghi `paymentProvider`/`gatewayTransactionId` thay vì
-   `confirmedBy` (không có admin nào trong luồng này) → `00`.
+   `confirmedBy` (không có admin nào trong luồng này).
+
+VNPay và MoMo phản hồi IPN khác khuôn dạng nhau (VNPay đòi JSON `{RspCode, Message}` theo đúng
+bảng mã của nó; MoMo không có bảng mã riêng, chỉ cần HTTP `204`) — mỗi cổng có controller riêng
+dịch lại kết quả chung của `handleGatewayIpn` sang đúng khuôn dạng cổng đó hiểu, xem
+[`docs/02-kien-truc.md`](02-kien-truc.md#thanh-toán-online-provider-abstraction).
 
 Đường thủ công (chuyển khoản + admin đối soát) **vẫn giữ nguyên** làm phương án dự phòng —
 không xoá, không thay thế.
@@ -206,9 +214,8 @@ không xoá, không thay thế.
 - Cài đặt: `backend/src/services/payments/`, `backend/src/services/billing/`
   (`createCheckoutSession`, `handleGatewayIpn`, `handleGatewayReturn`), kiến trúc chi tiết ở
   [`docs/02-kien-truc.md`](02-kien-truc.md#thanh-toán-online-provider-abstraction).
-- Test: `backend/tests/unit/vnpay.provider.test.js`, `backend/tests/unit/billing.service.test.js`,
-  `backend/tests/integration/paymentWebhook.routes.test.js`.
-- MoMo chưa cài đặt — `getProvider('momo')` sẽ báo cổng chưa hỗ trợ (interface đã sẵn sàng).
+- Test: `backend/tests/unit/vnpay.provider.test.js`, `backend/tests/unit/momo.provider.test.js`,
+  `backend/tests/unit/billing.service.test.js`, `backend/tests/integration/paymentWebhook.routes.test.js`.
 
 ## Sân và duyệt sân
 
