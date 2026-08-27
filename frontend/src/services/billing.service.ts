@@ -32,8 +32,8 @@ const billingService = {
       paymentReference,
     }),
 
-  /** Tạo link thanh toán online — chỉ VNPay lúc này, MoMo là bước tiếp theo trong roadmap. */
-  checkout: (invoiceId: string, provider: 'vnpay' = 'vnpay') =>
+  /** Tạo link thanh toán online. */
+  checkout: (invoiceId: string, provider: 'vnpay' | 'momo' = 'vnpay') =>
     api.post<ApiResponse<{ paymentUrl: string }>>(`/billing/invoices/${invoiceId}/checkout`, { provider }),
 };
 

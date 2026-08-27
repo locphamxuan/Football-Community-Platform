@@ -175,19 +175,21 @@ Toàn bộ nhóm này cần đăng nhập.
 | PATCH | `/subscription/auto-renew` | 🏟 👑 | `autoRenew` (boolean) |
 | GET | `/invoices` | 🏟 👑 | Query: `page, limit, status` |
 | POST | `/invoices/:id/report-payment` | 🏟 👑 | `paymentReference` (3–100 ký tự) — đường thủ công |
-| POST | `/invoices/:id/checkout` | 🏟 👑 | `provider?` (mặc định `vnpay`) → trả `{ paymentUrl }` |
+| POST | `/invoices/:id/checkout` | 🏟 👑 | `provider?` (`vnpay` mặc định, hoặc `momo`) → trả `{ paymentUrl }` |
 
 ### Webhook cổng thanh toán — `/webhooks/payments` (nằm ngoài `/api/v1`)
 
-Không JWT — VNPay gọi vào server-to-server (IPN) hoặc redirect trình duyệt người dùng (return).
-Chữ ký HMAC là hàng rào chính, không phải cookie/token. Xem
-[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thanh-toán-online-vnpay) và
+Không JWT — cổng thanh toán gọi vào server-to-server (IPN) hoặc redirect trình duyệt người dùng
+(return). Chữ ký HMAC là hàng rào chính, không phải cookie/token. Xem
+[04 — Quy tắc nghiệp vụ](04-nghiep-vu.md#thanh-toán-online-vnpay-momo) và
 [02 — Kiến trúc](02-kien-truc.md#thanh-toán-online-provider-abstraction).
 
 | Method | Đường dẫn | Ghi chú |
 |---|---|---|
 | GET | `/vnpay/ipn` | Server-to-server, idempotent. Trả JSON `{RspCode, Message}`, luôn HTTP 200 |
 | GET | `/vnpay/return` | Redirect trình duyệt về `/owner/billing?payment=success\|failed` — chỉ UX, không xác nhận đơn |
+| POST | `/momo/ipn` | Server-to-server, JSON body (khác VNPay dùng GET query), idempotent. Luôn trả HTTP 204 — MoMo không có bảng response code riêng |
+| GET | `/momo/return` | Redirect trình duyệt về `/owner/billing?payment=success\|failed` — chỉ UX, không xác nhận đơn |
 
 ## Thông báo — `/notifications`
 

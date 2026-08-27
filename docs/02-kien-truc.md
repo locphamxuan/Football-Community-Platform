@@ -193,18 +193,33 @@ chung được vì `shared/types.ts` chỉ chứa type, không mang được gi�
 
 Nhánh `feature/vnpay-payment-gateway` thêm cổng thanh toán VNPay cho hoá đơn thuê bao, cạnh
 đường thủ công (chủ sân báo mã chuyển khoản, admin đối soát) vốn đã có — đường thủ công vẫn
-giữ nguyên làm phương án dự phòng.
+giữ nguyên làm phương án dự phòng. Nhánh `feature/momo-payment-gateway` thêm MoMo cùng interface.
 
 ```
 backend/src/services/payments/
   provider.interface.js   JSDoc mô tả hợp đồng: createPaymentUrl, verifySignature, isSuccess, parseCallback
   vnpay.provider.js       cài đặt cho VNPay
+  momo.provider.js        cài đặt cho MoMo
   index.js                getProvider(name) — tra registry, ném PAYMENT_PROVIDER_UNAVAILABLE nếu chưa cấu hình
 ```
 
-`services/billing/` chỉ gọi qua `getProvider(name)`, không import thẳng `vnpay.provider.js` —
-thêm MoMo sau này là thêm một file cài đặt hợp đồng, không sửa `createCheckoutSession`/
-`handleGatewayIpn`.
+`services/billing/` chỉ gọi qua `getProvider(name)`, không import thẳng `vnpay.provider.js` hay
+`momo.provider.js` — thêm cổng mới là thêm một file cài đặt hợp đồng, không sửa
+`createCheckoutSession`/`handleGatewayIpn`.
+
+**VNPay tự ký URL tại chỗ (sync), MoMo phải gọi API trước (async).** VNPay build query string
+và ký bằng HMAC ngay trong tiến trình — không cần mạng. MoMo thì ngược lại: phải `POST` tới
+`/v2/gateway/api/create` của MoMo để đổi lấy `payUrl`, không tự tạo được URL nếu không gọi ra
+ngoài. Vì vậy `createPaymentUrl` trong interface chấp nhận cả `string` lẫn `Promise<string>`, và
+`owner.js` luôn `await` kết quả — `await` trên một giá trị đã resolve (trường hợp VNPay) không
+tốn gì thêm, nên không cần tách hai đường gọi khác nhau cho hai cổng.
+
+**MoMo IPN là POST JSON, không phải GET query như VNPay** — route riêng
+(`POST /webhooks/payments/momo/ipn`) và không có bảng response code riêng như VNPay
+(`RspCode`/`Message`); server chỉ cần trả `204` để xác nhận đã nhận, MoMo không đọc body.
+`handleGatewayIpn`/`handleGatewayReturn` trong `services/billing/gateway.js` vẫn dùng chung
+một hàm cho cả hai cổng nhờ interface đã trừu tượng hết phần khác biệt (tên field, định dạng
+chữ ký) xuống tầng provider.
 
 **Vì sao webhook nằm ngoài `/api`** (`app.js`, mount `/webhooks/payments` trước
 `app.use('/api', globalLimiter, writeLimiter)`): VNPay gọi vào không mang JWT — `authenticate`

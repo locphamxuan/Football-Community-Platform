@@ -64,6 +64,17 @@ const env = {
   VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET'),
   VNPAY_URL: optional('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
   VNPAY_RETURN_URL: optional('VNPAY_RETURN_URL', `${optional('CLIENT_URL', 'http://localhost:3000')}/owner/billing`),
+
+  // ── Thanh toán (MoMo) ───────────────────────────────────────────────────────
+  // Cùng lý do optional như VNPay ở trên. MOMO_IPN_URL phải là URL công khai gọi được từ MoMo
+  // (không phải localhost khi test thật) — mặc định trỏ vào backend local chỉ để không crash
+  // lúc đọc env khi chưa cấu hình.
+  MOMO_PARTNER_CODE: optional('MOMO_PARTNER_CODE'),
+  MOMO_ACCESS_KEY: optional('MOMO_ACCESS_KEY'),
+  MOMO_SECRET_KEY: optional('MOMO_SECRET_KEY'),
+  MOMO_URL: optional('MOMO_URL', 'https://test-payment.momo.vn/v2/gateway/api/create'),
+  MOMO_IPN_URL: optional('MOMO_IPN_URL', `http://localhost:${number('PORT', '5000')}/webhooks/payments/momo/ipn`),
+  MOMO_REDIRECT_URL: optional('MOMO_REDIRECT_URL', `${optional('CLIENT_URL', 'http://localhost:3000')}/owner/billing`),
 };
 
 module.exports = env;
