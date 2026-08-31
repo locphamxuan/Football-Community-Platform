@@ -5,9 +5,11 @@ import { API_URL } from '@/lib/constants';
  * Kết nối WebSocket tới backend — một cái cho cả tab, không phải một cái cho mỗi component.
  *
  * Socket.io gắn vào chính server đang phục vụ REST, nên địa chỉ là `API_URL` bỏ đi phần
- * tiền tố phiên bản: `http://host/api/v1` → `http://host`.
+ * tiền tố phiên bản: `http://host/api/v1` → `http://host`. Khi `API_URL` là đường dẫn tương
+ * đối (production, đi qua rewrite proxy trong `next.config.ts`), kết quả rỗng — truyền
+ * `undefined` cho `io()` để nó tự kết nối cùng origin với trang thay vì origin rỗng.
  */
-const SOCKET_URL = API_URL.replace(/\/api\/v\d+\/?$/, '');
+const SOCKET_URL = API_URL.replace(/\/api\/v\d+\/?$/, '') || undefined;
 
 let socket: Socket | null = null;
 
