@@ -13,6 +13,16 @@ const optional = (key, defaultVal = '') => process.env[key] ?? defaultVal;
 const number = (key, defaultVal) => parseInt(optional(key, defaultVal), 10);
 const flag = (key, defaultVal) => optional(key, defaultVal) === 'true';
 
+/** JWT secret yếu (rỗng/ngắn) không bị `required()` bắt vì nó chỉ kiểm tra non-empty. */
+const requiredSecret = (key, minLength = 32) => {
+  const val = required(key);
+  if (val.length < minLength) {
+    console.error(`${key} is too short (${val.length} chars) — need at least ${minLength} for a safe JWT signing secret`);
+    process.exit(1);
+  }
+  return val;
+};
+
 const nodeEnv = optional('NODE_ENV', 'development');
 
 const env = {
@@ -22,8 +32,8 @@ const env = {
 
   MONGODB_URI: required('MONGODB_URI'),
 
-  JWT_ACCESS_SECRET: required('JWT_ACCESS_SECRET'),
-  JWT_REFRESH_SECRET: required('JWT_REFRESH_SECRET'),
+  JWT_ACCESS_SECRET: requiredSecret('JWT_ACCESS_SECRET'),
+  JWT_REFRESH_SECRET: requiredSecret('JWT_REFRESH_SECRET'),
   JWT_ACCESS_EXPIRES_IN: optional('JWT_ACCESS_EXPIRES_IN', '15m'),
   JWT_REFRESH_EXPIRES_IN: optional('JWT_REFRESH_EXPIRES_IN', '7d'),
 

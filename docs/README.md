@@ -1,6 +1,6 @@
 # Tài liệu Football Community Platform
 
-> Cập nhật lần cuối: 2026-08-26
+> Cập nhật lần cuối: 2026-08-31
 
 Đây là tài liệu chính thức của dự án. `memory/PROGRESS.md` trả lời "dự án đang ở đâu";
 thư mục này trả lời "dự án là gì, chạy thế nào, và đi tiếp về đâu".
@@ -17,6 +17,7 @@ thư mục này trả lời "dự án là gì, chạy thế nào, và đi tiếp
 | [06 — Kiểm thử](06-kiem-thu.md) | Test nằm ở đâu, chạy thế nào, viết thêm ra sao |
 | [07 — Vận hành](07-van-hanh.md) | Biến môi trường, chạy local, Docker, CI, health check |
 | [08 — Lộ trình](08-lo-trinh.md) | Nghiệp vụ và chức năng làm tiếp, theo thứ tự ưu tiên |
+| [09 — Triển khai production](09-trien-khai.md) | Deploy lên Render/Vercel/Atlas/Upstash/EAS thế nào, vì sao cấu trúc domain như vậy |
 
 ## Quy ước
 

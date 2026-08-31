@@ -6,8 +6,8 @@
 const defaults = {
   NODE_ENV: 'test',
   MONGODB_URI: 'mongodb://127.0.0.1:27017/football-platform-test',
-  JWT_ACCESS_SECRET: 'test-access-secret',
-  JWT_REFRESH_SECRET: 'test-refresh-secret',
+  JWT_ACCESS_SECRET: 'test-access-secret-must-be-at-least-32-chars',
+  JWT_REFRESH_SECRET: 'test-refresh-secret-must-be-at-least-32-chars',
   CLOUDINARY_CLOUD_NAME: 'test',
   CLOUDINARY_API_KEY: 'test',
   CLOUDINARY_API_SECRET: 'test',
