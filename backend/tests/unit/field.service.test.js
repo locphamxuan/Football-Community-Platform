@@ -5,7 +5,7 @@ jest.mock('../../src/models/Field', () => ({
 }));
 jest.mock('../../src/models/Booking', () => ({ find: jest.fn(), countDocuments: jest.fn() }));
 jest.mock('../../src/services/billing', () => ({
-  assertCanCreateField: jest.fn().mockResolvedValue({}),
+  assertCanCreateField: jest.fn().mockResolvedValue({ plan: { name: 'Pro', maxFields: 20 } }),
   assertCanAddSubField: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('../../src/config/cloudinary', () => ({
@@ -69,13 +69,14 @@ beforeEach(() => {
   resetCache();
   Field.exists.mockResolvedValue(null);
   Field.findByIdAndUpdate.mockResolvedValue({});
+  Field.countDocuments.mockResolvedValue(1);
   Booking.countDocuments.mockResolvedValue(0);
   bookingsFound([]);
 });
 
 describe('createField', () => {
   it('kiểm tra hạn mức gói trước khi tạo', async () => {
-    Field.create.mockResolvedValue({ _id: FIELD_ID });
+    Field.create.mockResolvedValue({ _id: FIELD_ID, deleteOne: jest.fn() });
 
     await fieldService.createField(OWNER_ID, validFieldData);
 
@@ -93,7 +94,7 @@ describe('createField', () => {
   });
 
   it('lưu toạ độ theo thứ tự [lng, lat] của GeoJSON', async () => {
-    Field.create.mockResolvedValue({ _id: FIELD_ID });
+    Field.create.mockResolvedValue({ _id: FIELD_ID, deleteOne: jest.fn() });
 
     await fieldService.createField(OWNER_ID, {
       ...validFieldData,
@@ -106,13 +107,26 @@ describe('createField', () => {
   });
 
   it('không có toạ độ thì mặc định [0, 0] để index 2dsphere không vỡ', async () => {
-    Field.create.mockResolvedValue({ _id: FIELD_ID });
+    Field.create.mockResolvedValue({ _id: FIELD_ID, deleteOne: jest.fn() });
 
     await fieldService.createField(OWNER_ID, validFieldData);
 
     expect(Field.create).toHaveBeenCalledWith(expect.objectContaining({
       location: expect.objectContaining({ coordinates: { type: 'Point', coordinates: [0, 0] } }),
     }));
+  });
+
+  it('hai request tạo sân cùng lúc vượt hạn mức thì hoàn tác, không giữ sân thừa', async () => {
+    const deleteOne = jest.fn().mockResolvedValue(undefined);
+    Field.create.mockResolvedValue({ _id: FIELD_ID, deleteOne });
+    // Cả hai request đều đếm thấy 1 sân trước khi tạo (qua assertCanCreateField, đã mock ở
+    // module-level) rồi cùng tạo — lúc đếm lại sau khi ghi, số sân đã vượt hạn mức Pro (20).
+    Field.countDocuments.mockResolvedValue(21);
+
+    await expect(fieldService.createField(OWNER_ID, validFieldData))
+      .rejects.toMatchObject({ code: 'PLAN_LIMIT_REACHED' });
+
+    expect(deleteOne).toHaveBeenCalled();
   });
 });
 

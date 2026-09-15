@@ -13,7 +13,7 @@ const { publicIdFromUrl, generateUniqueSlug } = require('./helpers');
 // ─── createField ──────────────────────────────────────────────────────────────
 const createField = async (ownerId, data, files = []) => {
   // Hạn mức số sân phụ thuộc gói thuê bao chủ sân đang dùng
-  await billingService.assertCanCreateField(ownerId);
+  const { plan } = await billingService.assertCanCreateField(ownerId);
 
   const slug = await generateUniqueSlug(slugify(data.name, { lower: true, strict: true }));
 
@@ -36,7 +36,22 @@ const createField = async (ownerId, data, files = []) => {
     },
   };
 
-  return Field.create(fieldData);
+  const field = await Field.create(fieldData);
+
+  // Hai request tạo sân cùng lúc có thể cùng vượt qua assertCanCreateField ở trên (đọc rồi
+  // ghi tách rời) — đếm lại sau khi ghi và hoàn tác nếu vượt hạn mức, cùng cách xử lý race
+  // đã dùng cho việc trùng khung giờ đặt sân và mã khuyến mãi.
+  const fieldCount = await Field.countDocuments({ owner: ownerId });
+  if (fieldCount > plan.maxFields) {
+    await field.deleteOne();
+    throw new AppError(
+      `Plan "${plan.name}" is limited to ${plan.maxFields} field(s). Upgrade your plan to add more.`,
+      HttpStatus.PAYMENT_REQUIRED,
+      ErrorCode.PLAN_LIMIT_REACHED
+    );
+  }
+
+  return field;
 };
 
 // ─── updateField ──────────────────────────────────────────────────────────────
