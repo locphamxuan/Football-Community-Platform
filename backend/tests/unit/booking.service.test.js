@@ -395,9 +395,33 @@ describe('createBooking', () => {
       promoCode: 'SALE10',
     }));
     expect(Field.updateOne).toHaveBeenCalledWith(
-      { _id: FIELD_ID, 'promotions.code': 'SALE10' },
-      { $inc: { 'promotions.$.usedCount': 1 } }
+      { _id: FIELD_ID },
+      { $inc: { 'promotions.$[p].usedCount': 1 } },
+      {
+        arrayFilters: [{
+          'p.code': 'SALE10',
+          $expr: { $or: [{ $eq: ['$p.maxUses', null] }, { $lt: ['$p.usedCount', '$p.maxUses'] }] },
+        }],
+      }
     );
+  });
+
+  it('mã khuyến mãi hết lượt đúng lúc hai request cùng chạy thì huỷ booking, không phát thừa lượt giảm giá', async () => {
+    const promo = {
+      code: 'SALE10', type: 'percentage', value: 10, slots: [],
+      startDate: '2020-01-01', endDate: '2099-01-01', active: true, usedCount: 0, maxUses: 1,
+    };
+    Field.findById.mockResolvedValue(makeField({ promotions: [promo] }));
+    const deleteOne = jest.fn().mockResolvedValue();
+    Booking.create.mockResolvedValue({ _id: BOOKING_ID, deleteOne });
+    // arrayFilters đã cản request thua cuộc ngay trong Mongo — mô phỏng bằng modifiedCount: 0
+    Field.updateOne.mockResolvedValue({ modifiedCount: 0 });
+    const data = validData({ startTime: '10:00', endTime: '11:00', promoCode: 'sale10' });
+
+    await expect(bookingService.createBooking(BOOKER_ID, data))
+      .rejects.toMatchObject({ code: 'PROMO_CODE_INVALID' });
+
+    expect(deleteOne).toHaveBeenCalled();
   });
 
   it('mã khuyến mãi sai thì báo 400, không tạo booking', async () => {

@@ -93,12 +93,27 @@ const createBooking = async (userId, data) => {
     throw new AppError('This time slot has just been booked by someone else', HttpStatus.CONFLICT, ErrorCode.SLOT_NOT_AVAILABLE);
   }
 
-  // Chỉ tính lượt dùng sau khi chắc chắn booking không bị rollback ở bước kiểm tra lại phía trên
+  // Chỉ tính lượt dùng sau khi chắc chắn booking không bị rollback ở bước kiểm tra lại phía trên.
+  // Điều kiện usedCount < maxUses phải nằm trong CHÍNH câu lệnh $inc (arrayFilters + $expr) —
+  // đọc rồi ghi hai bước tách rời sẽ cho nhiều request cùng vượt qua kiểm tra ở resolvePromotion
+  // rồi cùng tăng usedCount, khiến mã khuyến mãi bị dùng vượt maxUses khi có nhiều người bấm
+  // cùng lúc (ví dụ mã giảm giá flash-sale được chia sẻ rộng).
   if (promoCode) {
-    await Field.updateOne(
-      { _id: field._id, 'promotions.code': promoCode },
-      { $inc: { 'promotions.$.usedCount': 1 } }
+    const promoResult = await Field.updateOne(
+      { _id: field._id },
+      { $inc: { 'promotions.$[p].usedCount': 1 } },
+      {
+        arrayFilters: [{
+          'p.code': promoCode,
+          $expr: { $or: [{ $eq: ['$p.maxUses', null] }, { $lt: ['$p.usedCount', '$p.maxUses'] }] },
+        }],
+      }
     );
+    if (promoResult.modifiedCount === 0) {
+      await booking.deleteOne();
+      await invalidateAvailability(field._id, bookingDate);
+      throw new AppError('This promo code just reached its usage limit', HttpStatus.CONFLICT, ErrorCode.PROMO_CODE_INVALID);
+    }
   }
 
   await invalidateAvailability(field._id, bookingDate);
