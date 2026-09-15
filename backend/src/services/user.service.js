@@ -2,13 +2,11 @@ const User = require('../models/User');
 const { uploadImage, deleteImage } = require('../config/cloudinary');
 const { comparePassword, hashPassword } = require('../utils/bcrypt');
 const { getPagination } = require('../utils/pagination');
+const { escapeRegex } = require('../utils/regex');
 const { AppError } = require('../middleware/errorHandler');
 const HttpStatus = require('../constants/httpStatus');
 const ErrorCode = require('../constants/errorCodes');
 const Role = require('../constants/roles');
-
-/** Người dùng gõ gì cũng phải là chữ cần tìm, không phải cú pháp regex. */
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getMe = async (userId) => {
   const user = await User.findById(userId);
@@ -105,10 +103,11 @@ const getUsers = async (query) => {
   const filter = {};
 
   if (query.search) {
+    const term = escapeRegex(query.search);
     filter.$or = [
-      { fullName: { $regex: query.search, $options: 'i' } },
-      { username: { $regex: query.search, $options: 'i' } },
-      { email: { $regex: query.search, $options: 'i' } },
+      { fullName: { $regex: term, $options: 'i' } },
+      { username: { $regex: term, $options: 'i' } },
+      { email: { $regex: term, $options: 'i' } },
     ];
   }
   if (query.role) filter.roles = query.role;

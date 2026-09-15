@@ -160,6 +160,18 @@ const submitResult = async (requestId, userId, { requesterScore, opponentScore }
 
   if (!isFromRequester && !isFromOpponent) throw new AppError('Forbidden', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
+  // Bên kia đã xác nhận một tỉ số rồi thì lượt nhập này phải khớp y hệt — không thì "xác nhận
+  // hai bên" chỉ còn là hình thức: ai bấm sau cùng đè số của người kia và tự quyết định Elo.
+  const otherAlreadyConfirmed = isFromRequester ? request.result.confirmedByOpponent : request.result.confirmedByRequester;
+  if (otherAlreadyConfirmed
+    && (requesterScore !== request.result.requesterScore || opponentScore !== request.result.opponentScore)) {
+    throw new AppError(
+      `Score does not match what the other team already confirmed (${request.result.requesterScore}-${request.result.opponentScore}). Agree on the score with them before submitting again.`,
+      HttpStatus.CONFLICT,
+      ErrorCode.CONFLICT
+    );
+  }
+
   let winner;
   if (requesterScore > opponentScore) winner = 'requester';
   else if (opponentScore > requesterScore) winner = 'opponent';
