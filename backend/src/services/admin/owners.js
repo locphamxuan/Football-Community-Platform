@@ -5,6 +5,7 @@ const Booking = require('../../models/Booking');
 const Subscription = require('../../models/Subscription');
 const Invoice = require('../../models/Invoice');
 const { getPagination } = require('../../utils/pagination');
+const { escapeRegex } = require('../../utils/regex');
 const { getPlan } = require('../../constants/plans');
 const Role = require('../../constants/roles');
 const { AppError } = require('../../middleware/errorHandler');
@@ -18,10 +19,11 @@ const getOwners = async (query) => {
 
   const match = { roles: Role.FIELD_OWNER };
   if (query.search) {
+    const term = escapeRegex(query.search);
     match.$or = [
-      { fullName: { $regex: query.search, $options: 'i' } },
-      { username: { $regex: query.search, $options: 'i' } },
-      { email: { $regex: query.search, $options: 'i' } },
+      { fullName: { $regex: term, $options: 'i' } },
+      { username: { $regex: term, $options: 'i' } },
+      { email: { $regex: term, $options: 'i' } },
     ];
   }
   if (query.plan) {

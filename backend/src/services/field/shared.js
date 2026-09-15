@@ -1,6 +1,7 @@
 const Field = require('../../models/Field');
 const Booking = require('../../models/Booking');
 const { getPagination } = require('../../utils/pagination');
+const { escapeRegex } = require('../../utils/regex');
 const { cache, CacheKeys, CacheTTL } = require('../../config/redis');
 const { AppError } = require('../../middleware/errorHandler');
 const HttpStatus = require('../../constants/httpStatus');
@@ -12,8 +13,8 @@ const getFields = async (query) => {
   const filter = { status: 'active' };
 
   if (query.search) filter.$text = { $search: query.search };
-  if (query.city) filter['location.city'] = { $regex: query.city, $options: 'i' };
-  if (query.district) filter['location.district'] = { $regex: query.district, $options: 'i' };
+  if (query.city) filter['location.city'] = { $regex: escapeRegex(query.city), $options: 'i' };
+  if (query.district) filter['location.district'] = { $regex: escapeRegex(query.district), $options: 'i' };
   if (query.minRating) filter['rating.average'] = { $gte: Number(query.minRating) };
 
   if (query.lat && query.lng) {

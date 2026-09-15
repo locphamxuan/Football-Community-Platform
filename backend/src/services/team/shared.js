@@ -1,5 +1,6 @@
 const Team = require('../../models/Team');
 const { getPagination } = require('../../utils/pagination');
+const { escapeRegex } = require('../../utils/regex');
 const { AppError } = require('../../middleware/errorHandler');
 const HttpStatus = require('../../constants/httpStatus');
 const ErrorCode = require('../../constants/errorCodes');
@@ -10,7 +11,7 @@ const getTeams = async (query) => {
   const filter = { status: 'active', isPublic: true };
 
   if (query.search) filter.$text = { $search: query.search };
-  if (query.city) filter.homeCity = { $regex: query.city, $options: 'i' };
+  if (query.city) filter.homeCity = { $regex: escapeRegex(query.city), $options: 'i' };
   if (query.skillLevel) filter.skillLevel = query.skillLevel;
   if (query.fieldSize) filter.fieldSize = query.fieldSize;
 
