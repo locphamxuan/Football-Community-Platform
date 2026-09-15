@@ -42,6 +42,7 @@ const acceptedRequest = (overrides = {}) => ({
   status: 'accepted',
   date: hoursFromNow(-3),
   startTime: hoursFromNow(-2).toISOString().slice(11, 16),
+  result: { requesterScore: 0, opponentScore: 0, confirmedByRequester: false, confirmedByOpponent: false },
   ...overrides,
 });
 
@@ -245,8 +246,14 @@ describe('submitResult', () => {
     expect(Team.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('cả hai bên xác nhận thì cộng Elo và đóng trận', async () => {
-    setup({ confirmed: { confirmedByRequester: true, confirmedByOpponent: true } });
+  it('cả hai bên xác nhận cùng một tỉ số thì cộng Elo và đóng trận', async () => {
+    // Requester đã xác nhận 3-1 từ trước; opponent giờ xác nhận đúng tỉ số đó
+    setup({
+      request: acceptedRequest({
+        result: { requesterScore: 3, opponentScore: 1, confirmedByRequester: true, confirmedByOpponent: false },
+      }),
+      confirmed: { confirmedByRequester: true, confirmedByOpponent: true },
+    });
 
     await matchRequestService.submitResult(REQUEST_ID, MANAGER_B, { requesterScore: 3, opponentScore: 1 });
 
@@ -260,12 +267,35 @@ describe('submitResult', () => {
   });
 
   it('hoà thì không đội nào đổi điểm', async () => {
-    setup({ confirmed: { confirmedByRequester: true, confirmedByOpponent: true } });
+    setup({
+      request: acceptedRequest({
+        result: { requesterScore: 2, opponentScore: 2, confirmedByRequester: false, confirmedByOpponent: true },
+      }),
+      confirmed: { confirmedByRequester: true, confirmedByOpponent: true },
+    });
 
     await matchRequestService.submitResult(REQUEST_ID, MANAGER_A, { requesterScore: 2, opponentScore: 2 });
 
     expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(TEAM_A, expect.objectContaining({ 'stats.eloRating': 1200 }));
     expect(Team.findByIdAndUpdate).toHaveBeenCalledWith(TEAM_B, expect.objectContaining({ 'stats.eloRating': 1200 }));
+  });
+
+  it('tỉ số không khớp với bên kia đã xác nhận thì bị từ chối, không tính Elo', async () => {
+    // Không dùng setup() ở đây: hàm ném lỗi trước khi chạm tới findById(...).populate(...) lần
+    // hai, nên mockReturnValueOnce đó sẽ không bị tiêu thụ và rò sang test kế tiếp.
+    MatchRequest.findById.mockResolvedValueOnce(acceptedRequest({
+      result: { requesterScore: 3, opponentScore: 1, confirmedByRequester: true, confirmedByOpponent: false },
+    }));
+    Team.findById
+      .mockResolvedValueOnce(fakeTeam(TEAM_A, MANAGER_A))
+      .mockResolvedValueOnce(fakeTeam(TEAM_B, MANAGER_B));
+
+    // Opponent cố chốt một tỉ số khác với cái requester đã xác nhận
+    await expect(matchRequestService.submitResult(REQUEST_ID, MANAGER_B, { requesterScore: 1, opponentScore: 1 }))
+      .rejects.toMatchObject({ statusCode: 409 });
+
+    expect(MatchRequest.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(Team.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -316,7 +346,9 @@ describe('thông báo đi kèm lời mời thi đấu', () => {
 
   it('cả hai bên đã xác nhận thì thôi nhắc — trận đã đóng', async () => {
     MatchRequest.findById
-      .mockResolvedValueOnce(acceptedRequest())
+      .mockResolvedValueOnce(acceptedRequest({
+        result: { requesterScore: 2, opponentScore: 1, confirmedByRequester: true, confirmedByOpponent: false },
+      }))
       .mockReturnValueOnce(mockPopulated({ _id: REQUEST_ID }));
     Team.findById
       .mockResolvedValueOnce(fakeTeam(TEAM_A, MANAGER_A))
